@@ -11,7 +11,7 @@ El objetivo es mejorar la organización de la información clínica, optimizar l
 
 ## Tecnologías utilizadas
 
-- JavaScript
+- c#
 - SQL Server
 - Visual Studio Code
 - Power BI (para análisis de datos)
