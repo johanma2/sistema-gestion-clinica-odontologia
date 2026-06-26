@@ -1,0 +1,180 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Agenda de Apoyo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="agenda-apoyo.css" />
+</head>
+<body>
+
+  <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Agenda de apoyo) ═════ -->
+   <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="../../Imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img" />
+    </div>
+    <nav class="sidebar-nav">
+      <a href="../st-aux-01-panel-operativo/panel-operativo.html" class="nav-item " data-icon="📊" >Panel operativo</a>   
+      <a href="agenda-apoyo.html" class="nav-item active" data-icon="🗓️" aria-current="page">Agenda de apoyo</a>
+      <a href="../../Gestion_De_Pacientes/st-aux-03-preparacion-consulta/preparacion-consulta.html" class="nav-item" data-icon="✅">Preparación consulta</a>
+      <a href="../st-aux-05-historial-parcial/historial-parcial.html" class="nav-item" data-icon="📋">Historia parcial</a>
+      <a href="../st-aux-06-asistencia-procedimiento/asistencia-procedimiento.html" class="nav-item" data-icon="🔄">Asistencia procedimiento</a>
+      <a href="../../Historia_Clinica/st-aux-07-control-postoperatorio/control-postoperatorio.html" class="nav-item" data-icon="🏥">Control post-operatorio</a>     
+      <a href="../../Historia_Clinica/st-aux-08-documentos-clinicos/documentos-clinicos.html" class="nav-item" data-icon="📎">Carga documentos</a>
+      <a href="../st-aux-09-estado-consultorio/estado-consultorio.html" class="nav-item" data-icon="🚑">Estado consultorio</a>
+      <a href="../st-aux-10-citas-finalizadas/citas-finalizadas.html" class="nav-item" data-icon="✅">Citas finalizadas</a>
+      <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../../Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.html" class="nav-item" data-icon="👤">Mi perfil</a>
+    </nav>
+    <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">Au</div>
+      <div class="user-info">
+        <span class="user-role">Auxiliar</span>
+        <span class="user-email">auxiliar@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Page header con metadatos accesibles -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Auxiliar</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Agenda</span>
+        </nav>
+        <h1 class="page-title">Agenda de Apoyo Clínico</h1>
+        <p class="page-subtitle" id="phMeta" aria-live="polite">Citas del día que requieren asistencia</p>
+      </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <div class="content">
+
+      <!-- Barra de filtros con role toolbar y accesibilidad -->
+      <div class="filtros-bar" role="toolbar" aria-label="Filtros de agenda">
+        
+        <!-- Dropdown profesional accesible -->
+        <div class="dropdown-wrap">
+          <button class="filter-btn filter-dropdown" id="btnProfesional" aria-haspopup="true" aria-expanded="false" aria-controls="dropdownMenu">
+            Todos los profesionales <span class="dd-arrow" aria-hidden="true">▼</span>
+          </button>
+          <div class="dropdown-menu" id="dropdownMenu" role="menu" aria-label="Seleccionar profesional">
+            <div class="dd-item active" role="menuitem" tabindex="0" data-value="todos">Todos los profesionales</div>
+            <div class="dd-item" role="menuitem" tabindex="0" data-value="mendez">Dr. Méndez</div>
+            <div class="dd-item" role="menuitem" tabindex="0" data-value="ramirez">Dra. Ramírez</div>
+            <div class="dd-item" role="menuitem" tabindex="0" data-value="gomez">Dra. Gómez</div>
+          </div>
+        </div>
+
+        <!-- Filtros de tipo con role radiogroup -->
+        <div role="radiogroup" aria-label="Filtrar por tipo de cita" class="filter-group">
+          <button class="filter-btn active" id="f-todos" role="radio" aria-checked="true" data-value="todos">Todos los tipos</button>
+          <button class="filter-btn tipo-consulta" id="f-consulta" role="radio" aria-checked="false" data-value="consulta">Consulta</button>
+          <button class="filter-btn tipo-procedimiento" id="f-procedimiento" role="radio" aria-checked="false" data-value="procedimiento">Procedimiento</button>
+          <button class="filter-btn tipo-urgencia" id="f-urgencia" role="radio" aria-checked="false" data-value="urgencia">Urgencia</button>
+        </div>
+
+      </div>
+
+      <!-- Tabla de citas con estructura accesible -->
+      <div class="table-card">
+        <div class="table-scroll">
+          <table class="agenda-table" aria-label="Agenda de citas que requieren asistencia">
+            <thead>
+              <tr>
+                <th scope="col">HORA</th>
+                <th scope="col">PACIENTE</th>
+                <th scope="col">PROFESIONAL</th>
+                <th scope="col">TIPO</th>
+                <th scope="col">ALERGIAS</th>
+                <th scope="col">ESTADO</th>
+              </tr>
+            </thead>
+            <tbody id="agendaBody" aria-live="polite">
+              <!-- Las filas se generan dinámicamente por JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        <div class="table-empty" id="tableEmpty" style="display:none" role="status" aria-live="polite">
+          No hay citas que coincidan con el filtro seleccionado.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Mobile bottom nav con aria-label para navegación móvil -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="../st-aux-01-panel-operativo/panel-operativo.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Panel</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
+    </a>
+    <a href="../st-aux-05-historial-parcial/historial-parcial.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📋</span>
+      <span>Historial</span>
+    </a>
+    <a href="../../Gestion_De_Pacientes/st-aux-03-preparacion-consulta/preparacion-consulta.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">✅</span>
+      <span>Preparación</span>
+    </a>
+    <a href="../../Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Perfil</span>
+    </a>
+  </nav>
+
+  <!-- Toast con aria-atomic para anuncio completo de notificaciones -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para contenido solo accesible por screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+    .skip-link:focus { top: 0; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="agenda-apoyo.js"></script>
+</body>
+</html>

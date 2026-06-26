@@ -1,0 +1,104 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmileTrack � Mis Reportes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="mis-reportes.css"/>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../../imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img"/>
+    </div>
+        <nav class="sidebar-nav">
+      <a href="../../Gestion_De_Profesionales/st-odo-01-dashboard/index.html" class="nav-item" data-icon="🏠">Mi dashboard</a>
+      <a href="../../Gestion_De_Citas/st-odo-02-agenda/index.html" class="nav-item" data-icon="📅">Mi agenda</a>
+      <a href="../../Historia_Clinica/st-odo-03-historial/gestion-historial.html" class="nav-item" data-icon="📋">Historia Clínica</a>
+      <a href="../../Historia_Clinica/st-odo-04-odontograma/odontograma-digital.html" class="nav-item" data-icon="🦷">Odontograma</a>
+      <a href="../../Servicios_Y_Recursos/st-odo-05-servicios/index.html" class="nav-item" data-icon="💼">Servicios</a>
+      <a href="../../Historia_Clinica/st-odo-06-pacientes/index.html" class="nav-item" data-icon="👥">Mis Pacientes</a>
+      <a href="../../Historia_Clinica/st-odo-07-seguimiento-tratamientos/seguimiento-tratamientos.html" class="nav-item" data-icon="📋">Tratamientos</a>
+      <a href="../../Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.html" class="nav-item" data-icon="📊">Mis reportes</a>
+      <a href="../../Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil-profesional.html" class="nav-item" data-icon="👤">Mi perfil</a>
+        <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">OD</div>
+      <div class="user-info">
+        <span class="user-role">Odont�logo</span>
+        <span class="user-email">odontologo@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+  <button class="hamburger" id="hamburger" aria-label="Men�"><span></span><span></span><span></span></button>
+  <div class="overlay" id="overlay"></div>
+
+  <main class="main">
+    <div class="breadcrumb">Odont�logo ? Mis reportes</div>
+
+    <header class="page-header">
+      <div class="header-left">
+        <h1 class="page-title">Mis Reportes</h1>
+        <p class="page-sub" id="pageSub">Productividad y estad�sticas de Dr. Carlos M�ndez � Marzo 2026</p>
+      </div>
+      <button class="btn-save" id="btnGuardar">?? Guardar cambios</button>
+    </header>
+
+    <div class="filter-row">
+      <select id="mesSelect" class="mes-select">
+        <option value="2026-01">Enero 2026</option>
+        <option value="2026-02">Febrero 2026</option>
+        <option value="2026-03" selected>Marzo 2026</option>
+        <option value="2026-04">Abril 2026</option>
+        <option value="2026-05">Mayo 2026</option>
+      </select>
+    </div>
+
+    <section class="stats-grid">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number" id="statCitas">0</span>
+        <span class="stat-label">Citas del mes</span>
+        <span class="stat-vs up" id="vsCitas">? 4 vs febrero</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number" id="statIngresos">$0</span>
+        <span class="stat-label">Ingresos generados</span>
+        <span class="stat-vs up" id="vsIngresos">? 12% vs febrero</span>
+      </div>
+      <div class="stat-card" data-color="orange">
+        <span class="stat-number" id="statCanceladas">0</span>
+        <span class="stat-label">Canceladas</span>
+        <span class="stat-vs down" id="vsCanceladas">? 1 vs febrero</span>
+      </div>
+      <div class="stat-card" data-color="purple">
+        <span class="stat-number" id="statAsistencia">0%</span>
+        <span class="stat-label">Asistencia</span>
+        <span class="stat-vs up" id="vsAsistencia">? 2% vs febrero</span>
+      </div>
+    </section>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h2 class="chart-title" id="chartTitulo">Citas por semana � Marzo 2026</h2>
+        <div class="bar-chart" id="barChart"></div>
+        <div class="chart-footer">
+          <span class="meta-label" id="metaLabel">Meta: 7/semana</span>
+          <span class="vs-mes" id="vsMes">? 13.5% vs mes anterior</span>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h2 class="chart-title">Servicios m�s realizados</h2>
+        <div class="service-chart" id="serviceChart"></div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="mis-reportes.js"></script>
+</body>
+</html>
+

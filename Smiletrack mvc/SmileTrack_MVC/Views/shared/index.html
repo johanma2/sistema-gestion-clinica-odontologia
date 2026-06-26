@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmileTrack — Navegación Completa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ═════ VARIABLES BASE ═════ */
+        :root {
+            --sidebar-w: 300px;
+            --bg-sidebar: #0f2057;
+            --bg-sidebar-light: #1a3580;
+            --bg-active: #1a56cc;
+            --text-sidebar: #8fa3c8;
+            --text-white: #ffffff;
+            --border-sidebar: rgba(255, 255, 255, 0.1);
+            --tr: 0.2s ease;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #f4f6fb;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        button {
+            font-family: inherit;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        /* ═════ SIDEBAR ═════ */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: linear-gradient(180deg, var(--bg-sidebar) 0%, var(--bg-sidebar-light) 100%);
+            color: var(--text-sidebar);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: transform var(--tr);
+        }
+
+        .sidebar-logo {
+            padding: 20px 18px;
+            border-bottom: 1px solid var(--border-sidebar);
+            text-align: center;
+        }
+
+        .sidebar-logo img {
+            max-width: 150px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 12px 10px;
+        }
+
+        .nav-group {
+            margin-bottom: 12px;
+        }
+
+        .nav-group-title {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.4);
+            padding: 8px 12px 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid var(--border-sidebar);
+            margin-bottom: 4px;
+        }
+
+        .nav-group-title .icon {
+            font-size: 0.75rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-sidebar);
+            transition: all var(--tr);
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            position: relative;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-white);
+        }
+
+        .nav-item.active {
+            background: var(--bg-active);
+            color: var(--text-white);
+            font-weight: 600;
+        }
+
+        .nav-item::before {
+            content: attr(data-icon);
+            font-size: 13px;
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .nav-item .badge-role {
+            margin-left: auto;
+            font-size: 0.5rem;
+            font-weight: 600;
+            padding: 1px 4px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            display: inline-flex;
+            gap: 2px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .badge-role span {
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+
+        .badge-admin {
+            background: rgba(147, 51, 234, 0.4);
+            color: #c084fc;
+        }
+
+        .badge-prof {
+            background: rgba(34, 197, 94, 0.4);
+            color: #86efac;
+        }
+
+        .badge-rec {
+            background: rgba(245, 158, 11, 0.4);
+            color: #fcd34d;
+        }
+
+        .badge-aux {
+            background: rgba(217, 70, 239, 0.4);
+            color: #e879f9;
+        }
+
+        .badge-pac {
+            background: rgba(59, 130, 246, 0.4);
+            color: #93c5fd;
+        }
+
+        .nav-separator {
+            height: 1px;
+            background: var(--border-sidebar);
+            margin: 12px 10px;
+        }
+
+        .sidebar-footer {
+            padding: 14px 14px;
+            border-top: 1px solid var(--border-sidebar);
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--bg-active);
+            color: var(--text-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .user-details {
+            overflow: hidden;
+        }
+
+        .user-name {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 0.65rem;
+            color: var(--text-sidebar);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        /* Contenido principal */
+        .main-content {
+            margin-left: var(--sidebar-w);
+            padding: 40px;
+        }
+
+        .main-content h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .main-content p {
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        .view-info {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .view-info h2 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+
+        .view-info .path {
+            font-family: monospace;
+            font-size: 0.85rem;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: #0f172a;
+            word-break: break-all;
+        }
+
+        .view-info .roles {
+            margin-top: 12px;
+        }
+
+        .view-info .role-tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-right: 6px;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ═════ SIDEBAR ═════ -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Navegación principal">
+
+        <!-- Logo -->
+        <div class="sidebar-logo">
+            <img src="../Imagenes/Logos/logo.jpg" alt="SmileTrack Logo"
+                onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'color:white;font-family:Syne;font-size:1.3rem;font-weight:700;\'>🦷 SmileTrack</div>';">
+        </div>
+
+        <!-- Navegación (TODAS las vistas visibles, sin filtro) -->
+        <nav class="sidebar-nav" id="sidebarNav"></nav>
+
+        <div class="nav-separator"></div>
+
+        <!-- Cerrar sesión -->
+        <div style="padding: 0 10px 12px;">
+            <button class="nav-item" onclick="logout()" style="color: #f87171;">🚪 Cerrar sesión</button>
+        </div>
+
+        <!-- Footer usuario -->
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">👁️</div>
+                <div class="user-details">
+                    <div class="user-name">Vista Completa</div>
+                    <div class="user-role">Todos los roles visibles</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═════ CONTENIDO PRINCIPAL ═════ -->
+    <main class="main-content" id="mainContent">
+        <h1>🗂️ Navegación Completa SmileTrack</h1>
+        <p>Todas las vistas del sistema organizadas por módulo. Los badges de colores indican qué roles tienen acceso a
+            cada vista.</p>
+
+        <div class="view-info">
+            <h2>📍 Vista seleccionada</h2>
+            <div class="path" id="currentPath">Haz clic en un módulo del menú</div>
+            <div class="roles" id="currentRoles"></div>
+            <div style="margin-top:12px; font-size:0.8rem; color:#64748b;">
+                <strong>Leyenda de roles:</strong><br>
+                <span class="role-tag" style="background:#f3e8ff;color:#9333ea">ADMIN</span>
+                <span class="role-tag" style="background:#dcfce7;color:#166534">PROF</span>
+                <span class="role-tag" style="background:#ffedd5;color:#92400e">REC</span>
+                <span class="role-tag" style="background:#fce7f3;color:#9d174d">AUX</span>
+                <span class="role-tag" style="background:#dbeafe;color:#1d4ed8">PAC</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        //  BASE DE DATOS COMPLETA DE NAVEGACIÓN - TODAS LAS VISTAS SIN FILTRO
+        // ═══════════════════════════════════════════════════════════════════
+
+        const NAVIGATION_DATA = {
+            // ═════ 0. PÚBLICO ═════
+            publico: {
+                title: '🌐 Público', icon: '',
+                items: [
+                    { label: 'Homepage', path: '../../Publico/homepage.html', roles: ['admin', 'profesional', 'recepcion', 'auxiliar', 'paciente'], desc: 'Página de inicio pública' },
+                    { label: 'Login', path: '../../Acceso_Y_Seguridad/login/index.html', roles: ['admin', 'profesional', 'recepcion', 'auxiliar', 'paciente'], desc: 'Inicio de sesión' },
+                    { label: 'Registro', path: '../../Acceso_Y_Seguridad/register/index.html', roles: ['admin', 'profesional', 'recepcion', 'auxiliar', 'paciente'], desc: 'Crear nueva cuenta' },
+                    { label: 'Recuperar Contraseña', path: '../../Acceso_Y_Seguridad/recover/index.html', roles: ['admin', 'profesional', 'recepcion', 'auxiliar', 'paciente'], desc: 'Restablecer acceso' }
+                ]
+            },
+
+            // ═════ 1. ACCESO Y SEGURIDAD ═════
+            acceso: {
+                title: '🔐 Acceso y Seguridad', icon: '',
+                items: [
+                    { label: 'Gestión de Usuarios', path: '../../Acceso_Y_Seguridad/st-adm-02-gestion-usuarios/index.html', roles: ['admin'], desc: 'CRUD de cuentas y roles' },
+                    { label: 'Gestión de Roles', path: '../../Acceso_Y_Seguridad/st-adm-03-gestion-roles/index.html', roles: ['admin'], desc: 'Configurar permisos por rol' },
+                    { label: 'Matriz de Permisos', path: '../../Acceso_Y_Seguridad/st-adm-04-matriz-permisos/index.html', roles: ['admin'], desc: 'Control granular de accesos' },
+                    { label: 'Bitácora del Sistema', path: '../../Acceso_Y_Seguridad/st-adm-15-bitacora/index.html', roles: ['admin'], desc: 'Auditoría de eventos' }
+                ]
+            },
+
+            // ═════ 2. GESTIÓN DE PACIENTES ═════
+            pacientes: {
+                title: '👥 Gestión de Pacientes', icon: '',
+                items: [
+                    { label: 'Gestión de Pacientes', path: '../../Gestion_De_Pacientes/st-adm-05-gestion-pacientes/index.html', roles: ['admin', 'recepcion', 'profesional'], desc: 'CRUD de pacientes' },
+                    { label: 'Pacientes Inactivos', path: '../../Gestion_De_Pacientes/st-adm-06-pacientes-inactivos/index.html', roles: ['admin'], desc: 'Listado de bajas' },
+                    { label: 'Registrar Paciente + Cita', path: '../../Gestion_De_Pacientes/st-rec-02-registrar-paciente-agendar-cita/nuevo_paciente.html', roles: ['recepcion'], desc: 'Registro rápido con agenda' },
+                    { label: 'Preparación de Consulta', path: '../../Gestion_De_Pacientes/st-aux-03-preparacion-consulta/preparacion-consulta.html', roles: ['auxiliar'], desc: 'Listar datos pre-consulta' },
+                    { label: 'Mi Perfil (Paciente)', path: '../../Perfiles/st-pac-03-mi-perfil/index.html', roles: ['paciente'], desc: 'Datos personales del paciente' }
+                ]
+            },
+
+            // ═════ 3. GESTIÓN DE PROFESIONALES ═════
+            profesionales: {
+                title: '🩺 Gestión de Profesionales', icon: '',
+                items: [
+                    { label: 'Gestión de Profesionales', path: '../../Gestion_De_Profesionales/st-adm-07-gestion-profesionales/index.html', roles: ['admin'], desc: 'Registro de odontólogos' },
+                    { label: 'Dashboard Profesional', path: '../../Gestion_De_Profesionales/st-odo-01-dashboard/index.html', roles: ['profesional'], desc: 'Panel del odontólogo' },
+                    { label: 'Mis Reportes', path: '../../Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.html', roles: ['profesional'], desc: 'Estadísticas personales' },
+                    { label: 'Reportes Clínicos', path: '../../Gestion_De_Profesionales/st-adm-14-reportes-clinicos/index.html', roles: ['admin', 'profesional'], desc: 'Informes clínicos' },
+                    { label: 'Mi Perfil Profesional', path: '../../Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil-profesional.html', roles: ['profesional'], desc: 'Datos del odontólogo' },
+                    { label: 'Perfil del Recepcionista', path: '../../Perfiles/st-rec-06-perfil-del-recepcionista/Perfil del Recepcionista.html', roles: ['recepcion'], desc: 'Datos del recepcionista' },
+                    { label: 'Perfil del Auxiliar', path: '../../Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.html', roles: ['auxiliar'], desc: 'Datos del auxiliar' }
+                ]
+            },
+
+            // ═════ 4. GESTIÓN DE CITAS ═════
+            citas: {
+                title: '📅 Gestión de Citas', icon: '',
+                items: [
+                    // Admin
+                    { label: 'Dashboard General', path: '../../Gestion_De_Citas/st-adm-01-dashboard/index.html', roles: ['admin'], desc: 'KPIs globales' },
+                    { label: 'Agenda General', path: '../../Gestion_De_Citas/st-adm-08-agenda/index.html', roles: ['admin'], desc: 'Calendario completo' },
+                    { label: 'Gestión Integral de Citas', path: '../../Gestion_De_Citas/st-adm-09-citas/index.html', roles: ['admin'], desc: 'Administración centralizada' },
+                    // Recepcionista
+                    { label: 'Panel de Recepción', path: '../../Gestion_De_Citas/st-rec-01-dashboard/index.html', roles: ['recepcion'], desc: 'Vista rápida del día' },
+                    { label: 'Gestión de Citas', path: '../../Gestion_De_Citas/st-rec-03-gestion-citas/index.html', roles: ['recepcion'], desc: 'Agendar/modificar citas' },
+                    { label: 'Recordatorios', path: '../../Gestion_De_Citas/st-rec-05-recordatorios/index.html', roles: ['recepcion'], desc: 'Alertas de citas' },
+                    // Profesional
+                    { label: 'Agenda Personal', path: '../../Gestion_De_Citas/st-odo-02-agenda/index.html', roles: ['profesional'], desc: 'Citas asignadas' },
+                    // Auxiliar
+                    { label: 'Panel Operativo', path: '../../Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.html', roles: ['auxiliar'], desc: 'Estado de consultorios' },
+                    { label: 'Agenda de Apoyo', path: '../../Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.html', roles: ['auxiliar'], desc: 'Calendario de asistencia' },
+                    { label: 'Historial Parcial', path: '../../Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.html', roles: ['auxiliar'], desc: 'Consulta rápida de historial' },
+                    { label: 'Asistencia en Procedimiento', path: '../../Gestion_De_Citas/st-aux-06-asistencia-procedimiento/asistencia-procedimiento.html', roles: ['auxiliar'], desc: 'Apoyo durante consulta' },
+                    { label: 'Estado de Consultorio', path: '../../Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.html', roles: ['auxiliar'], desc: 'Disponibilidad de salas' },
+                    { label: 'Citas Finalizadas', path: '../../Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.html', roles: ['auxiliar', 'recepcion'], desc: 'Historial de atenciones' },
+                    // Paciente
+                    { label: 'Mis Citas', path: '../../Gestion_De_Citas/st-pac-01-mis-citas/index.html', roles: ['paciente'], desc: 'Citas del paciente' },
+                    { label: 'Notificaciones', path: '../../Gestion_De_Citas/st-pac-03-notificaciones/index.html', roles: ['paciente'], desc: 'Alertas para paciente' }
+                ]
+            },
+
+            // ═════ 5. HISTORIA CLÍNICA ═════
+            historia: {
+                title: '📋 Historia Clínica', icon: '',
+                items: [
+                    { label: 'Gestión de Historia Clínica', path: '../../Historia_Clinica/st-odo-03-historial/gestion-historial.html', roles: ['profesional'], desc: 'Registro de diagnósticos' },
+                    { label: 'Odontograma Digital', path: '../../Historia_Clinica/st-odo-04-odontograma/odontograma-digital.html', roles: ['profesional'], desc: 'Estado visual de piezas' },
+                    { label: 'Pacientes Atendidos', path: '../../Historia_Clinica/st-odo-06-pacientes/index.html', roles: ['profesional'], desc: 'Lista de pacientes' },
+                    { label: 'Seguimiento de Tratamientos', path: '../../Historia_Clinica/st-odo-07-seguimiento-tratamientos/seguimiento-tratamientos.html', roles: ['profesional'], desc: 'Evolución de tratamientos' },
+                    { label: 'Auditoría de Historias', path: '../../Historia_Clinica/st-adm-11-auditoria-historias/index.html', roles: ['admin'], desc: 'Control de cambios clínicos' },
+                    { label: 'Control Postoperatorio', path: '../../Historia_Clinica/st-aux-07-control-postoperatorio/control-postoperatorio.html', roles: ['auxiliar'], desc: 'Seguimiento post-consulta' },
+                    { label: 'Documentos Clínicos', path: '../../Historia_Clinica/st-aux-08-documentos-clinicos/documentos-clinicos.html', roles: ['auxiliar'], desc: 'Gestión de archivos' },
+                    { label: 'Mi Historial', path: '../../Historia_Clinica/st-pac-02-historial/index.html', roles: ['paciente'], desc: 'Historial del paciente' }
+                ]
+            },
+
+            // ═════ 6. FACTURACIÓN Y PAGOS ═════
+            facturacion: {
+                title: '💳 Facturación y Pagos', icon: '',
+                items: [
+                    { label: 'Gestión de Facturación', path: '../../Facturacion_Y_Pagos/st-adm-12-facturacion/gestionfacturacion.html', roles: ['admin'], desc: 'Control financiero' },
+                    { label: 'Reportes Financieros', path: '../../Facturacion_Y_Pagos/st-adm-13-reportes-financieros/index.html', roles: ['admin'], desc: 'Informes de ingresos' },
+                    { label: 'Generar Factura y Pago', path: '../../Facturacion_Y_Pagos/st-rec-04-generar-factura-registrar-pago/index.html', roles: ['recepcion'], desc: 'Facturación desde recepción' }
+                ]
+            },
+
+            // ═════ 7. SERVICIOS Y RECURSOS ═════
+            servicios: {
+                title: '⚙️ Servicios y Recursos', icon: '',
+                items: [
+                    { label: 'Catálogo de Servicios', path: '../../Servicios_Y_Recursos/st-adm-10-servicios/catalogoservicios.html', roles: ['admin'], desc: 'Administración de tratamientos' },
+                    { label: 'Servicios Prestados', path: '../../Servicios_Y_Recursos/st-odo-05-servicios/index.html', roles: ['profesional'], desc: 'Servicios del profesional' },
+                    { label: 'Configuración General', path: '../../Servicios_Y_Recursos/st-adm-16-configuracion-general/index.html', roles: ['admin'], desc: 'Ajustes globales del sistema' }
+                ]
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  FUNCIONES PRINCIPALES
+        // ═══════════════════════════════════════════════════════════════════
+
+        function renderNavigation() {
+            const nav = document.getElementById('sidebarNav');
+            let html = '';
+
+            // Renderizar TODOS los grupos y TODOS los items (sin filtro por rol)
+            Object.entries(NAVIGATION_DATA).forEach(([key, group]) => {
+                html += `<div class="nav-group"><div class="nav-group-title"><span class="icon">${group.icon}</span>${group.title}</div>`;
+
+                group.items.forEach(item => {
+                    // Crear badges de roles
+                    const badges = item.roles.map(r => {
+                        const labels = { admin: 'Admin', profesional: 'Prof', recepcion: 'Rec', auxiliar: 'Aux', paciente: 'Pac' };
+                        const colors = { admin: 'admin', profesional: 'prof', recepcion: 'rec', auxiliar: 'aux', paciente: 'pac' };
+                        return `<span class="badge-${colors[r]}">${labels[r]}</span>`;
+                    }).join('');
+
+                    html += `<button class="nav-item" data-icon="•" 
+            onclick="navigateTo(event, '${item.path}', '${item.label}', '${item.desc}', '${item.roles.join(', ')}')"
+            title="${item.desc}">${item.label}<span class="badge-role">${badges}</span></button>`;
+                });
+                html += '</div>';
+            });
+            nav.innerHTML = html;
+        }
+
+        function navigateTo(event, path, label, desc, roles) {
+            event?.preventDefault?.();
+
+            // Actualizar panel de info
+            document.getElementById('currentPath').textContent = path;
+            const roleColors = {
+                admin: { bg: '#f3e8ff', color: '#9333ea' }, profesional: { bg: '#dcfce7', color: '#166534' },
+                recepcion: { bg: '#ffedd5', color: '#92400e' }, auxiliar: { bg: '#fce7f3', color: '#9d174d' },
+                paciente: { bg: '#dbeafe', color: '#1d4ed8' }
+            };
+            const rolesHtml = roles.split(', ').map(r => {
+                const c = roleColors[r] || { bg: '#f1f5f9', color: '#475569' };
+                return `<span class="role-tag" style="background:${c.bg};color:${c.color};">${r.toUpperCase()}</span>`;
+            }).join('');
+            document.getElementById('currentRoles').innerHTML = `<strong>Acceso para:</strong><br>${rolesHtml}`;
+
+            // Marcar activo
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            event?.currentTarget?.classList?.add('active');
+
+            // ✅ REDIRECCIÓN REAL con ajuste de rutas
+            let finalPath = path;
+            const currentPath = window.location.pathname;
+
+            // Ajuste automático según ubicación del archivo
+            if (currentPath.includes('/shared/')) {
+                finalPath = path.replace('../../', '../');
+            }
+
+            console.log(`🔄 Redirigiendo: ${label} → ${finalPath}`);
+
+            // ✅ NAVEGACIÓN REAL
+            setTimeout(() => {
+                window.location.href = finalPath;
+            }, 100);
+        }
+
+        function logout() {
+            if (confirm('¿Cerrar sesión y volver al login?')) {
+                window.location.href = '../../Acceso_Y_Seguridad/login/index.html';
+            }
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavigation();
+            console.log('✅ Sidebar cargado con todas las vistas del sistema');
+        });
+    </script>
+</body>
+
+</html>

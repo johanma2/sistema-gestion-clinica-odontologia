@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmileTrack — Iniciar Sesión</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+  <!-- Background -->
+  <div class="login-bg">
+    <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1920&q=80" alt="Clínica dental" class="bg-img">
+    <div class="bg-overlay"></div>
+  </div>
+
+  <!-- Back to home -->
+  <a href="../../Publico/homepage.html" class="back-link" aria-label="Volver al inicio">
+    <span class="material-symbols-outlined back-arrow" aria-hidden="true">arrow_back</span>
+    <span>Volver al inicio</span>
+  </a>
+
+  <!-- Login Container -->
+  <main class="login-main" role="main">
+    <div class="login-card">
+
+      <!-- Header -->
+      <div class="login-header">
+        <div class="logo-wrap">
+          <img src="../../Imagenes/Logos/logo.jpg" alt="Logo SmileTrack" class="logo-img">
+        </div>
+        <h1 class="login-title">SmileTrack</h1>
+        <p class="login-subtitle">Sistema de Gestión Odontológica</p>
+      </div>
+
+      <!-- Role Selection -->
+      <div class="login-section">
+        <p class="section-label" id="roleLabel">Selecciona tu rol</p>
+        <div class="role-grid" role="radiogroup" aria-labelledby="roleLabel">
+          
+          <!-- ✅ CORREGIDO: data-route agregado, <a> eliminado -->
+          <button class="role-btn" type="button" data-role="administrador" data-route="../../Gestion_De_Citas/st-adm-01-dashboard/index.html" role="radio" aria-label="Ingresar como Administrador">
+            <span class="role-text">Administrador</span>
+          </button>
+          
+          <button class="role-btn" type="button" data-role="profesional" data-route="../../Gestion_De_Profesionales/st-odo-01-dashboard/index.html" role="radio" aria-label="Ingresar como Odontólogo">
+            <span class="role-text">Odontólogo</span>
+          </button>
+          
+          <button class="role-btn" type="button" data-role="paciente" data-route="../../Gestion_De_Citas/st-pac-01-mis-citas/index.html" role="radio" aria-label="Ingresar como Paciente">
+            <span class="role-text">Paciente</span>
+          </button>
+          
+          <button class="role-btn" type="button" data-role="recepcionista" data-route="../../Gestion_De_Citas/st-rec-01-dashboard/index.html" role="radio" aria-label="Ingresar como Recepcionista">
+            <span class="role-text">Recepcionista</span>
+          </button>
+          
+          <button class="role-btn" type="button" data-role="auxiliar" data-route="../../Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.html" role="radio" aria-label="Ingresar como Auxiliar">
+            <span class="role-text">Auxiliar</span>
+          </button>
+          
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="login-form" novalidate>
+        
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="email">
+            CORREO ELECTRÓNICO <span class="text-error" aria-hidden="true">*</span>
+          </label>
+          <div class="input-wrap">
+            <span class="material-symbols-outlined input-icon" aria-hidden="true">mail</span>
+            <!-- ✅ CORREGIDO: removed required para evitar validación visual roja -->
+            <input class="form-input" id="email" name="email" placeholder="dr.smith@smiletrack.com" type="email" autocomplete="email" aria-required="true">
+          </div>
+          <span id="emailError" class="error-msg" role="alert"></span>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label" for="password">
+            CONTRASEÑA <span class="text-error" aria-hidden="true">*</span>
+          </label>
+          <div class="input-wrap">
+            <span class="material-symbols-outlined input-icon" aria-hidden="true">lock</span>
+            <!-- ✅ CORREGIDO: removed required -->
+            <input class="form-input" id="password" name="password" placeholder="••••••••" type="password" autocomplete="current-password" aria-required="true">
+            <button id="togglePassword" class="toggle-pass" type="button" aria-label="Mostrar contraseña" aria-pressed="false">
+              <span id="toggleIcon" class="material-symbols-outlined" aria-hidden="true">visibility</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="form-options">
+          <label class="checkbox-wrap">
+            <input class="checkbox-input" type="checkbox" id="rememberMe" name="remember">
+            <span class="checkbox-custom"></span>
+            <span class="checkbox-label">Recordarme</span>
+          </label>
+          <a class="link-forgot" href="../recover/index.html">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <!-- ✅ CORREGIDO: error-box empieza hidden -->
+        <div id="errorMsg" class="error-box hidden" role="alert" aria-live="assertive">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <span id="errorText"></span>
+        </div>
+
+        <!-- Submit -->
+        <button id="loginBtn" class="btn-login" type="submit" aria-busy="false">
+          <span class="material-symbols-outlined" aria-hidden="true">login</span>
+          <span id="btnText">Iniciar Sesión</span>
+        </button>
+
+        <!-- Support -->
+        <div class="form-footer">
+          <p class="footer-text">
+            ¿No tienes cuenta?
+            <a class="link-register" href="../register/index.html">Regístrate aquí</a>
+          </p>
+        </div>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <footer class="login-footer">
+      <p class="footer-badge">
+        <span class="material-symbols-outlined" aria-hidden="true">verified_user</span>
+        Portal Clínico Seguro • v2.4.0
+      </p>
+    </footer>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite">
+    <div class="toast-content">
+      <span class="material-symbols-outlined toast-icon" aria-hidden="true">check_circle</span>
+      <span id="toastMsg"></span>
+    </div>
+  </div>
+
+  <script src="login.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Historia Parcial del Paciente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="historial-parcial.css" />
+</head>
+<body>
+
+  <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Historia parcial) ═════ -->
+   <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="../../Imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img" />
+    </div>
+    <nav class="sidebar-nav">
+      <a href="../st-aux-01-panel-operativo/panel-operativo.html" class="nav-item " data-icon="📊" aria-current="page">Panel operativo</a>   
+      <a href="../st-aux-02-agenda-apoyo/agenda-apoyo.html" class="nav-item" data-icon="🗓️">Agenda de apoyo</a>
+      <a href="../../Gestion_De_Pacientes/st-aux-03-preparacion-consulta/preparacion-consulta.html" class="nav-item" data-icon="✅">Preparación consulta</a>
+      <a href="historial-parcial.html" class="nav-item active" data-icon="📋" aria-current="page">Historia parcial</a>
+      <a href="../st-aux-06-asistencia-procedimiento/asistencia-procedimiento.html" class="nav-item" data-icon="🔄">Asistencia procedimiento</a>
+      <a href="../../Historia_Clinica/st-aux-07-control-postoperatorio/control-postoperatorio.html" class="nav-item" data-icon="🏥">Control post-operatorio</a>     
+      <a href="../../Historia_Clinica/st-aux-08-documentos-clinicos/documentos-clinicos.html" class="nav-item" data-icon="📎">Carga documentos</a>
+      <a href="../st-aux-09-estado-consultorio/estado-consultorio.html" class="nav-item" data-icon="🚑">Estado consultorio</a>
+      <a href="../st-aux-10-citas-finalizadas/citas-finalizadas.html" class="nav-item" data-icon="✅">Citas finalizadas</a>
+      <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../../Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.html" class="nav-item" data-icon="👤">Mi perfil</a>
+    </nav>
+    <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">Au</div>
+      <div class="user-info">
+        <span class="user-role">Auxiliar</span>
+        <span class="user-email">auxiliar@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Page header con metadatos del paciente -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Auxiliar</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Historial Clínico</span>
+        </nav>
+        <h1 class="page-title">Historial Clínico — Solo Lectura</h1>
+        <p class="page-subtitle" id="patientMeta" aria-live="polite">Cargando...</p>
+      </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <div class="content">
+
+      <!-- Alerta médica con role alert para anuncio inmediato -->
+      <div class="alerta-medica" id="alertaMedica" role="alert" aria-live="assertive">
+        <div class="alerta-medica-title">
+          <span aria-hidden="true">⚠️</span>
+          <span>ALERTA MÉDICA — LEER ANTES DE PROCEDER</span>
+        </div>
+        <div class="alerta-medica-row">
+          <span class="alerta-medica-icon" aria-hidden="true">🚨</span>
+          <span><strong>Alergia:</strong> <span class="alerta-medica-value red" id="alergia" aria-live="polite">—</span></span>
+        </div>
+        <div class="alerta-medica-row">
+          <span class="alerta-medica-icon" aria-hidden="true">💊</span>
+          <span><strong>Medicamentos:</strong> <span class="alerta-medica-value" id="medicamentos" aria-live="polite">—</span></span>
+        </div>
+        <div class="alerta-medica-row">
+          <span class="alerta-medica-icon" aria-hidden="true">🩸</span>
+          <span><strong>Grupo sanguíneo:</strong> <span class="alerta-medica-value" id="grupoSang" aria-live="polite">—</span></span>
+        </div>
+      </div>
+
+      <!-- Tabla de historial con estructura accesible -->
+      <div class="table-card">
+        <div class="table-scroll">
+          <table class="hist-table" aria-label="Historial de consultas del paciente">
+            <thead>
+              <tr>
+                <th scope="col">FECHA</th>
+                <th scope="col">PROFESIONAL</th>
+                <th scope="col">DIAGNÓSTICO</th>
+                <th scope="col">PROCEDIMIENTO</th>
+              </tr>
+            </thead>
+            <tbody id="histBody" aria-live="polite">
+              <!-- Skeleton loader inicial para feedback visual durante carga -->
+              <tr class="skeleton-row">
+                <td><div class="skeleton-cell" style="width:80px" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:130px" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:90%" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:90%" aria-hidden="true"></div></td>
+              </tr>
+              <tr class="skeleton-row">
+                <td><div class="skeleton-cell" style="width:80px" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:130px" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:90%" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:90%" aria-hidden="true"></div></td>
+              </tr>
+              <tr class="skeleton-row">
+                <td><div class="skeleton-cell" style="width:80px" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:130px" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:90%" aria-hidden="true"></div></td>
+                <td><div class="skeleton-cell" style="width:90%" aria-hidden="true"></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer" id="tableFooter" role="note">
+          Solo se muestran las últimas 3 consultas. Para ver el historial completo contacta a tu supervisor.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Toast container con atributos ARIA para notificaciones -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para contenido solo accesible por screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+    .skip-link:focus { top: 0; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="historial-parcial.js"></script>
+</body>
+</html>

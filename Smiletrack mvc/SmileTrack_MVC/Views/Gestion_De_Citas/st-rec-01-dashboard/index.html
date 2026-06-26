@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Panel de Recepción</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- [MEJORA]: Skip link para accesibilidad keyboard-first (consistente con módulos anteriores) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Panel) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="../../Imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img" />
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-icon="📊" aria-current="page">Panel</a>
+      <a href="../../Gestion_De_Pacientes/st-rec-02-registrar-paciente-agendar-cita/nuevo_paciente.html" class="nav-item" data-icon="👥">Pacientes</a>
+      <a href="../st-rec-03-gestion-citas/index.html" class="nav-item" data-icon="📅">Citas</a>
+      <a href="../../Facturacion_Y_Pagos/st-rec-04-generar-factura-registrar-pago/index.html" class="nav-item" data-icon="🧾">Facturas</a>
+      <a href="../st-rec-05-recordatorios/index.html" class="nav-item" data-icon="🔔">Recordatorios</a>
+      <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../../Perfiles/st-rec-06-perfil-recepcionista/perfil-recepcionista.html" class="nav-item" data-icon="👤">Mi perfil</a>
+    </nav>
+    <!-- [MEJORA]: aria-label más descriptivo para logout (consistente con módulos anteriores) -->
+    <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">RE</div>
+      <div class="user-info">
+        <span class="user-role">Recepción</span>
+        <span class="user-email">recepcion@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <!-- [MEJORA]: aria-expanded y aria-controls para accesibilidad de menú móvil -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <!-- [MEJORA]: aria-hidden inicial para overlay -->
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Page header -->
+    <header class="page-header">
+      <div class="header-left">
+        <div class="breadcrumb">Recepción → Panel</div>
+        <h1 class="page-title">Panel de Recepción</h1>
+        <!-- [MEJORA]: time datetime para accesibilidad de fecha/hora -->
+        <p class="page-subtitle">Miércoles 20 de marzo 2026 - <time class="text-primary font-bold" datetime="2026-03-20T09:47">09:47 AM</time></p>
+      </div>
+    </header>
+
+    <!-- Alert Banner (próximas citas) -->
+    <!-- [MEJORA]: role="region" + aria-label para sección importante -->
+    <div class="alert-banner" role="region" aria-label="Próximas citas en los siguientes 30 minutos">
+      <div class="alert-banner-icon" aria-hidden="true">⏰</div>
+      <div class="alert-banner-content">
+        <h3 class="alert-banner-title">Próximas citas — en los siguientes 30 minutos</h3>
+        <div class="alert-banner-desc">
+          <!-- [MEJORA]: time datetime para cada cita -->
+          <p><time datetime="2026-03-20T10:00"><strong>10:00 AM</strong></time> Pedro García - Control - Dr. Carlos Méndez - Consultorio 1</p>
+          <p><time datetime="2026-03-20T10:30"><strong>10:30 AM</strong></time> María López - Dra. Laura Gómez - Limpieza - Consultorio 2</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Grid (usando clases unificadas) -->
+    <!-- [MEJORA]: aria-label para sección de estadísticas -->
+    <section class="stats-grid" aria-label="Resumen de actividad del día">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number">24</span>
+        <span class="stat-label">Citas hoy</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number">18</span>
+        <span class="stat-label">Confirmadas</span>
+      </div>
+      <div class="stat-card" data-color="orange">
+        <span class="stat-number">3</span>
+        <span class="stat-label">Pendientes</span>
+      </div>
+      <div class="stat-card" data-color="purple">
+        <span class="stat-number">$645k</span>
+        <span class="stat-label">Facturas pendientes</span>
+      </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <!-- [MEJORA]: role="group" para botones relacionados -->
+    <div class="action-buttons-row" role="group" aria-label="Acciones rápidas">
+      <!-- [MEJORA]: aria-label descriptivo para cada botón -->
+      <button class="btn-action btn-green" id="btnNuevoPaciente" aria-label="Registrar nuevo paciente en el sistema">
+        <span aria-hidden="true">➕</span> Nuevo paciente
+      </button>
+      <button class="btn-action btn-blue" id="btnGenerarFactura" aria-label="Generar nueva factura para paciente">
+        <span aria-hidden="true">🧾</span> Generar factura
+      </button>
+    </div>
+
+    <!-- Content Layout: Table + Widgets -->
+    <div class="content-layout">
+
+      <!-- Table Section -->
+      <div class="table-section">
+        <div class="table-wrap">
+          <!-- [MEJORA]: aria-label y role para tabla accesible -->
+          <table class="table-base" aria-label="Listado de citas del día">
+            <thead>
+              <tr>
+                <!-- [MEJORA]: scope="col" para accesibilidad de tablas -->
+                <th scope="col">Hora</th>
+                <th scope="col">Paciente</th>
+                <th scope="col">Profesional</th>
+                <th scope="col">Servicio</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <!-- [MEJORA]: aria-live para anunciar cambios dinámicos en la tabla -->
+            <tbody id="appointmentsTable" aria-live="polite"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Widgets Section -->
+      <aside class="widgets-section" aria-label="Información complementaria">
+
+        <!-- Alertas Pendientes -->
+        <div class="sidebar-card">
+          <h4 class="sidebar-card-title" id="alertasTitle">⚠️ Alertas pendientes</h4>
+          <!-- [MEJORA]: role="list" + aria-labelledby para estructura semántica -->
+          <div class="alerts-list" role="list" aria-labelledby="alertasTitle">
+            <div class="alert-item-card" role="listitem">
+              <div class="alert-item-header">
+                <span class="icon red" aria-hidden="true">✕</span>
+                <span>3 pacientes sin confirmar</span>
+              </div>
+              <!-- [MEJORA]: aria-label descriptivo para botón de acción -->
+              <button class="btn-notify btn-notify-red" data-alert="sin-confirmar" aria-label="Enviar notificación a pacientes sin confirmar">Notificar</button>
+            </div>
+            <div class="alert-item-card" role="listitem">
+              <div class="alert-item-header">
+                <span class="icon orange" aria-hidden="true">🔥</span>
+                <span>2 facturas vencidas</span>
+              </div>
+              <button class="btn-notify btn-notify-orange" data-alert="facturas-vencidas" aria-label="Enviar recordatorio de pago por facturas vencidas">Notificar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sistema en línea -->
+        <div class="sidebar-card">
+          <h4 class="sidebar-card-title">🟢 Estado del sistema</h4>
+          <p style="font-size:.85rem;color:var(--text-muted);">Todos los servicios operativos</p>
+          <p style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">Última verificación: hace 2 min</p>
+        </div>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Toast -->
+  <!-- [MEJORA]: aria-atomic="true" para que lectores anuncien mensaje completo -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

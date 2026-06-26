@@ -1,0 +1,321 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dashboard General de SmileTrack - Sistema de Gestión Dental" />
+  <title>SmileTrack — Dashboard General</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- â•â•â•â•â• SIDEBAR UNIFICADO (Estándar SmileTrack) â•â•â•â•â• -->
+    <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../../imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img"/>
+    </div>
+                <nav class="sidebar-nav">
+      <a href="../../Gestion_De_Profesionales/st-odo-01-dashboard/index.html" class="nav-item active" aria-current="page" data-icon="🏠">Mi dashboard</a>
+      <a href="../../Gestion_De_Citas/st-odo-02-agenda/index.html" class="nav-item" data-icon="📅">Mi agenda</a>
+      <a href="../../Historia_Clinica/st-odo-03-historial/gestion-historial.html" class="nav-item" data-icon="📋">Historia Clínica</a>
+      <a href="../../Historia_Clinica/st-odo-04-odontograma/odontograma-digital.html" class="nav-item" data-icon="🦷">Odontograma</a>
+      <a href="../../Servicios_Y_Recursos/st-odo-05-servicios/index.html" class="nav-item" data-icon="💼">Servicios</a>
+      <a href="../../Historia_Clinica/st-odo-06-pacientes/index.html" class="nav-item" data-icon="👥">Mis Pacientes</a>
+      <a href="../../Historia_Clinica/st-odo-07-seguimiento-tratamientos/seguimiento-tratamientos.html" class="nav-item" data-icon="📋">Tratamientos</a>
+      <a href="../../Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.html" class="nav-item" data-icon="📊">Mis reportes</a>
+      <a href="../../Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil-profesional.html" class="nav-item" data-icon="👤">Mi perfil</a>
+        <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">OD</div>
+      <div class="user-info">
+        <span class="user-role">Odontólogo</span>
+        <span class="user-email">odontologo@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- â•â•â•â•â• HAMBURGER (móvil) â•â•â•â•â• -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- â•â•â•â•â• MAIN â•â•â•â•â• -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Administración</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Dashboard</span>
+        </nav>
+        <h1 class="page-title">Dashboard General</h1>
+        <p class="page-subtitle">
+          Resumen en tiempo real · 
+          <time datetime="2026-03-24" id="headerDate">martes 24 de marzo 2026</time>
+        </p>
+      </div>
+      <button class="btn-primary" id="btnExport" aria-label="Exportar reporte en PDF y Excel">
+        📊 Exportar reporte
+      </button>
+    </header>
+
+    <!-- Barra de progreso superior -->
+    <div class="progress-row" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso del sistema: 75%">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="topProgressBar" style="width:75%"></div>
+      </div>
+      <span class="progress-label" aria-live="polite">Sistema operativo</span>
+    </div>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid" aria-label="Métricas principales">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number" id="statPacientes" data-target="142" aria-live="polite">0</span>
+        <span class="stat-label">Pacientes activos</span>
+        <span class="stat-vs up" aria-live="polite">↑ 12</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number" id="statCitas" data-target="24" aria-live="polite">0</span>
+        <span class="stat-label">Citas hoy</span>
+        <span class="stat-vs up" aria-live="polite">↑ 4</span>
+      </div>
+      <div class="stat-card" data-color="orange">
+        <span class="stat-number" id="statProfesionales" data-target="8" aria-live="polite">0</span>
+        <span class="stat-label">Profesionales activos</span>
+        <span class="stat-vs" style="visibility:hidden" aria-hidden="true">↑ 0</span>
+      </div>
+      <div class="stat-card" data-color="purple">
+        <span class="stat-number" id="statIngresos" aria-live="polite">$4.2M</span>
+        <span class="stat-label">Ingresos del mes</span>
+        <span class="stat-vs up" aria-live="polite">↑ 13.5%</span>
+      </div>
+    </section>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+
+      <!-- Columna izquierda: Gráficos -->
+      <div class="content-left">
+
+        <!-- Gráfico de ingresos -->
+        <section class="card" aria-labelledby="revenueTitle">
+          <h2 class="card-title" id="revenueTitle">Ingresos por mes — 2026</h2>
+          <div class="chart-container" id="revenueChart" role="img" aria-label="Gráfico de barras: ingresos mensuales">
+            <div class="chart-row">
+              <span class="chart-label">Enero</span>
+              <div class="chart-bar-bg">
+                <div class="chart-bar-fill blue" data-width="65" style="width:0" role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" aria-label="Enero: $3.1M, 65% del máximo"></div>
+              </div>
+              <span class="chart-val">$3.1M</span>
+            </div>
+            <div class="chart-row">
+              <span class="chart-label">Febrero</span>
+              <div class="chart-bar-bg">
+                <div class="chart-bar-fill blue" data-width="75" style="width:0" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" aria-label="Febrero: $3.7M, 75% del máximo"></div>
+              </div>
+              <span class="chart-val">$3.7M</span>
+            </div>
+            <div class="chart-row">
+              <span class="chart-label">Marzo</span>
+              <div class="chart-bar-bg">
+                <div class="chart-bar-fill green" data-width="85" style="width:0" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100" aria-label="Marzo: $4.2M, 85% del máximo"></div>
+              </div>
+              <span class="chart-val">$4.2M</span>
+            </div>
+          </div>
+          <p class="chart-summary" aria-live="polite">↑ 13.5% vs mes anterior</p>
+        </section>
+
+        <!-- Tabla de profesionales top -->
+        <section class="card" aria-labelledby="topProfTitle">
+          <h2 class="card-title" id="topProfTitle">Top profesionales del mes</h2>
+          <div class="table-wrap">
+            <table class="table-base" aria-label="Tabla de profesionales más productivos">
+              <thead>
+                <tr>
+                  <th scope="col">Profesional</th>
+                  <th scope="col" style="text-align:center">Espec.</th>
+                  <th scope="col" style="text-align:center">Citas</th>
+                  <th scope="col" style="text-align:right">Ingresos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="td-avatar avatar-blue" aria-hidden="true">CM</div>
+                    <span class="td-name">Dr. Carlos Méndez</span>
+                  </td>
+                  <td style="text-align:center"><span class="badge-spec">Gral.</span></td>
+                  <td style="text-align:center" class="td-strong">42</td>
+                  <td style="text-align:right" class="td-success">$1.8M</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="td-avatar avatar-green" aria-hidden="true">LG</div>
+                    <span class="td-name">Dra. Laura Gómez</span>
+                  </td>
+                  <td style="text-align:center"><span class="badge-spec">Ortod.</span></td>
+                  <td style="text-align:center" class="td-strong">38</td>
+                  <td style="text-align:right" class="td-success">$1.4M</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="td-avatar avatar-purple" aria-hidden="true">AT</div>
+                    <span class="td-name">Dr. Andrés Torres</span>
+                  </td>
+                  <td style="text-align:center"><span class="badge-spec">Cirugía</span></td>
+                  <td style="text-align:center" class="td-strong">35</td>
+                  <td style="text-align:right" class="td-success">$1.3M</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Columna derecha: Estado e invoices -->
+      <div class="content-right">
+
+        <!-- Estado de citas -->
+        <section class="card" aria-labelledby="statusTitle">
+          <h2 class="card-title" id="statusTitle">Citas del mes por estado</h2>
+          <div class="status-chart" id="statusChart" role="img" aria-label="Gráfico de estado de citas">
+            <div class="status-row">
+              <span class="status-label">Atendidas</span>
+              <div class="status-bar-bg">
+                <div class="status-bar-fill green" data-width="80" style="width:0" role="progressbar" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100" aria-label="Atendidas: 186 citas, 80%"></div>
+              </div>
+              <span class="status-val">186</span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">Agendadas</span>
+              <div class="status-bar-bg">
+                <div class="status-bar-fill blue" data-width="35" style="width:0" role="progressbar" aria-valuenow="35" aria-valuemin="0" aria-valuemax="100" aria-label="Agendadas: 67 citas, 35%"></div>
+              </div>
+              <span class="status-val">67</span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">Canceladas</span>
+              <div class="status-bar-bg">
+                <div class="status-bar-fill red" data-width="15" style="width:0" role="progressbar" aria-valuenow="15" aria-valuemin="0" aria-valuemax="100" aria-label="Canceladas: 29 citas, 15%"></div>
+              </div>
+              <span class="status-val">29</span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">No asistió</span>
+              <div class="status-bar-bg">
+                <div class="status-bar-fill orange" data-width="10" style="width:0" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100" aria-label="No asistió: 14 citas, 10%"></div>
+              </div>
+              <span class="status-val">14</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Facturas pendientes -->
+        <section class="card" aria-labelledby="invoicesTitle">
+          <h2 class="card-title" id="invoicesTitle">Facturas pendientes de cobro</h2>
+          <div class="invoices-list" role="list">
+            <div class="invoice-item warning" role="listitem">
+              <div>
+                <p class="invoice-code">FAC-2026-0015</p>
+                <p class="invoice-desc"><time datetime="2026-03-24">Vence hoy</time> · María López</p>
+              </div>
+              <p class="invoice-amount">$120.000</p>
+            </div>
+            <div class="invoice-item danger" role="listitem">
+              <div>
+                <p class="invoice-code">FAC-2026-0012</p>
+                <p class="invoice-desc"><time datetime="2026-03-21">Vencida</time> · Carlos Ruiz</p>
+              </div>
+              <p class="invoice-amount">$450.000</p>
+            </div>
+            <div class="invoice-item muted" role="listitem">
+              <div>
+                <p class="invoice-code">FAC-2026-0018</p>
+                <p class="invoice-desc"><time datetime="2026-03-31">Vence en 7 días</time> · Pedro García</p>
+              </div>
+              <p class="invoice-amount">$75.000</p>
+            </div>
+          </div>
+          <div class="invoices-total" aria-live="polite">
+            <span>Total pendiente:</span>
+            <strong>$645.000</strong>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Mobile bottom nav -->
+        <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="../../Gestion_De_Profesionales/st-odo-01-dashboard/index.html" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">🏠</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="../../Gestion_De_Citas/st-odo-02-agenda/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
+    </a>
+    <a href="../../Historia_Clinica/st-odo-06-pacientes/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Pacientes</span>
+    </a>
+    <a href="../../Historia_Clinica/st-odo-03-historial/gestion-historial.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📋</span>
+      <span>Historial</span>
+    </a>
+    <a href="../../Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil-profesional.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Perfil</span>
+    </a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+    .skip-link:focus { top: 0; outline: 2px solid #fff; outline-offset: 2px; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="app.js"></script>
+</body>
+</html>

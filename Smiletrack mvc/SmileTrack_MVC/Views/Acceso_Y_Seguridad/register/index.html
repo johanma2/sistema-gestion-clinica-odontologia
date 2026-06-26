@@ -1,0 +1,285 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="es">
+
+<head>
+    <!-- Codificación UTF-8 para soportar tildes y caracteres especiales en español -->
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Crear Cuenta - Smile Track</title>
+
+    <!-- Tailwind CSS desde CDN con plugins para formularios y container queries -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Fuentes del sistema: Montserrat para títulos, Roboto para cuerpo de texto -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <!-- Iconos Material Symbols para elementos visuales de la interfaz -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;500;700,FILL@0..1&display=swap"
+        rel="stylesheet" />
+
+    <!-- Hoja de estilos personalizada para esta vista de registro -->
+    <link href="register.css" rel="stylesheet" />
+
+    <!-- Configuración de Tailwind con colores y tipografías del sistema SmileTrack -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#1E88E5',
+                        'accent': '#43A047',
+                        'background': '#FFFFFF',
+                        'surface': '#F5F7FA',
+                        'text-primary': '#212121',
+                        'text-secondary': '#1E88E5',
+                        'success': '#43A047',
+                        'error': '#E53935',
+                        'warning': '#FBC02D',
+                        'info': '#42A5F5'
+                    },
+                    fontFamily: {
+                        'title': ['Montserrat', 'sans-serif'],
+                        'body': ['Roboto', 'sans-serif']
+                    },
+                    fontSize: {
+                        'h1': ['32px', { lineHeight: '1.2', fontWeight: '700' }],
+                        'h2': ['24px', { lineHeight: '1.3', fontWeight: '600' }],
+                        'body': ['16px', { lineHeight: '1.5', fontWeight: '400' }],
+                        'label': ['14px', { lineHeight: '1.4', fontWeight: '500' }],
+                        'button': ['16px', { lineHeight: '1.5', fontWeight: '700' }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .dental-gradient-overlay {
+            background: linear-gradient(135deg, rgba(0, 53, 95, 0.85) 0%, rgba(25, 28, 30, 0.7) 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-background font-body text-text-primary antialiased min-h-screen flex items-center justify-center p-6">
+
+    <!-- Fondo de página con imagen de clínica y overlay degradado para legibilidad -->
+    <div class="fixed inset-0 z-0">
+        <img alt="Clínica Dental" class="w-full h-full object-cover"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNvm84fO25nT6Fr-OiDad7iFRSETdrOn4tHsUL8JKUgudSDvYRNPtrG9uEEUFrie9rqPDEDmAUFlIdyUAH6ZP9Ym_KEkAIc_hgv3UJpzaNU5prUsdX4Ov9pPSqdM0xz9duoLLLTsefcV6XRqc8niA4YIeMAG3MMalq26KtHT9ml0kug6lLffddb75SJ3iTz6LpRWDSXz1Hqe1tjYmDSsE6nWDBRLDIcEbyygv-dzhsaCU3OlCKmEuZ1EVVMrd2C1RrXEo1dHKiaw" />
+        <div class="absolute inset-0 dental-gradient-overlay backdrop-blur-sm"></div>
+    </div>
+
+    <!-- Contenedor principal del formulario de registro -->
+    <main class="relative z-10 w-full max-w-2xl">
+        <div class="bg-[#1a3150]/95 backdrop-blur-md shadow-2xl rounded-3xl border border-white/20 overflow-hidden">
+
+            <!-- Encabezado: logo, título y descripción -->
+            <div class="p-6 text-center space-y-4">
+                <div class="flex justify-center mb-4">
+                    <!-- Logo: ruta corregida a assets/images/logos/logo.jpg -->
+                    <img src="../../Imagenes/Logos/logo.jpg" alt="Logo Smile Track"
+                        class="h-24 w-auto object-contain drop-shadow-md">
+                </div>
+                <h1 class="font-title text-h1 text-white font-bold tracking-tight">Smile Track</h1>
+                <p class="font-body text-label text-white/80">Únete a la red dental profesional</p>
+            </div>
+
+            <!-- Formulario de registro con validación en tiempo real -->
+            <form id="registerForm" class="px-10 pb-10 space-y-6">
+
+                <!-- Sección: Datos Personales -->
+                <fieldset class="space-y-2">
+                    <legend class="font-title text-h3 text-white font-medium mb-4 block">Datos Personales</legend>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide"
+                                for="first-name">Nombres</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full pl-12 pr-4 py-3 bg-[#0f1f33]/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 focus:border-white transition-all duration-300 font-body text-white placeholder:text-white/40 outline-none peer"
+                                    id="first-name" name="firstName" placeholder="Ej: Juan Carlos" type="text"
+                                    required />
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide"
+                                for="last-name">Apellidos</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full pl-12 pr-4 py-3 bg-[#0f1f33]/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 focus:border-white transition-all duration-300 font-body text-white placeholder:text-white/40 outline-none peer"
+                                    id="last-name" name="lastName" placeholder="Ej: Pérez García" type="text"
+                                    required />
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Sección: Documentación -->
+                <fieldset class="space-y-2">
+                    <legend class="font-title text-h3 text-white font-medium mb-4 block">Documentación</legend>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide"
+                                for="doc-type">Tipo Documento</label>
+                            <div class="relative">
+                                <select
+                                    class="w-full pl-12 pr-12 py-3 bg-[#0f1f33]/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 focus:border-white transition-all duration-300 font-body text-white appearance-none cursor-pointer peer"
+                                    id="doc-type" name="docType" required>
+                                    <option value="" class="text-gray-500">Seleccionar tipo...</option>
+                                    <option value="dni" class="text-black">Cedula de Ciudadania</option>
+                                    <option value="tarjetaidentidad" class="text-black">Tarjeta de Identidad</option>
+                                    <option value="cedulaextranjeria" class="text-black">Cedula de Extranjeria</option>
+                                    <option value="Pasa " class="text-black">Pasaporte</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide"
+                                for="doc-num">Número Documento</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full pl-12 pr-4 py-3 bg-[#0f1f33]/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 focus:border-white transition-all duration-300 font-body text-white placeholder:text-white/40 outline-none peer"
+                                    id="doc-num" name="docNumber" placeholder="Ej: 12345678" type="text" required />
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Sección: Contacto -->
+                <fieldset class="space-y-2">
+                    <legend class="font-title text-h3 text-white font-medium mb-4 block">Contacto</legend>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide"
+                                for="email">Correo Electrónico</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full pl-12 pr-4 py-3 bg-[#0f1f33]/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 focus:border-white transition-all duration-300 font-body text-white placeholder:text-white/40 outline-none peer"
+                                    id="email" name="email" placeholder="odontologo@clinicadental.com" type="email"
+                                    required />
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide"
+                                for="phone">Teléfono</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full pl-12 pr-4 py-3 bg-[#0f1f33]/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 focus:border-white transition-all duration-300 font-body text-white placeholder:text-white/40 outline-none peer"
+                                    id="phone" name="phone" placeholder="+57 300 123 456" type="tel" required />
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Sección: Seguridad (contraseñas) -->
+                <fieldset class="space-y-2">
+                    <legend class="font-title text-h3 text-white font-medium mb-4 block">Seguridad</legend>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide"
+                                for="password">Contraseña</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full pl-12 pr-12 py-3 bg-[#0f1f33]/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 focus:border-white transition-all duration-300 font-body text-white placeholder:text-white/40 outline-none peer"
+                                    id="password" name="password" placeholder="Mínimo 8 caracteres" type="password"
+                                    required />
+                                <!-- Botón para mostrar/ocultar contraseña con icono SVG -->
+                                <button type="button" id="togglePassword"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors p-1 z-10">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                        </path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <!-- Barra de fortaleza de contraseña (se muestra al escribir) -->
+                            <div id="passwordStrength" class="h-1 bg-white/20 rounded-full overflow-hidden mt-1 hidden">
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide"
+                                for="confirm-password">Confirmar Contraseña</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full pl-12 pr-4 py-3 bg-[#0f1f33]/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 focus:border-white transition-all duration-300 font-body text-white placeholder:text-white/40 outline-none peer"
+                                    id="confirm-password" name="confirmPassword" placeholder="Repite tu contraseña"
+                                    type="password" required />
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Checkbox de aceptación de términos -->
+                <div class="space-y-3 pt-2">
+                    <label
+                        class="flex items-start cursor-pointer group p-3 bg-[#0f1f33]/50 rounded-xl border border-white/20 hover:border-white transition-all">
+                        <div class="relative flex items-center mt-0.5 mr-4 flex-shrink-0">
+                            <input class="peer sr-only" id="terms" name="terms" type="checkbox" required />
+
+                            <!-- Checkbox personalizado: MISMO ESTILO QUE LOGIN -->
+                            <div
+                                class="w-5 h-5 border border-white/20 rounded bg-[#0f1f33] peer-checked:bg-[#a0c9ff] peer-checked:border-[#a0c9ff] transition-all flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[#00355f] text-[14px]"
+                                    style="font-variation-settings: 'FILL' 1;"></span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="font-body text-body text-white/80 group-hover:text-white transition-colors leading-relaxed">
+                            Acepto los <a href="javascript:void(0)"
+                                class="font-semibold hover:underline transition-all">Términos de Servicio</a> y
+                            <a href="javascript:void(0)" class="font-semibold hover:underline transition-all">Política
+                                de Privacidad</a> de Smile Track.
+                            <p class="text-sm text-white/50 mt-1 font-normal">Tu información está protegida con
+                                certificación HIPAA.</p>
+                        </div>
+                    </label>
+                </div>
+                <div class="font-body text-body text-white/80 group-hover:text-white transition-colors leading-relaxed">
+                    Acepto los <a href="javascript:void(0)"
+                        class="font-semibold hover:underline transition-all">Términos de Servicio</a> y
+                    <a href="javascript:void(0)" class="font-semibold hover:underline transition-all">Política
+                        de Privacidad</a> de Smile Track.
+                    <p class="text-sm text-white/50 mt-1 font-normal">Tu información está protegida con
+                        certificación HIPAA.</p>
+                </div>
+                </label>
+        </div>
+
+        <!-- Botón de envío del formulario (CORREGIDO) -->
+        <button id="registerBtn"
+            class="w-full bg-[#a0c9ff] text-[#00355f] py-4 rounded-2xl font-title text-button hover:bg-white transition-all duration-300 flex items-center justify-center gap-3 shadow-xl hover:shadow-2xl font-bold text-lg group"
+            type="submit">
+            Crear Cuenta
+        </button>
+
+        <!-- Enlace para volver al inicio de sesión -->
+        <div class="pt-8 border-t border-white/20 text-center">
+            <p class="font-body text-label text-white/80">
+                ¿Ya tienes cuenta?
+                <a class="text-[#a0c9ff] font-semibold hover:underline font-medium" href="../login/index.html">Inicia
+                    sesión aquí</a>
+            </p>
+        </div>
+        </form>
+        </div>
+
+        <!-- Pie de página con información de seguridad -->
+        <footer class="mt-8 text-center">
+            <p class="font-mono text-sm text-white/70 flex items-center justify-center gap-2 uppercase tracking-wider">
+                Portal Clínico Seguro • v2.4.0
+            </p>
+        </footer>
+    </main>
+
+    <!-- Script principal de la vista de registro -->
+    <script src="register.js"></script>
+</body>
+
+</html>

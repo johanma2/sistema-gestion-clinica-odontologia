@@ -1,0 +1,198 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Mis Pacientes</title>
+  <meta name="description" content="Gestiona y consulta la información de tus pacientes en SmileTrack." />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="pacientes.css" />
+</head>
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Mis Pacientes) ═════ -->
+   <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../../imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img"/>
+    </div>
+                <nav class="sidebar-nav">
+      <a href="../../Gestion_De_Profesionales/st-odo-01-dashboard/index.html" class="nav-item" data-icon="🏠">Mi dashboard</a>
+      <a href="../../Gestion_De_Citas/st-odo-02-agenda/index.html" class="nav-item" data-icon="📅">Mi agenda</a>
+      <a href="../../Historia_Clinica/st-odo-03-historial/gestion-historial.html" class="nav-item" data-icon="📋">Historia Clínica</a>
+      <a href="../../Historia_Clinica/st-odo-04-odontograma/odontograma-digital.html" class="nav-item" data-icon="🦷">Odontograma</a>
+      <a href="../../Servicios_Y_Recursos/st-odo-05-servicios/index.html" class="nav-item" data-icon="💼">Servicios</a>
+      <a href="../../Historia_Clinica/st-odo-06-pacientes/index.html" class="nav-item active" aria-current="page" data-icon="👥">Mis Pacientes</a>
+      <a href="../../Historia_Clinica/st-odo-07-seguimiento-tratamientos/seguimiento-tratamientos.html" class="nav-item" data-icon="📋">Tratamientos</a>
+      <a href="../../Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.html" class="nav-item" data-icon="📊">Mis reportes</a>
+      <a href="../../Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil-profesional.html" class="nav-item" data-icon="👤">Mi perfil</a>
+        <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">OD</div>
+      <div class="user-info">
+        <span class="user-role">Odontólogo</span>
+        <span class="user-email">odontologo@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Odontólogo</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Mis Pacientes</span>
+        </nav>
+        <h1 class="page-title">Mis Pacientes</h1>
+        <p class="page-subtitle">Consulta y gestiona la información de tus pacientes atendidos</p>
+      </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid" aria-label="Resumen de pacientes">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number" id="statTotal" data-target="42" aria-live="polite">0</span>
+        <span class="stat-label">Total pacientes</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number" id="statActivos" data-target="28" aria-live="polite">0</span>
+        <span class="stat-label">Activos</span>
+      </div>
+      <div class="stat-card" data-color="orange">
+        <span class="stat-number" id="statSeguimiento" data-target="9" aria-live="polite">0</span>
+        <span class="stat-label">En seguimiento</span>
+      </div>
+      <div class="stat-card" data-color="purple">
+        <span class="stat-number" id="statAltas" data-target="5" aria-live="polite">0</span>
+        <span class="stat-label">Altas médicas</span>
+      </div>
+    </section>
+
+    <!-- Filtros y búsqueda -->
+    <section class="filters-section" aria-label="Filtros de pacientes">
+      <div class="filters-row">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="searchInput" class="search-input" placeholder="Buscar paciente por nombre..." aria-label="Buscar paciente por nombre o cédula">
+        </div>
+        <div class="filter-wrap">
+          <label for="filterEstado" class="visually-hidden">Filtrar por estado</label>
+          <select id="filterEstado" class="status-select" aria-label="Filtrar pacientes por estado">
+            <option value="">Todos los estados</option>
+            <option value="activo">Activos</option>
+            <option value="seguimiento">En seguimiento</option>
+            <option value="alta">Altas médicas</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabla de pacientes -->
+    <section class="table-card" aria-labelledby="pacientesTitle">
+      <h2 class="visually-hidden" id="pacientesTitle">Lista de pacientes</h2>
+      <div class="table-wrap">
+        <table id="pacientesTable" class="table-base" aria-label="Tabla de pacientes atendidos">
+          <thead>
+            <tr>
+              <th scope="col">PACIENTE</th>
+              <th scope="col">ÚLTIMA CONSULTA</th>
+              <th scope="col">SERVICIO</th>
+              <th scope="col">PRÓXIMA CITA</th>
+              <th scope="col">ESTADO</th>
+              <th scope="col">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody id="pacientesTbody" aria-live="polite">
+            <!-- Filas inyectadas por pacientes.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal de detalle de paciente -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalClose" aria-label="Cerrar ventana de detalle">×</button>
+      <h2 class="modal-title" id="modalTitle">Detalle del Paciente</h2>
+      <div id="modalContent" role="document"></div>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+        <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="../../Gestion_De_Profesionales/st-odo-01-dashboard/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">🏠</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="../../Gestion_De_Citas/st-odo-02-agenda/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
+    </a>
+    <a href="../../Historia_Clinica/st-odo-06-pacientes/index.html" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Pacientes</span>
+    </a>
+    <a href="../../Historia_Clinica/st-odo-03-historial/gestion-historial.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📋</span>
+      <span>Historial</span>
+    </a>
+    <a href="../../Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil-profesional.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Perfil</span>
+    </a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+    .skip-link:focus { top: 0; outline: 2px solid #fff; outline-offset: 2px; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="pacientes.js"></script>
+</body>
+</html>
+

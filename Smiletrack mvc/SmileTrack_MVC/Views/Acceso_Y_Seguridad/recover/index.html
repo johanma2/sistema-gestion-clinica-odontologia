@@ -1,0 +1,153 @@
+﻿<!-- ════════════════════════════════════════════════════════
+     SMILETRACK — RECUPERAR CONTRASEÑA (VERSIÓN FINAL)
+     Correcciones:
+     1. Iconos visibles (send y arrow_back dentro de los span)
+     2. Link de vuelta corregido a: ../auth/login/index.html
+     ════════════════════════════════════════════════════════ -->
+<!DOCTYPE html>
+<html class="light" lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Recuperar Contraseña - Smile Track</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Fuentes -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;500;700,FILL@0..1&display=swap"
+        rel="stylesheet" />
+
+    <!-- CSS Personalizado -->
+    <link href="recover.css" rel="stylesheet" />
+
+    <!-- Config Tailwind -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#1E88E5',
+                        'accent': '#43A047',
+                        'background': '#FFFFFF',
+                        'surface': '#F5F7FA',
+                        'text-primary': '#212121',
+                        'success': '#43A047',
+                        'error': '#E53935',
+                        'warning': '#FBC02D',
+                        'info': '#42A5F5'
+                    },
+                    fontFamily: {
+                        'title': ['Montserrat', 'sans-serif'],
+                        'body': ['Roboto', 'sans-serif']
+                    },
+                    fontSize: {
+                        'h1': ['32px', { lineHeight: '1.2', fontWeight: '700' }],
+                        'h2': ['24px', { lineHeight: '1.3', fontWeight: '600' }],
+                        'body': ['16px', { lineHeight: '1.5', fontWeight: '400' }],
+                        'label': ['14px', { lineHeight: '1.4', fontWeight: '500' }],
+                        'button': ['16px', { lineHeight: '1.5', fontWeight: '700' }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .dental-gradient-overlay {
+            background: linear-gradient(135deg, rgba(0, 53, 95, 0.85) 0%, rgba(25, 28, 30, 0.7) 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-background font-body text-text-primary antialiased min-h-screen flex items-center justify-center p-6">
+    <!-- Background Clinic -->
+    <div class="fixed inset-0 z-0">
+        <img alt="Clínica Dental Moderna" class="w-full h-full object-cover"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNvm84fO25nT6Fr-OiDad7iFRSETdrOn4tHsUL8JKUgudSDvYRNPtrG9uEEUFrie9rqPDEDmAUFlIdyUAH6ZP9Ym_KEkAIc_hgv3UJpzaNU5prUsdX4Ov9pPSqdM0xz9duoLLLTsefcV6XRqc8niA4YIeMAG3MMalq26KtHT9ml0kug6lLffddb75SJ3iTz6LpRWDSXz1Hqe1tjYmDSsE6nWDBRLDIcEbyygv-dzhsaCU3OlCKmEuZ1EVVMrd2C1RrXEo1dHKiaw" />
+        <div class="absolute inset-0 dental-gradient-overlay backdrop-blur-sm"></div>
+    </div>
+
+    <!-- Contenedor Recovery -->
+    <main class="relative z-10 w-full max-w-md">
+        <div class="bg-[#1a3150]/95 backdrop-blur-md shadow-2xl rounded-3xl border border-white/20 overflow-hidden">
+            <!-- Header -->
+            <div class="p-6 text-center space-y-4">
+                <div class="flex justify-center mb-4">
+                    <img src="../../Imagenes/Logos/logo.jpg" alt="Logo" class="h-24 w-auto object-contain drop-shadow-md">
+                </div>
+                <div class="space-y-3">
+                    <h1 class="font-title text-h1 text-white font-bold tracking-tight">Recuperar Contraseña</h1>
+                    <p class="font-body text-body text-white/80 max-w-[300px] mx-auto leading-relaxed">
+                        Ingresa tu correo electrónico y te enviaremos instrucciones seguras para restablecer tu
+                        contraseña.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Formulario -->
+            <form id="recoverForm" class="px-10 pb-10 space-y-6">
+                <!-- Email Field -->
+                <div class="space-y-3">
+                    <label
+                        class="font-body text-label text-white/80 block font-medium uppercase tracking-wide flex items-center gap-2">
+                        Correo Electrónico
+                    </label>
+                    <div class="relative">
+                        <input
+                            class="w-full pl-14 pr-5 py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-body text-white placeholder:text-white/40 outline-none shadow-sm hover:shadow-md peer"
+                            id="email" name="email" placeholder="odontologo@clinicadental.com" type="email" required />
+                        <div id="emailFeedback"
+                            class="mt-2 text-sm font-medium hidden peer-invalid:text-red-400 peer-valid:text-green-400">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button id="recoverBtn"
+                    class="w-full bg-[#a0c9ff] text-[#00355f] py-5 rounded-2xl font-title text-button hover:bg-white active:scale-[0.97] transition-all duration-300 flex items-center justify-center gap-3 shadow-xl hover:shadow-2xl font-bold text-lg group relative overflow-hidden"
+                    type="submit">
+                    <!-- ✅ CORREGIDO: Icono "send" DENTRO del span -->
+                    <span class="material-symbols-outlined group-hover:scale-110 transition-transform duration-300"
+                        style="font-variation-settings: 'FILL' 0;"></span>
+                    Enviar Instrucciones
+                    <div
+                        class="absolute inset-0 bg-white/20 scale-0 group-hover:scale-100 transition-transform origin-center duration-300">
+                    </div>
+                </button>
+
+                <!-- Back Link -->
+                <div class="pt-8 border-t border-white/20 text-center">
+                    <a id="backToLogin"
+                        class="inline-flex items-center gap-2 font-body text-button text-[#a0c9ff] hover:text-white font-semibold hover:underline transition-all group cursor-pointer"
+                        href="../login/index.html">
+                        <!-- Icono "arrow_back" DENTRO del span -->
+                        <span
+                            class="material-symbols-outlined text-lg group-hover:translate-x-[-2px] transition-transform"
+                            style="font-variation-settings: 'FILL' 0;"></span>
+                        Volver al inicio de sesión
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer Branding -->
+        <footer class="mt-10 text-center">
+            <p
+                class="font-mono text-sm text-white/80 flex items-center justify-center gap-2 uppercase tracking-wider bg-black/20 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
+                Portal Clínico Seguro • v2.4.0
+
+            </p>
+        </footer>
+    </main>
+
+    <!-- Scripts -->
+    <script src="recover.js"></script>
+</body>
+
+</html>

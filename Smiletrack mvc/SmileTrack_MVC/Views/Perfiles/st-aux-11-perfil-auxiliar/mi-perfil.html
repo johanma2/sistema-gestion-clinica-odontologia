@@ -1,0 +1,239 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Mi Perfil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="mi-perfil.css" />
+</head>
+<body>
+
+  <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Mi perfil) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="../../Imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img" />
+    </div>
+    <nav class="sidebar-nav">
+      <a href="../../Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.html" class="nav-item" data-icon="📊">Panel operativo</a>
+      <a href="../../Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.html" class="nav-item" data-icon="📅">Agenda de apoyo</a>
+      <a href="../../Gestion_De_Pacientes/st-aux-03-preparacion-consulta/preparacion-consulta.html" class="nav-item" data-icon="📋">Historia parcial</a>
+      <a href="../../Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.html" class="nav-item" data-icon="✅">Preparación consulta</a>
+      <a href="../../Gestion_De_Citas/st-aux-06-asistencia-procedimiento/asistencia-procedimiento.html" class="nav-item" data-icon="🔄">Asistencia procedimiento</a>
+      <a href="../../Historia_Clinica/st-aux-07-control-postoperatorio/control-postoperatorio.html" class="nav-item" data-icon="🏥">Control post-operatorio</a>
+      <a href="../../Historia_Clinica/st-aux-08-documentos-clinicos/documentos-clinicos.html" class="nav-item" data-icon="📎">Carga documentos</a>
+      <a href="../../Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.html" class="nav-item" data-icon="🚑">Estado consultorio</a>
+      <a href="../../Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.html" class="nav-item" data-icon="✅">Citas finalizadas</a>
+      <div class="nav-separator" aria-hidden="true"></div>
+      <a href="#" class="nav-item active" data-icon="👤" aria-current="page">Mi perfil</a>
+    </nav>
+    <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">Au</div>
+      <div class="user-info">
+        <span class="user-role">Auxiliar</span>
+        <span class="user-email">auxiliar@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header con saludo dinámico accesible -->
+    <header class="page-header">
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <span>Auxiliar</span>
+        <span class="bc-sep" aria-hidden="true">→</span>
+        <span class="bc-active">Mi perfil</span>
+      </nav>
+      <p class="greeting" id="greeting" aria-live="polite">Cargando saludo...</p>
+      <h1 class="page-title">Mi Perfil</h1>
+      <p class="page-subtitle">Gestiona tu información personal y acceso al sistema.</p>
+    </header>
+
+    <!-- Layout de perfil con dos columnas -->
+    <div class="profile-layout">
+
+      <!-- Columna izquierda: Datos personales -->
+      <section class="profile-card" aria-labelledby="personalDataTitle">
+        <div class="profile-header">
+          <div class="avatar-large" id="userAvatar" aria-label="Avatar de usuario: Sara Jiménez">SJ</div>
+          <h2 class="profile-title" id="personalDataTitle">Datos personales</h2>
+          <button class="btn-edit" id="btnEditProfile" aria-label="Editar información personal">
+            <span>Editar</span><span class="edit-icon" aria-hidden="true">✏️</span>
+          </button>
+        </div>
+
+        <div class="profile-content">
+          <!-- Grid de información personal con estructura accesible -->
+          <div class="info-grid" role="list">
+            <div class="info-group" role="listitem">
+              <label class="info-label" for="nombres">Nombres</label>
+              <span class="info-value" id="nombres" aria-describedby="nombresLabel">Sara</span>
+              <span id="nombresLabel" class="visually-hidden">Nombre de pila del usuario</span>
+            </div>
+            <div class="info-group" role="listitem">
+              <label class="info-label" for="apellidos">Apellidos</label>
+              <span class="info-value" id="apellidos">Jiménez</span>
+            </div>
+            <div class="info-group" role="listitem">
+              <label class="info-label" for="tipoDoc">Tipo documento</label>
+              <span class="info-value" id="tipoDoc">CC</span>
+            </div>
+            <div class="info-group" role="listitem">
+              <label class="info-label" for="numeroDoc">Número de documento</label>
+              <span class="info-value" id="numeroDoc" aria-label="Número de documento: 1234567890">••••••••••</span>
+            </div>
+            <div class="info-group" role="listitem">
+              <label class="info-label" for="fechaIngreso">Fecha de ingreso</label>
+              <span class="info-value" id="fechaIngreso"><time datetime="2024-01-01">01 Ene 2024</time></span>
+            </div>
+            <div class="info-group" role="listitem">
+              <label class="info-label">Estado</label>
+              <span class="info-value">
+                <span class="status-badge active" role="status" aria-label="Estado de cuenta: Activo">
+                  <span class="status-dot" aria-hidden="true"></span>Activo
+                </span>
+              </span>
+            </div>
+            <div class="info-group" role="listitem">
+              <label class="info-label" for="telefono">Teléfono</label>
+              <span class="info-value" id="telefono">312456 7890</span>
+            </div>
+            <div class="info-group" role="listitem">
+              <label class="info-label" for="email">Correo electrónico</label>
+              <span class="info-value" id="email">auxiliar@smiletrack.co</span>
+            </div>
+          </div>
+
+          <!-- Barra de progreso de completitud de perfil -->
+          <div class="profile-progress">
+            <div class="progress-bar-bg" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80" aria-label="Completitud del perfil: 80%">
+              <div class="progress-bar-fill" id="profileProgress" style="width: 80%;"></div>
+            </div>
+            <span class="progress-text" id="progressText" aria-live="polite">80% completado</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Columna derecha: Cambio de contraseña -->
+      <aside class="password-card" aria-labelledby="passwordTitle">
+        <h3 class="password-title" id="passwordTitle">Cambiar contraseña</h3>
+        
+        <!-- Formulario con validación accesible -->
+        <form id="passwordForm" novalidate aria-describedby="passwordRequirements">
+          
+          <div class="form-group">
+            <label class="form-label" for="currentPassword">Contraseña actual <span class="required" aria-hidden="true">*</span></label>
+            <div class="input-with-icon">
+              <button type="button" class="toggle-password" id="toggleCurrent" aria-label="Mostrar contraseña actual" aria-pressed="false" aria-controls="currentPassword">
+                <span class="visually-hidden">Mostrar/ocultar</span>👁
+              </button>
+              <input type="password" class="form-input" id="currentPassword" name="currentPassword" placeholder="••••••••" required autocomplete="current-password" aria-required="true" />
+            </div>
+            <span class="error-message" id="error-currentPassword">Por favor ingresa tu contraseña actual</span>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="newPassword">Nueva contraseña <span class="required" aria-hidden="true">*</span></label>
+            <div class="input-with-icon">
+              <button type="button" class="toggle-password" id="toggleNew" aria-label="Mostrar nueva contraseña" aria-pressed="false" aria-controls="newPassword">
+                <span class="visually-hidden">Mostrar/ocultar</span>👁
+              </button>
+              <input type="password" class="form-input" id="newPassword" name="newPassword" placeholder="••••••••" required autocomplete="new-password" aria-required="true" aria-describedby="passwordStrength passwordRequirements" />
+            </div>
+            <!-- Indicador de fuerza de contraseña accesible -->
+            <div class="password-strength" id="passwordStrength" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Fortaleza de contraseña: Débil">
+              <span class="visually-hidden" id="strengthText">Débil</span>
+            </div>
+            <small id="passwordRequirements" class="password-requirements">
+              Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 símbolo
+            </small>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="confirmPassword">Confirmar nueva contraseña <span class="required" aria-hidden="true">*</span></label>
+            <div class="input-with-icon">
+              <button type="button" class="toggle-password" id="toggleConfirm" aria-label="Mostrar confirmación de contraseña" aria-pressed="false" aria-controls="confirmPassword">
+                <span class="visually-hidden">Mostrar/ocultar</span>👁
+              </button>
+              <input type="password" class="form-input" id="confirmPassword" name="confirmPassword" placeholder="••••••••" required autocomplete="new-password" aria-required="true" />
+            </div>
+            <span class="error-message" id="error-confirmPassword">Las contraseñas no coinciden</span>
+          </div>
+          
+          <div class="form-divider" aria-hidden="true"></div>
+          
+          <button type="submit" class="btn-update" id="btnUpdatePassword" aria-label="Actualizar contraseña de acceso">Actualizar contraseña</button>
+        </form>
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Mobile bottom nav con aria-label para navegación móvil -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="../../Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Panel</span>
+    </a>
+    <a href="../../Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Perfil</span>
+    </a>
+    <a href="../../Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">✅</span>
+      <span>Finalizadas</span>
+    </a>
+  </nav>
+
+  <!-- Toast con aria-atomic para anuncio completo de notificaciones -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para contenido solo accesible por screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+    .skip-link:focus { top: 0; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="mi-perfil.js"></script>
+</body>
+</html>

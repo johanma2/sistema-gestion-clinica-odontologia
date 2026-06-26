@@ -1,0 +1,97 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Notificaciones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- [MEJORA]: Skip link para accesibilidad keyboard-first (consistente con st-pac-01) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Notificaciones) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="../../Imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img" />
+    </div>
+    <nav class="sidebar-nav">
+      <a href="../st-pac-01-mis-citas/index.html" class="nav-item" data-icon="📅">Mis citas</a>
+      <a href="../../Historia_Clinica/st-pac-02-historial/index.html" class="nav-item" data-icon="📋">Mi historial</a>
+      <a href="#" class="nav-item active" data-icon="🔔" aria-current="page">Notificaciones</a>
+    </nav>
+    <!-- [MEJORA]: aria-label más descriptivo para logout (consistente con st-pac-01) -->
+    <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">👤</div>
+      <div class="user-info">
+        <span class="user-role">Paciente</span>
+        <span class="user-email">juan@paciente.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <!-- [MEJORA]: aria-expanded y aria-controls para accesibilidad de menú móvil -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+  </button>
+  <!-- [MEJORA]: aria-hidden inicial para overlay -->
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Page header -->
+    <header class="page-header">
+      <div class="header-left">
+        <div class="breadcrumb">Paciente → Notificaciones</div>
+        <h1 class="page-title">Notificaciones</h1>
+        <p class="page-subtitle">Recordatorios, confirmaciones y mensajes de la clínica</p>
+      </div>
+      <!-- [MEJORA]: aria-label para botón de acción principal -->
+      <button class="btn-primary" id="btnMarkAllRead" aria-label="Marcar todas las notificaciones como leídas">Marcar todas como leídas</button>
+    </header>
+
+    <!-- Toolbar de filtros -->
+    <div class="toolbar" role="toolbar" aria-label="Filtros de notificaciones">
+      <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <!-- [MEJORA]: aria-label para input de búsqueda (consistente con st-pac-01) -->
+        <input type="search" id="searchInput" class="search-input" placeholder="Buscar notificaciones…" autocomplete="off" aria-label="Buscar notificaciones" />
+      </div>
+      <div class="filter-chips" role="group" aria-label="Filtrar notificaciones por tipo">
+        <button class="chip chip--active" data-filter="all" aria-pressed="true">Todas</button>
+        <button class="chip" data-filter="reminder" aria-pressed="false">📅 Recordatorios</button>
+        <button class="chip" data-filter="confirmed" aria-pressed="false">✅ Confirmaciones</button>
+        <button class="chip" data-filter="cancelled" aria-pressed="false">❌ Cancelaciones</button>
+        <button class="chip" data-filter="message" aria-pressed="false">💬 Mensajes</button>
+      </div>
+      <span class="count-label" id="countLabel" aria-live="polite"></span>
+    </div>
+
+    <!-- Lista de notificaciones -->
+    <!-- [MEJORA]: role="list" explícito para lectores de pantalla -->
+    <ul class="notifications-list" id="notificationsList" role="list" aria-live="polite" aria-label="Lista de notificaciones">
+      <!-- Items inyectados por JS -->
+    </ul>
+
+    <!-- Empty state -->
+    <!-- [MEJORA]: aria-hidden gestionado por JS, texto más accesible -->
+    <div class="empty-state" id="emptyState" aria-live="polite" aria-hidden="true" style="display:none;">
+      <span class="empty-icon" aria-hidden="true">🔔</span>
+      <p class="empty-state-text">No hay notificaciones en esta categoría.</p>
+    </div>
+
+  </main>
+
+  <!-- Toast -->
+  <!-- [MEJORA]: aria-atomic="true" para que lectores anuncien mensaje completo -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="notificaciones.js"></script>
+</body>
+</html>

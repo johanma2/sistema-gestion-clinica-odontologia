@@ -1,0 +1,354 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Gestión de citas y horarios en la agenda general de SmileTrack" />
+  <title>SmileTrack — Agenda General</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="agendageneral.css" />
+</head>
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Agenda) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="../../Imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img" />
+    </div>
+    <nav class="sidebar-nav">
+      <a href="../../Gestion_De_Citas/st-adm-01-dashboard/index.html" class="nav-item" data-icon="📊">Dashboard</a>
+      <a href="../../Acceso_Y_Seguridad/st-adm-02-gestion-usuarios/index.html" class="nav-item" data-icon="👥">Gestión Usuarios</a>
+      <a href="../../Acceso_Y_Seguridad/st-adm-03-gestion-roles/index.html" class="nav-item" data-icon="🔑">Gestión Roles</a>
+      <a href="../../Acceso_Y_Seguridad/st-adm-04-matriz-permisos/index.html" class="nav-item" data-icon="🔐">Matriz Permisos</a>
+      <a href="../../Gestion_De_Pacientes/st-adm-05-gestion-pacientes/index.html" class="nav-item" data-icon="🦷">Gestión Pacientes</a>
+      <a href="../../Gestion_De_Profesionales/st-adm-07-gestion-profesionales/index.html" class="nav-item" data-icon="🩺">Gestión Profesionales</a>
+      <a href="#" class="nav-item active" data-icon="📅" aria-current="page">Agenda</a>
+      <a href="../../Gestion_De_Citas/st-adm-09-citas/index.html" class="nav-item" data-icon="🗓️">Citas</a>
+      <a href="../../Servicios_Y_Recursos/st-adm-10-servicios/catalogoservicios.html" class="nav-item" data-icon="💼">Servicios</a>
+      <a href="../../Facturacion_Y_Pagos/st-adm-12-facturacion/gestionfacturacion.html" class="nav-item" data-icon="💳">Facturación</a>
+      <a href="../../Facturacion_Y_Pagos/st-adm-13-reportes-financieros/index.html" class="nav-item" data-icon="📈">Reportes Financieros</a>
+      <a href="../../Gestion_De_Profesionales/st-adm-14-reportes-clinicos/index.html" class="nav-item" data-icon="📋">Reportes Clínicos</a>
+      <a href="../../Acceso_Y_Seguridad/st-adm-15-bitacora/index.html" class="nav-item" data-icon="📜">Bitácora</a>
+      <a href="../../Servicios_Y_Recursos/st-adm-16-configuracion-general/index.html" class="nav-item" data-icon="⚙️">Configuración</a>
+      <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">🔧</div>
+      <div class="user-info">
+        <span class="user-role">Administrador</span>
+        <span class="user-email">admin@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Administración</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Agenda General</span>
+        </nav>
+        <h1 class="page-title">Agenda General</h1>
+        <p class="page-subtitle">Gestión de citas y horarios</p>
+      </div>
+    </header>
+
+    <!-- Controles de agenda -->
+    <section class="agenda-controls" aria-label="Controles de navegación y filtros">
+      <div class="controls-left">
+        <div class="week-nav" role="navigation" aria-label="Navegación semanal">
+          <button class="btn-week" id="btnPrev" aria-label="Semana anterior">
+            <span aria-hidden="true">◀</span>
+          </button>
+          <span class="week-label" id="weekLabel" aria-live="polite">19-25 mayo 2026</span>
+          <button class="btn-week" id="btnNext" aria-label="Próxima semana">
+            <span aria-hidden="true">▶</span>
+          </button>
+        </div>
+        <button class="btn-primary" id="btnToday" aria-label="Ir a la semana actual">
+          📅 Hoy
+        </button>
+      </div>
+      <div class="controls-right">
+        <div class="filter-group">
+          <label for="filterProfessional" class="filter-label">Profesional</label>
+          <select id="filterProfessional" class="status-select" aria-label="Filtrar por profesional">
+            <option value="">Todos los profesionales</option>
+            <option value="1">Dr. Javier Méndez</option>
+            <option value="2">Dra. Lucía Torres</option>
+            <option value="3">Dr. Roberto Sanz</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterOffice" class="filter-label">Consultorio</label>
+          <select id="filterOffice" class="status-select" aria-label="Filtrar por consultorio">
+            <option value="">Todos los consultorios</option>
+            <option value="1">Box 01 - General</option>
+            <option value="2">Box 02 - Cirugía</option>
+            <option value="3">Box 03 - Ortodoncia</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button class="btn-icon" id="btnFilter" aria-label="Aplicar filtros">🔍</button>
+          <button class="btn-icon" id="btnDownload" aria-label="Descargar agenda">📥</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Calendario semanal -->
+    <section class="calendar-section" aria-labelledby="calendarTitle">
+      <h2 class="visually-hidden" id="calendarTitle">Calendario semanal de citas</h2>
+      
+      <!-- Cabecera de días -->
+      <div class="calendar-header" role="row">
+        <div class="calendar-day-header" role="columnheader">
+          <span class="day-name">Lun</span>
+          <time datetime="2026-05-19" class="day-number">19</time>
+        </div>
+        <div class="calendar-day-header" role="columnheader">
+          <span class="day-name">Mar</span>
+          <time datetime="2026-05-20" class="day-number">20</time>
+        </div>
+        <div class="calendar-day-header current" role="columnheader" aria-current="date">
+          <span class="day-name">Mié</span>
+          <time datetime="2026-05-21" class="day-number">21</time>
+          <span class="day-indicator" aria-hidden="true"></span>
+        </div>
+        <div class="calendar-day-header" role="columnheader">
+          <span class="day-name">Jue</span>
+          <time datetime="2026-05-22" class="day-number">22</time>
+        </div>
+        <div class="calendar-day-header" role="columnheader">
+          <span class="day-name">Vie</span>
+          <time datetime="2026-05-23" class="day-number">23</time>
+        </div>
+        <div class="calendar-day-header" role="columnheader">
+          <span class="day-name">Sáb</span>
+          <time datetime="2026-05-24" class="day-number">24</time>
+        </div>
+        <div class="calendar-day-header closed" role="columnheader" aria-label="Domingo: cerrado">
+          <span class="day-name">Dom</span>
+          <time datetime="2026-05-25" class="day-number">25</time>
+        </div>
+      </div>
+
+      <!-- Cuerpo del calendario -->
+      <div class="calendar-body" role="grid" aria-label="Citas por día">
+        <!-- Lunes -->
+        <div class="calendar-day" role="row" aria-labelledby="day-lunes">
+          <span id="day-lunes" class="visually-hidden">Lunes 19 de mayo</span>
+          <div class="appointment confirmed" tabindex="0" role="button" aria-label="Cita confirmada: Carlos Ruiz, 09:00, Limpieza, Box 01" data-appointment='{"id":1,"time":"09:00","patient":"Carlos Ruiz","service":"Limpieza","office":"Box 01","status":"confirmed"}'>
+            <time datetime="2026-05-19T09:00:00" class="appt-time">09:00</time>
+            <span class="appt-patient">Carlos Ruiz</span>
+            <span class="appt-detail">Limpieza · Box 01</span>
+          </div>
+          <div class="appointment attended" tabindex="0" role="button" aria-label="Cita asistida: Elena Gómez, 11:30, Revisión, Box 02" data-appointment='{"id":2,"time":"11:30","patient":"Elena Gómez","service":"Revisión","office":"Box 02","status":"attended"}'>
+            <time datetime="2026-05-19T11:30:00" class="appt-time">11:30</time>
+            <span class="appt-patient">Elena Gómez</span>
+            <span class="appt-detail">Revisión · Box 02</span>
+          </div>
+        </div>
+        
+        <!-- Martes -->
+        <div class="calendar-day" role="row" aria-labelledby="day-martes">
+          <span id="day-martes" class="visually-hidden">Martes 20 de mayo</span>
+          <div class="appointment cancelled" tabindex="0" role="button" aria-label="Cita cancelada: Marc Vila, 10:00" data-appointment='{"id":3,"time":"10:00","patient":"Marc Vila","service":"—","office":"—","status":"cancelled"}'>
+            <time datetime="2026-05-20T10:00:00" class="appt-time">10:00</time>
+            <span class="appt-patient">Marc Vila</span>
+            <span class="appt-status">CANCELADA</span>
+          </div>
+          <div class="appointment confirmed" tabindex="0" role="button" aria-label="Cita confirmada: Sara Ortiz, 16:00, Ortodoncia, Box 03" data-appointment='{"id":4,"time":"16:00","patient":"Sara Ortiz","service":"Ortodoncia","office":"Box 03","status":"confirmed"}'>
+            <time datetime="2026-05-20T16:00:00" class="appt-time">16:00</time>
+            <span class="appt-patient">Sara Ortiz</span>
+            <span class="appt-detail">Ortodoncia · Box 03</span>
+          </div>
+        </div>
+        
+        <!-- Miércoles (día actual) -->
+        <div class="calendar-day current" role="row" aria-labelledby="day-miercoles">
+          <span id="day-miercoles" class="visually-hidden">Miércoles 21 de mayo - Día actual</span>
+          <div class="appointment attended" tabindex="0" role="button" aria-label="Cita asistida: Paula Jiménez, 08:30" data-appointment='{"id":5,"time":"08:30","patient":"Paula Jiménez","service":"—","office":"—","status":"attended"}'>
+            <time datetime="2026-05-21T08:30:00" class="appt-time">08:30</time>
+            <span class="appt-patient">Paula Jiménez</span>
+            <span class="appt-status">Asistida</span>
+          </div>
+          <div class="appointment available" tabindex="0" role="button" aria-label="Espacio disponible: 12:00" data-appointment='{"id":6,"time":"12:00","available":true}'>
+            <time datetime="2026-05-21T12:00:00" class="appt-time">12:00</time>
+            <span class="appt-patient">Espacio Disponible</span>
+          </div>
+          <div class="appointment confirmed" tabindex="0" role="button" aria-label="Cita confirmada: Daniel Castro, 17:45" data-appointment='{"id":7,"time":"17:45","patient":"Daniel Castro","service":"—","office":"—","status":"confirmed"}'>
+            <time datetime="2026-05-21T17:45:00" class="appt-time">17:45</time>
+            <span class="appt-patient">Daniel Castro</span>
+            <span class="appt-status">Confirmada</span>
+          </div>
+        </div>
+        
+        <!-- Jueves -->
+        <div class="calendar-day" role="row" aria-labelledby="day-jueves">
+          <span id="day-jueves" class="visually-hidden">Jueves 22 de mayo</span>
+          <div class="appointment confirmed" tabindex="0" role="button" aria-label="Cita confirmada: Marta Soler, 10:00, Control, Box 01" data-appointment='{"id":8,"time":"10:00","patient":"Marta Soler","service":"Control","office":"Box 01","status":"confirmed"}'>
+            <time datetime="2026-05-22T10:00:00" class="appt-time">10:00</time>
+            <span class="appt-patient">Marta Soler</span>
+            <span class="appt-detail">Control · Box 01</span>
+          </div>
+        </div>
+        
+        <!-- Viernes -->
+        <div class="calendar-day" role="row" aria-labelledby="day-viernes">
+          <span id="day-viernes" class="visually-hidden">Viernes 23 de mayo</span>
+          <div class="appointment confirmed" tabindex="0" role="button" aria-label="Cita confirmada: Luis Navarro, 09:00, Limpieza, Box 01" data-appointment='{"id":9,"time":"09:00","patient":"Luis Navarro","service":"Limpieza","office":"Box 01","status":"confirmed"}'>
+            <time datetime="2026-05-23T09:00:00" class="appt-time">09:00</time>
+            <span class="appt-patient">Luis Navarro</span>
+            <span class="appt-detail">Limpieza · Box 01</span>
+          </div>
+          <div class="appointment attended" tabindex="0" role="button" aria-label="Cita asistida: Ana Belén, 11:00" data-appointment='{"id":10,"time":"11:00","patient":"Ana Belén","service":"—","office":"—","status":"attended"}'>
+            <time datetime="2026-05-23T11:00:00" class="appt-time">11:00</time>
+            <span class="appt-patient">Ana Belén</span>
+            <span class="appt-status">Asistida</span>
+          </div>
+          <div class="appointment confirmed" tabindex="0" role="button" aria-label="Cita confirmada: Pedro Páez, 15:30, Consulta, Box 02" data-appointment='{"id":11,"time":"15:30","patient":"Pedro Páez","service":"Consulta","office":"Box 02","status":"confirmed"}'>
+            <time datetime="2026-05-23T15:30:00" class="appt-time">15:30</time>
+            <span class="appt-patient">Pedro Páez</span>
+            <span class="appt-detail">Consulta · Box 02</span>
+          </div>
+        </div>
+        
+        <!-- Sábado -->
+        <div class="calendar-day" role="row" aria-labelledby="day-sabado">
+          <span id="day-sabado" class="visually-hidden">Sábado 24 de mayo</span>
+          <div class="appointment reserved" tabindex="0" role="button" aria-label="Reservado para urgencias, 10:00" data-appointment='{"id":12,"time":"10:00","reserved":true}'>
+            <time datetime="2026-05-24T10:00:00" class="appt-time">10:00</time>
+            <span class="appt-patient">Urgencia - Reservado</span>
+          </div>
+        </div>
+        
+        <!-- Domingo (cerrado) -->
+        <div class="calendar-day closed" role="row" aria-labelledby="day-domingo">
+          <span id="day-domingo" class="visually-hidden">Domingo 25 de mayo - Cerrado</span>
+          <div class="day-closed">
+            <span aria-hidden="true">🏥</span>
+            <span>CERRADO</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Leyenda de estados -->
+    <section class="legend-section" aria-labelledby="legendTitle">
+      <h2 class="section-title" id="legendTitle">Estados de cita</h2>
+      <div class="legend-grid">
+        <div class="legend-item">
+          <span class="legend-dot confirmed" aria-hidden="true"></span>
+          <span>Confirmada</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot attended" aria-hidden="true"></span>
+          <span>Asistida</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot cancelled" aria-hidden="true"></span>
+          <span>Cancelada</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot available" aria-hidden="true"></span>
+          <span>Disponible</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal: Detalle de cita -->
+  <div class="modal-overlay" id="modalAppointment" role="dialog" aria-modal="true" aria-labelledby="modalApptTitle" aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalApptClose" aria-label="Cerrar ventana">×</button>
+      <h2 class="modal-title" id="modalApptTitle">Detalle de Cita</h2>
+      <div class="modal-content" id="modalApptContent">
+        <!-- Contenido inyectado por JS -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="modalApptCancel">Cerrar</button>
+        <button type="button" class="btn-primary" id="modalApptEdit">✏️ Editar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB: Nueva cita -->
+  <button class="fab" id="btnNewAppointment" aria-label="Crear nueva cita">
+    <span aria-hidden="true">+</span>
+  </button>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="../st-adm-01-dashboard/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="../st-adm-06-profesionales/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">🩺</span>
+      <span>Profesionales</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
+    </a>
+    <a href="../st-adm-08-citas/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
+      <span>Citas</span>
+    </a>
+    <a href="../../Servicios_Y_Recursos/st-adm-16-configuracion-general/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
+      <span>Config</span>
+    </a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+    .skip-link:focus { top: 0; outline: 2px solid #fff; outline-offset: 2px; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="agendageneral.js"></script>
+</body>
+</html>

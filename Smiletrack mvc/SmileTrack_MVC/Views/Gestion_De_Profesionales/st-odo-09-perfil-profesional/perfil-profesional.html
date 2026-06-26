@@ -1,0 +1,282 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmileTrack — Perfil Profesional</title>
+  <meta name="description" content="Gestiona tu información profesional y configuración en SmileTrack." />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="perfil-profesional.css" />
+</head>
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Perfil Profesional) ═════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../../imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img"/>
+    </div>
+                <nav class="sidebar-nav">
+      <a href="../../Gestion_De_Profesionales/st-odo-01-dashboard/index.html" class="nav-item" data-icon="🏠">Mi dashboard</a>
+      <a href="../../Gestion_De_Citas/st-odo-02-agenda/index.html" class="nav-item" data-icon="📅">Mi agenda</a>
+      <a href="../../Historia_Clinica/st-odo-03-historial/gestion-historial.html" class="nav-item" data-icon="📋">Historia Clínica</a>
+      <a href="../../Historia_Clinica/st-odo-04-odontograma/odontograma-digital.html" class="nav-item" data-icon="🦷">Odontograma</a>
+      <a href="../../Servicios_Y_Recursos/st-odo-05-servicios/index.html" class="nav-item" data-icon="💼">Servicios</a>
+      <a href="../../Historia_Clinica/st-odo-06-pacientes/index.html" class="nav-item" data-icon="👥">Mis Pacientes</a>
+      <a href="../../Historia_Clinica/st-odo-07-seguimiento-tratamientos/seguimiento-tratamientos.html" class="nav-item" data-icon="📋">Tratamientos</a>
+      <a href="../../Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.html" class="nav-item" data-icon="📊">Mis reportes</a>
+      <a href="../../Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil-profesional.html" class="nav-item active" aria-current="page" data-icon="👤">Mi perfil</a>
+        <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../../Acceso_Y_Seguridad/login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">OD</div>
+      <div class="user-info">
+        <span class="user-role">Odontólogo</span>
+        <span class="user-email">odontologo@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Odontólogo</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Perfil Profesional</span>
+        </nav>
+        <h1 class="page-title">Mi Perfil Profesional</h1>
+        <p class="page-subtitle">Información personal y configuración del profesional</p>
+      </div>
+    </header>
+
+    <!-- Profile Header Card -->
+    <section class="profile-header-card" aria-labelledby="profileName">
+      <div class="profile-avatar-large" aria-hidden="true">CM</div>
+      <div class="profile-info">
+        <h2 id="profileName">Dr. Carlos Méndez</h2>
+        <div class="profile-tags" role="list">
+          <span class="tag tag-blue" role="listitem">🦷 Odontología General</span>
+          <span class="tag tag-purple" role="listitem">✨ Estética Dental</span>
+          <span class="tag tag-green" role="listitem">✓ RM-2026-001</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Layout -->
+    <div class="content-layout">
+
+      <!-- Left Column: Personal Info -->
+      <div class="content-left">
+        <div class="card info-card">
+          <h3 class="card-title">📝 Información personal</h3>
+          
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-icon" aria-hidden="true">📞</div>
+              <div>
+                <label>Teléfono</label>
+                <div class="info-value">300 123 4567</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-icon" aria-hidden="true">✉️</div>
+              <div>
+                <label>Correo</label>
+                <div class="info-value">dr.mendez@smiletrack.co</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-icon" aria-hidden="true">📅</div>
+              <div>
+                <label>Fecha de ingreso</label>
+                <div class="info-value"><time datetime="2022-03-15">15 Mar 2022</time></div>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-icon" aria-hidden="true"></div>
+              <div>
+                <label>Estado</label>
+                <div class="info-value">
+                  <span class="status-badge active" role="status" aria-label="Estado: Activo">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    Activo
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-divider"></div>
+
+          <!-- Change Password Section -->
+          <div class="password-section">
+            <h3 class="card-title">🔒 Cambiar contraseña</h3>
+            
+            <form id="passwordForm" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="currentPassword">Contraseña actual</label>
+                <div class="input-with-icon">
+                  <input type="password" class="form-input" id="currentPassword" placeholder="••••••••" required aria-required="true">
+                  <button type="button" class="toggle-password" aria-label="Mostrar u ocultar contraseña actual" aria-pressed="false">👁</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="newPassword">Nueva contraseña</label>
+                <div class="input-with-icon">
+                  <input type="password" class="form-input" id="newPassword" placeholder="••••••••" required aria-required="true" aria-describedby="passwordStrength">
+                  <button type="button" class="toggle-password" aria-label="Mostrar u ocultar nueva contraseña" aria-pressed="false">👁</button>
+                </div>
+                <div class="password-strength" id="passwordStrength" role="status" aria-live="polite"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="confirmPassword">Confirmar nueva contraseña</label>
+                <div class="input-with-icon">
+                  <input type="password" class="form-input" id="confirmPassword" placeholder="••••••••" required aria-required="true">
+                  <button type="button" class="toggle-password" aria-label="Mostrar u ocultar confirmación de contraseña" aria-pressed="false">👁</button>
+                </div>
+              </div>
+              <button type="submit" class="btn-update">Actualizar contraseña</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Schedule -->
+      <div class="content-right">
+        <div class="card schedule-card">
+          <div class="schedule-header">
+            <h3 class="card-title" style="margin-bottom: 0;">📅 Horario Semanal</h3>
+            <span class="edit-hint">Click en un día para editar</span>
+          </div>
+          
+          <div class="schedule-grid" id="scheduleGrid" role="list" aria-label="Horario semanal del profesional">
+            <!-- Generated by JS -->
+          </div>
+
+          <div class="schedule-legend" aria-hidden="true">
+            <div class="legend-item">
+              <span class="legend-dot active"></span>
+              <span>Día laboral</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot inactive"></span>
+              <span>No disponible</span>
+            </div>
+          </div>
+
+          <div class="schedule-summary" id="scheduleSummary" aria-live="polite">
+            <div class="summary-text">Total semanal</div>
+            <div class="summary-number" id="totalHours">0 horas</div>
+            <div class="summary-text" id="totalDays">0 días laborales</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ═════ MODAL EDITAR HORARIO ═════ -->
+  <div class="modal-backdrop" id="scheduleModal" role="dialog" aria-modal="true" aria-labelledby="modalDayName" aria-hidden="true" inert>
+    <div class="modal-schedule" role="document">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-day-icon" id="modalDayIcon" aria-hidden="true"></div>
+          <div>
+            <h3 class="modal-day-name" id="modalDayName"></h3>
+            <div class="modal-day-subtitle">Editar horario laboral</div>
+          </div>
+        </div>
+        <button class="modal-close" id="modalClose" aria-label="Cerrar ventana de edición">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Toggle Activo/Inactivo -->
+        <div class="modal-toggle-section">
+          <label class="modal-toggle">
+            <input type="checkbox" id="modalDayActive" aria-describedby="toggleText">
+            <span class="toggle-slider" aria-hidden="true"></span>
+            <span class="toggle-text" id="toggleText">Día laboral</span>
+          </label>
+        </div>
+
+        <!-- Time Inputs (solo visibles si está activo) -->
+        <div class="modal-time-section" id="modalTimeSection">
+          <div class="time-input-group">
+            <label class="time-label" for="modalStartTime">🌅 Hora de inicio</label>
+            <input type="time" class="time-input" id="modalStartTime" value="08:00">
+          </div>
+          <div class="time-separator" aria-hidden="true">
+            <span>a</span>
+          </div>
+          <div class="time-input-group">
+            <label class="time-label" for="modalEndTime">🌇 Hora de fin</label>
+            <input type="time" class="time-input" id="modalEndTime" value="12:00">
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="modal-preview" id="modalPreview" aria-live="polite">
+          <div class="preview-label">Horario resultante:</div>
+          <div class="preview-time" id="previewTime">08:00 - 12:00</div>
+          <div class="preview-hours" id="previewHours">4 horas</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="modalCancel">Cancelar</button>
+        <button class="modal-btn modal-btn-primary" id="modalSave">💾 Guardar horario</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+    .skip-link:focus { top: 0; outline: 2px solid #fff; outline-offset: 2px; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="perfil-profesional.js"></script>
+</body>
+</html>
+

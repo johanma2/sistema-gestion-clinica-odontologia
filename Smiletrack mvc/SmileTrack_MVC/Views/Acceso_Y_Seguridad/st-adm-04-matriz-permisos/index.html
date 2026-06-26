@@ -1,0 +1,293 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Configura permisos por rol y módulo en SmileTrack" />
+  <title>SmileTrack — Matriz de Permisos</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Matriz Permisos) ═════ -->
+<aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="../../Imagenes/Logos/logo.jpg" alt="SmileTrack" class="logo-img" />
+    </div>
+    <nav class="sidebar-nav">
+      <a href="../../Gestion_De_Citas/st-adm-01-dashboard/index.html" class="nav-item" data-icon="📊">Dashboard</a>
+      <a href="../st-adm-02-gestion-usuarios/index.html" class="nav-item " data-icon="👥" >Gestión Usuarios</a>
+      <a href="../st-adm-03-gestion-roles/index.html" class="nav-item" data-icon="🔑">Gestión Roles</a>
+      <a href="../st-adm-04-matriz-permisos/index.html" class="nav-item active" data-icon="🔐" aria-current="page">Matriz Permisos</a>
+      <a href="../../Gestion_De_Pacientes/st-adm-05-gestion-pacientes/index.html" class="nav-item" data-icon="🦷">Gestión Pacientes</a>
+      <a href="../../Gestion_De_Profesionales/st-adm-07-gestion-profesionales/index.html" class="nav-item" data-icon="🩺">Gestión Profesionales</a>
+      <a href="../../Gestion_De_Citas/st-adm-08-agenda/index.html" class="nav-item" data-icon="📅">Agenda</a>
+      <a href="../../Gestion_De_Citas/st-adm-09-citas/index.html" class="nav-item" data-icon="🗓️">Citas</a>
+      <a href="../../Servicios_Y_Recursos/st-adm-10-servicios/catalogoservicios.html" class="nav-item" data-icon="💼">Servicios</a>
+      <a href="../../Facturacion_Y_Pagos/st-adm-12-facturacion/gestionfacturacion.html" class="nav-item" data-icon="💳">Facturación</a>
+      <a href="../../Facturacion_Y_Pagos/st-adm-13-reportes-financieros/index.html" class="nav-item" data-icon="📈">Reportes Financieros</a>
+      <a href="../../Gestion_De_Profesionales/st-adm-14-reportes-clinicos/index.html" class="nav-item" data-icon="📋">Reportes Clínicos</a>
+      <a href="../st-adm-15-bitacora/index.html" class="nav-item" data-icon="📜">Bitácora</a>
+      <a href="../../Servicios_Y_Recursos/st-adm-16-configuracion-general/index.html" class="nav-item" data-icon="⚙️">Configuración</a>
+      <div class="nav-separator" aria-hidden="true"></div>
+      <a href="../login/index.html" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">🔧</div>
+      <div class="user-info">
+        <span class="user-role">Administrador</span>
+        <span class="user-email">admin@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Administración</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Matriz de Permisos</span>
+        </nav>
+        <h1 class="page-title">Matriz de Permisos por Módulo</h1>
+        <p class="page-subtitle">Configura qué puede hacer cada rol en cada módulo del sistema</p>
+      </div>
+      <div class="header-actions">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="searchModules" class="search-input" placeholder="Buscar módulo..." aria-label="Buscar módulo">
+        </div>
+        <button class="btn-primary" id="btnSaveConfig" aria-label="Guardar configuración de permisos">
+          💾 Guardar configuración
+        </button>
+      </div>
+    </header>
+
+    <!-- Tabla de matriz de permisos -->
+    <section class="matrix-section" aria-labelledby="matrixTitle">
+      <h2 class="visually-hidden" id="matrixTitle">Matriz de permisos por módulo y rol</h2>
+      
+      <!-- Cabecera de la tabla -->
+      <div class="matrix-header" role="row">
+        <div class="matrix-col-module" role="columnheader">Módulo</div>
+        <div class="matrix-col-roles" role="row">
+          <div class="matrix-role-header" role="columnheader" aria-label="Administrador">
+            <span class="role-badge admin">ADM</span>
+          </div>
+          <div class="matrix-role-header" role="columnheader" aria-label="Odontólogo">
+            <span class="role-badge odo">ODO</span>
+          </div>
+          <div class="matrix-role-header" role="columnheader" aria-label="Paciente">
+            <span class="role-badge pac">PAC</span>
+          </div>
+          <div class="matrix-role-header" role="columnheader" aria-label="Recepción">
+            <span class="role-badge rec">REC</span>
+          </div>
+          <div class="matrix-role-header" role="columnheader" aria-label="Auxiliar">
+            <span class="role-badge aux">AUX</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cuerpo de la matriz (renderizado por JS) -->
+      <div id="matrixBody" class="matrix-body" role="rowgroup" aria-live="polite">
+        <!-- Filas inyectadas por JS -->
+      </div>
+
+      <!-- Estado vacío -->
+      <div class="empty-state" id="emptyState" style="display:none" role="status" aria-live="polite" aria-hidden="true">
+        No se encontraron módulos con los criterios de búsqueda.
+      </div>
+    </section>
+
+    <!-- Leyenda de permisos -->
+    <section class="legend-section" aria-labelledby="legendTitle">
+      <h2 class="section-title" id="legendTitle">Glosario de permisos</h2>
+      <div class="legend-grid">
+        <div class="legend-item">
+          <span class="legend-dot crud" aria-hidden="true"></span>
+          <div>
+            <strong>CRUD</strong>
+            <p>Acceso total: Crear, Leer, Actualizar, Eliminar</p>
+          </div>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot cru" aria-hidden="true"></span>
+          <div>
+            <strong>CRU</strong>
+            <p>Crear, Leer, Actualizar (sin eliminar)</p>
+          </div>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot ru" aria-hidden="true"></span>
+          <div>
+            <strong>RU</strong>
+            <p>Leer y Actualizar (solo edición)</p>
+          </div>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot r" aria-hidden="true"></span>
+          <div>
+            <strong>R</strong>
+            <p>Solo Lectura (consulta)</p>
+          </div>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot c" aria-hidden="true"></span>
+          <div>
+            <strong>C</strong>
+            <p>Solo Creación (registro)</p>
+          </div>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot none" aria-hidden="true"></span>
+          <div>
+            <strong>—</strong>
+            <p>Sin acceso al módulo</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Estado del pie de página -->
+    <footer class="page-footer" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="footerStatus">Permisos sincronizados correctamente</span>
+    </footer>
+
+  </main>
+
+  <!-- Modal: Editar permiso -->
+  <div class="modal-overlay" id="modalEdit" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalClose" aria-label="Cerrar ventana">×</button>
+      <h2 class="modal-title" id="modalTitle">Editar Permiso</h2>
+      <p class="modal-subtitle" id="modalSubtitle">Módulo: <strong id="modalModule"></strong> · Rol: <strong id="modalRole"></strong></p>
+      
+      <form id="formPermission" class="permission-form">
+        <fieldset class="permission-options" role="radiogroup" aria-label="Nivel de acceso">
+          <label class="permission-option">
+            <input type="radio" name="permLevel" value="CRUD" class="perm-radio">
+            <span class="perm-label">
+              <span class="perm-badge crud">CRUD</span>
+              <span class="perm-desc">Acceso total: Crear, Leer, Actualizar, Eliminar</span>
+            </span>
+          </label>
+          <label class="permission-option">
+            <input type="radio" name="permLevel" value="CRU" class="perm-radio">
+            <span class="perm-label">
+              <span class="perm-badge cru">CRU</span>
+              <span class="perm-desc">Crear, Leer, Actualizar (sin eliminar)</span>
+            </span>
+          </label>
+          <label class="permission-option">
+            <input type="radio" name="permLevel" value="RU" class="perm-radio">
+            <span class="perm-label">
+              <span class="perm-badge ru">RU</span>
+              <span class="perm-desc">Leer y Actualizar (solo edición)</span>
+            </span>
+          </label>
+          <label class="permission-option">
+            <input type="radio" name="permLevel" value="R" class="perm-radio">
+            <span class="perm-label">
+              <span class="perm-badge r">R</span>
+              <span class="perm-desc">Solo Lectura (consulta)</span>
+            </span>
+          </label>
+          <label class="permission-option">
+            <input type="radio" name="permLevel" value="C" class="perm-radio">
+            <span class="perm-label">
+              <span class="perm-badge c">C</span>
+              <span class="perm-desc">Solo Creación (registro)</span>
+            </span>
+          </label>
+          <label class="permission-option">
+            <input type="radio" name="permLevel" value="-" class="perm-radio">
+            <span class="perm-label">
+              <span class="perm-badge none">—</span>
+              <span class="perm-desc">Sin acceso al módulo</span>
+            </span>
+          </label>
+        </fieldset>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="modalCancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Aplicar cambio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="../st-adm-01-dashboard/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="../st-adm-02-usuarios/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Usuarios</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">🔐</span>
+      <span>Permisos</span>
+    </a>
+    <a href="../st-adm-10-facturacion/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">💳</span>
+      <span>Facturación</span>
+    </a>
+    <a href="../st-adm-14-configuracion/index.html" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
+      <span>Config</span>
+    </a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+    .skip-link:focus { top: 0; outline: 2px solid #fff; outline-offset: 2px; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="script.js"></script>
+</body>
+</html>
