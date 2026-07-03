@@ -1,0 +1,62 @@
+@{
+    var currentPath = Context.Request.Path.Value ?? "/";
+    Func<string, string> linkClass = href => currentPath.Equals(href, StringComparison.OrdinalIgnoreCase) ? "nav-item active" : "nav-item";
+}
+<aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Mi Dashboard <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-profesionales/st-odo-01-dashboard" class="@linkClass("/gestion-de-profesionales/st-odo-01-dashboard")" data-icon="📊">Mi Dashboard</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Mi Agenda <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-citas/st-odo-02-agenda" class="@linkClass("/gestion-de-citas/st-odo-02-agenda")" data-icon="📅">Mi Agenda</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/historia-clinica/st-odo-03-historial" class="@linkClass("/historia-clinica/st-odo-03-historial")" data-icon="📋">Historia Clínica</a>
+        <a href="/historia-clinica/st-odo-04-odontograma" class="@linkClass("/historia-clinica/st-odo-04-odontograma")" data-icon="🦷">Odontograma</a>
+        <a href="/historia-clinica/st-odo-06-pacientes" class="@linkClass("/historia-clinica/st-odo-06-pacientes")" data-icon="👥">Mis Pacientes</a>
+        <a href="/historia-clinica/st-odo-07-seguimiento-tratamiento" class="@linkClass("/historia-clinica/st-odo-07-seguimiento-tratamiento")" data-icon="📈">Tratamientos</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Servicios <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/servicios-y-recursos/st-odo-05-servicios" class="@linkClass("/servicios-y-recursos/st-odo-05-servicios")" data-icon="💼">Servicios</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Reportes <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-profesionales/st-odo-08-mis-reportes" class="@linkClass("/gestion-de-profesionales/st-odo-08-mis-reportes")" data-icon="📊">Mis Reportes</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Perfil <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-profesionales/st-odo-09-perfil-profesional" class="@linkClass("/gestion-de-profesionales/st-odo-09-perfil-profesional")" data-icon="👤">Mi Perfil</a>
+      </div>
+    </div>
+
+    <div class="nav-separator" aria-hidden="true"></div>
+    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+  </nav>
+
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">PR</div>
+    <div class="user-info">
+      <span class="user-role">Profesional</span>
+      <span class="user-email">profesional@smiletrack.co</span>
+    </div>
+  </div>
+</aside>

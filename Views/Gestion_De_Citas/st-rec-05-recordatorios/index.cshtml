@@ -1,0 +1,319 @@
+@{ Layout = null; }
+
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Recordatorios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-rec-05-recordatorios/styles.css")" />
+</head>
+
+<body>
+
+  <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Recordatorios) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+  </div>
+  @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">RE</div>
+    <div class="user-info">
+      <span class="user-role">Recepción</span>
+      <span class="user-email">recepcion@smiletrack.co</span>
+    </div>
+  </div>
+</aside>
+
+  <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Page header -->
+    <header class="page-header">
+      <div class="header-left">
+        <div class="breadcrumb">Recepción → Recordatorios</div>
+        <h1 class="page-title">Recordatorios y Notificaciones</h1>
+        <p class="page-subtitle">Gestiona los recordatorios automáticos y manuales de citas para pacientes</p>
+      </div>
+      <a href="/gestion-de-citas/st-rec-03-gestion-citas" class="btn-primary" aria-label="Crear nueva cita">+ Nueva cita</a>
+    </header>
+
+    <!-- Stats con aria-label para sección de estadísticas -->
+    <section class="stats-container" aria-label="Resumen de recordatorios">
+      <div class="stat-card success-card">
+        <span class="stat-value" id="statsSentCount" aria-live="polite">12</span>
+        <span class="stat-label">Enviados hoy</span>
+      </div>
+      <div class="stat-card warning-card">
+        <span class="stat-value" id="statsPendingCount" aria-live="polite">5</span>
+        <span class="stat-label">Pendientes de envío</span>
+      </div>
+    </section>
+
+    <!-- Grid: Lista + Alertas -->
+    <div class="dashboard-grid">
+
+      <!-- Columna izquierda: Recordatorios pendientes + Historial -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+
+        <!-- Recordatorios pendientes con role region -->
+        <section class="reminders-section" aria-labelledby="pendingTitle">
+          <div class="section-header">
+            <h2 id="pendingTitle">Pendientes de envío</h2>
+            <button class="btn-success" id="btnSendSelected"
+              aria-label="Enviar recordatorios a pacientes seleccionados">✓ Enviar</button>
+          </div>
+
+          <!-- Lista con role list y aria-live para anuncios dinámicos -->
+          <div class="patient-list" id="patientListContainer" role="list" aria-label="Lista de pacientes pendientes"
+            aria-live="polite">
+            <!-- Paciente 1: Pedro García -->
+            <div class="patient-row selected" data-id="1" role="listitem">
+              <input type="checkbox" class="custom-checkbox" checked
+                aria-label="Seleccionar recordatorio para Pedro García" />
+              <div class="avatar-circle avatar-blue" aria-hidden="true">PG</div>
+              <div class="patient-info">
+                <p class="patient-name">Pedro García</p>
+                <div class="patient-meta">
+                  <span><time datetime="2026-03-21T10:00">Mañana 10:00 AM</time></span>
+                  <span class="meta-dot" aria-hidden="true"></span>
+                  <span class="meta-channel">✉️ Correo</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Paciente 2: Ana Martínez -->
+            <div class="patient-row selected" data-id="2" role="listitem">
+              <input type="checkbox" class="custom-checkbox" checked
+                aria-label="Seleccionar recordatorio para Ana Martínez" />
+              <div class="avatar-circle avatar-green" aria-hidden="true">AM</div>
+              <div class="patient-info">
+                <p class="patient-name">Ana Martínez</p>
+                <div class="patient-meta">
+                  <span><time datetime="2026-03-21T11:00">Mañana 11:00 AM</time></span>
+                  <span class="meta-dot" aria-hidden="true"></span>
+                  <span class="meta-channel">✉️ Correo</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Paciente 3: Luis Herrera -->
+            <div class="patient-row dimmed" data-id="3" role="listitem">
+              <input type="checkbox" class="custom-checkbox" aria-label="Seleccionar recordatorio para Luis Herrera" />
+              <div class="avatar-circle avatar-blue" aria-hidden="true">LH</div>
+              <div class="patient-info">
+                <p class="patient-name">Luis Herrera</p>
+                <div class="patient-meta">
+                  <span><time datetime="2026-03-21T14:00">Mañana 14:00 PM</time></span>
+                  <span class="meta-dot" aria-hidden="true"></span>
+                  <span class="meta-channel">📱 SMS</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Paciente 4: Sandra Pérez -->
+            <div class="patient-row" data-id="4" role="listitem">
+              <input type="checkbox" class="custom-checkbox" aria-label="Seleccionar recordatorio para Sandra Pérez" />
+              <div class="avatar-circle avatar-gray" aria-hidden="true">SP</div>
+              <div class="patient-info">
+                <p class="patient-name">Sandra Pérez</p>
+                <div class="patient-meta">
+                  <span><time datetime="2026-03-22T09:00">Pasado mañana 9:00 AM</time></span>
+                  <span class="meta-dot" aria-hidden="true"></span>
+                  <span class="meta-channel">✉️ Correo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botón móvil "Enviar a todos" -->
+          <button class="mobile-action-btn" id="btnSendAllMobile"
+            aria-label="Enviar recordatorios a todos los pacientes programados para mañana">🔔 Enviar a todos para
+            mañana</button>
+        </section>
+
+        <!-- Historial de enviados -->
+        <section class="history-section" aria-labelledby="historyTitle">
+          <div class="history-header">
+            <h3 id="historyTitle">Enviados recientemente</h3>
+            <a href="#" class="view-all-link" aria-label="Ver historial completo de recordatorios enviados">Ver todos
+              →</a>
+          </div>
+          <div class="history-scroller" id="historyScroller" role="list"
+            aria-label="Historial de recordatorios enviados">
+            <!-- Historial 1 -->
+            <div class="history-card" role="listitem">
+              <div class="avatar-circle avatar-blue" style="width:36px;height:36px;font-size:.8rem;" aria-hidden="true">
+                ML</div>
+              <div class="history-info">
+                <p class="history-name">María López</p>
+                <p class="history-time"><time datetime="2026-03-20T08:00">Hoy 08:00 AM</time></p>
+              </div>
+              <span class="status-badge" role="status">Enviado</span>
+            </div>
+            <!-- Historial 2 -->
+            <div class="history-card" role="listitem">
+              <div class="avatar-circle avatar-amber" style="width:36px;height:36px;font-size:.8rem;"
+                aria-hidden="true">CR</div>
+              <div class="history-info">
+                <p class="history-name">Carlos Ruiz</p>
+                <p class="history-time"><time datetime="2026-03-20T08:15">Hoy 08:15 AM</time></p>
+              </div>
+              <span class="status-badge" role="status">Enviado</span>
+            </div>
+            <!-- Historial 3 -->
+            <div class="history-card" role="listitem">
+              <div class="avatar-circle avatar-green" style="width:36px;height:36px;font-size:.8rem;"
+                aria-hidden="true">JD</div>
+              <div class="history-info">
+                <p class="history-name">Jorge Díaz</p>
+                <p class="history-time"><time datetime="2026-03-19T17:30">Ayer 17:30 PM</time></p>
+              </div>
+              <span class="status-badge" role="status">Enviado</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Columna derecha: Alertas -->
+      <aside class="alerts-sidebar-card" aria-labelledby="alertsTitle">
+        <div class="alerts-header">
+          <span aria-hidden="true">⚠️</span>
+          <h3 id="alertsTitle">Alertas pendientes</h3>
+        </div>
+        <div class="alerts-list" role="list" aria-label="Lista de alertas pendientes">
+          <!-- Alerta roja: sin confirmar -->
+          <div class="alert-item-card red-alert" role="listitem">
+            <div class="alert-icon-box" aria-hidden="true">✕</div>
+            <div class="alert-content-box">
+              <h4>3 pacientes sin confirmar</h4>
+              <p>Las citas para mañana requieren confirmación manual.</p>
+              <button class="btn-alert-action" id="btnAlertUnconfirmed"
+                aria-label="Notificar a pacientes sin confirmar cita">Notificar</button>
+            </div>
+          </div>
+          <!-- Alerta amarilla: facturas vencidas -->
+          <div class="alert-item-card yellow-alert" role="listitem">
+            <div class="alert-icon-box" aria-hidden="true">💰</div>
+            <div class="alert-content-box">
+              <h4>2 facturas vencidas</h4>
+              <p>Pacientes con pagos pendientes por más de 15 días.</p>
+              <button class="btn-alert-action" id="btnAlertOverdue"
+                aria-label="Notificar a pacientes con facturas vencidas">Notificar</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Mobile bottom nav con aria-label para navegación móvil -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="/gestion-de-citas/st-rec-01-dashboard" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Panel</span>
+    </a>
+    <a href="/gestion-de-pacientes/st-rec-02-registrar-paciente"
+      class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Pacientes</span>
+    </a>
+    <a href="/gestion-de-citas/st-rec-03-gestion-citas" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Citas</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">🔔</span>
+      <span>Recordatorios</span>
+    </a>
+    <a href="/perfiles/st-rec-06-perfil-recepcionista" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Perfil</span>
+    </a>
+  </nav>
+
+  <!-- Toast container con atributos ARIA para notificaciones -->
+  <div id="toastContainer" role="region" aria-live="polite" aria-atomic="true" aria-label="Notificaciones"></div>
+
+  <!-- Estilos para contenido solo accesible por screen readers -->
+  <style>
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+  <script src="@Url.Content("~/js/Gestion_De_Citas/st-rec-05-recordatorios/app.js")"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+
+</html>

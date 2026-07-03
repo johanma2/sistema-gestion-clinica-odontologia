@@ -1,0 +1,302 @@
+@{ Layout = null; }
+
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Asistencia en Procedimiento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/asistencia-procedimiento.css")" />
+</head>
+
+<body>
+
+  <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Asistencia procedimiento) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-pacientes/st-aux-03-preparacion-consulta" class="nav-item" data-icon="📋">Preparación de Consulta</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/perfiles/st-aux-11-perfil-auxiliar" class="nav-item" data-icon="👤">Perfil del Auxiliar</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="nav-item" data-icon="📊">Panel Operativo</a>
+        <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="nav-item" data-icon="🗓️">Agenda de Apoyo</a>
+        <a href="/gestion-de-citas/st-aux-05-historial-parcial" class="nav-item" data-icon="📋">Historial Parcial</a>
+        <a href="/gestion-de-citas/st-aux-06-asistencia-procedi" class="nav-item active" data-icon="🔄" aria-current="page">Asistencia en Procedimiento</a>
+        <a href="/gestion-de-citas/st-aux-09-estado-consultorio" class="nav-item" data-icon="🚑">Estado de Consultorio</a>
+        <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="nav-item" data-icon="✅">Citas Finalizadas</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/historia-clinica/st-aux-07-control-postoperato" class="nav-item" data-icon="🏥">Control Postoperatorio</a>
+        <a href="/historia-clinica/st-aux-08-documentos-clinicos" class="nav-item" data-icon="📎">Documentos Clínicos</a>
+      </div>
+    </div>
+    <div class="nav-separator" aria-hidden="true"></div>
+    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">AU</div>
+    <div class="user-info">
+      <span class="user-role">Auxiliar</span>
+      <span class="user-email">auxiliar@smiletrack.co</span>
+    </div>
+  </div>
+</aside>
+
+  <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Breadcrumb y header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Auxiliar</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Asistencia en procedimiento</span>
+        </nav>
+        <h1 class="page-title">Asistencia en Procedimiento</h1>
+        <p class="page-subtitle">Endodoncia pieza 23 · Dr. Andrés Torres · Consultorio 3</p>
+      </div>
+    </header>
+
+    <!-- Alerta médica con role alert para anuncio inmediato -->
+    <div class="alert-banner" role="alert" aria-live="assertive">
+      <span class="alert-banner-icon" aria-hidden="true">⚠️</span>
+      <p class="alert-banner-text"><strong>ALERTA</strong> — Pedro García · Alérgico a Penicilina · Enalapril 5mg</p>
+    </div>
+
+    <!-- Layout de contenido -->
+    <div class="content-layout">
+
+      <!-- Columna izquierda: Timer + Datos -->
+      <div class="content-left">
+
+        <!-- Tarjeta de estado con timer accesible -->
+        <div class="status-card">
+          <div class="timer-circle" role="timer" aria-label="Tiempo transcurrido del procedimiento" aria-live="polite">
+            <span class="timer-value" id="timerValue">24</span>
+            <span class="timer-label">min</span>
+          </div>
+          <div class="status-info">
+            <p class="status-label">Estado del procedimiento</p>
+            <span class="status-badge" role="status">En curso</span>
+            <p class="status-time">Iniciado a las <time datetime="2026-03-20T10:03">10:03 AM</time></p>
+          </div>
+        </div>
+
+        <!-- Datos de la cita -->
+        <div class="data-card">
+          <h3 class="data-card-title">Datos de la cita</h3>
+          <div class="data-row"><strong>Paciente:</strong> <span>Pedro García</span></div>
+          <div class="data-row"><strong>Profesional:</strong> <span>Dr. Andrés Torres</span></div>
+          <div class="data-row"><strong>Servicio:</strong> <span>Endodoncia pieza 23</span></div>
+          <div class="data-row"><strong>Consultorio:</strong> <span>Consultorio 3 - piso 2</span></div>
+        </div>
+
+      </div>
+
+      <!-- Columna derecha: Alertas + Estado del procedimiento -->
+      <aside class="content-right">
+
+        <!-- Alertas del paciente con role list -->
+        <div class="alert-card">
+          <p class="alert-card-title">🔔 Alertas del paciente</p>
+          <div class="alert-item" role="listitem">
+            <span class="alert-icon" aria-hidden="true">🚨</span>
+            <span><strong>Alergia:</strong> Penicilina</span>
+          </div>
+          <div class="alert-item" role="listitem">
+            <span class="alert-icon" aria-hidden="true">💊</span>
+            <span><strong>Medicamentos:</strong> Enalapril 5mg</span>
+          </div>
+          <div class="alert-item" role="listitem">
+            <span class="alert-icon" aria-hidden="true">📋</span>
+            <span><strong>Antecedentes:</strong> Hipertensión leve</span>
+          </div>
+          <div class="alert-item" role="listitem">
+            <span class="alert-icon" aria-hidden="true">🩸</span>
+            <span><strong>Grupo sanguíneo:</strong> O+</span>
+          </div>
+        </div>
+
+        <!-- Estado del procedimiento con píldoras interactivas -->
+        <div class="procedure-card">
+          <h3 class="procedure-card-title">Estado del Procedimiento</h3>
+
+          <div class="procedure-row">
+            <span class="procedure-label">
+              <span class="procedure-icon" aria-hidden="true">🧹</span>
+              Limpieza
+            </span>
+            <button class="procedure-pill azul" id="pillLimpieza" aria-pressed="false"
+              aria-label="Marcar limpieza como completada">Limpieza</button>
+          </div>
+
+          <div class="procedure-row">
+            <span class="procedure-label">
+              <span class="procedure-icon" aria-hidden="true">🔬</span>
+              Esterilización
+            </span>
+            <button class="procedure-pill verde" id="pillEsterilizacion" aria-pressed="false"
+              aria-label="Marcar esterilización como completada">Esterilización</button>
+          </div>
+
+          <div class="procedure-row">
+            <span class="procedure-label">
+              <span class="procedure-icon" aria-hidden="true">⚙️</span>
+              Equipos
+            </span>
+            <button class="procedure-pill gris" id="pillEquipos" aria-pressed="false"
+              aria-label="Marcar equipos como completada">Equipos</button>
+          </div>
+
+        </div>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Mobile bottom nav con aria-label para navegación móvil -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Panel</span>
+    </a>
+    <a href="#" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
+    </a>
+    <a href="/gestion-de-citas/st-aux-05-historial-parcial" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📋</span>
+      <span>Historial</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">🔄</span>
+      <span>Procedimiento</span>
+    </a>
+    <a href="/perfiles/st-aux-11-perfil-auxiliar" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Perfil</span>
+    </a>
+  </nav>
+
+  <!-- Toast con aria-atomic para anuncio completo de notificaciones -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para contenido solo accesible por screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+
+    .skip-link:focus {
+      top: 0;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+  <script src="@Url.Content("~/js/asistencia-procedimiento.js")"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+
+</html>

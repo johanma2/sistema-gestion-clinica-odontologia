@@ -1,0 +1,237 @@
+@{ Layout = null; }
+
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Citas Finalizadas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.css")" />
+</head>
+
+<body>
+
+  <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Citas finalizadas) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-pacientes/st-aux-03-preparacion-consulta" class="nav-item" data-icon="📋">Preparación de Consulta</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/perfiles/st-aux-11-perfil-auxiliar" class="nav-item" data-icon="👤">Perfil del Auxiliar</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="nav-item" data-icon="📊">Panel Operativo</a>
+        <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="nav-item" data-icon="🗓️">Agenda de Apoyo</a>
+        <a href="/gestion-de-citas/st-aux-05-historial-parcial" class="nav-item" data-icon="📋">Historial Parcial</a>
+        <a href="/gestion-de-citas/st-aux-06-asistencia-procedi" class="nav-item" data-icon="🔄">Asistencia en Procedimiento</a>
+        <a href="/gestion-de-citas/st-aux-09-estado-consultorio" class="nav-item" data-icon="🚑">Estado de Consultorio</a>
+        <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="nav-item active" data-icon="✅" aria-current="page">Citas Finalizadas</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/historia-clinica/st-aux-07-control-postoperato" class="nav-item" data-icon="🏥">Control Postoperatorio</a>
+        <a href="/historia-clinica/st-aux-08-documentos-clinicos" class="nav-item" data-icon="📎">Documentos Clínicos</a>
+      </div>
+    </div>
+    <div class="nav-separator" aria-hidden="true"></div>
+    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">AU</div>
+    <div class="user-info">
+      <span class="user-role">Auxiliar</span>
+      <span class="user-email">auxiliar@smiletrack.co</span>
+    </div>
+  </div>
+</aside>
+
+  <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header con metadatos accesibles -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Auxiliar</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Citas finalizadas</span>
+        </nav>
+        <h1 class="page-title">Citas Finalizadas del Día</h1>
+        <p class="page-subtitle">Resumen de la jornada · <time datetime="2026-03-20">20 de marzo 2026</time></p>
+      </div>
+      <button class="btn-export" id="btnExport" aria-label="Descargar resumen de citas finalizadas">📥 Descargar
+        resumen</button>
+    </header>
+
+    <!-- Tarjetas de resumen con aria-label para sección de métricas -->
+    <div class="summary-cards" aria-label="Resumen de citas por estado">
+      <div class="summary-card green">
+        <span class="summary-number" id="countAtendidas" aria-live="polite">0</span>
+        <span class="summary-label">Atendidas</span>
+      </div>
+      <div class="summary-card red">
+        <span class="summary-number" id="countCanceladas" aria-live="polite">0</span>
+        <span class="summary-label">Canceladas</span>
+      </div>
+      <div class="summary-card yellow">
+        <span class="summary-number" id="countNoAsistio" aria-live="polite">0</span>
+        <span class="summary-label">No asistió</span>
+      </div>
+    </div>
+
+    <!-- Tabla de citas con estructura accesible -->
+    <div class="table-card">
+      <table class="appointments-table" aria-label="Listado de citas finalizadas del día">
+        <thead>
+          <tr>
+            <th scope="col">HORA</th>
+            <th scope="col">PACIENTE</th>
+            <th scope="col">PROFESIONAL</th>
+            <th scope="col">SERVICIO</th>
+            <th scope="col">ESTADO</th>
+          </tr>
+        </thead>
+        <tbody id="appointmentsBody" aria-live="polite">
+          <!-- Las filas se generan dinámicamente por JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Mobile bottom nav con aria-label para navegación móvil -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Panel</span>
+    </a>
+    <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">✅</span>
+      <span>Finalizadas</span>
+    </a>
+    <a href="/perfiles/st-aux-11-perfil-auxiliar" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Perfil</span>
+    </a>
+  </nav>
+
+  <!-- Toast con aria-atomic para anuncio completo de notificaciones -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para contenido solo accesible por screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+
+    .skip-link:focus {
+      top: 0;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+  <script src="@Url.Content("~/js/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.js")"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+
+</html>

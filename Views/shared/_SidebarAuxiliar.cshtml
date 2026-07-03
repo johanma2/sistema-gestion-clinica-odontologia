@@ -1,0 +1,35 @@
+@{
+    var currentPath = Context.Request.Path.Value ?? "/";
+    Func<string, string> linkClass = href => currentPath.Equals(href, StringComparison.OrdinalIgnoreCase) ? "nav-item active" : "nav-item";
+}
+<nav class="sidebar-nav">
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/" class="@linkClass("/")" data-icon="🏠">Homepage</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="@linkClass("/gestion-de-pacientes/st-adm-05-gestion-pacientes")" data-icon="👥">Gestión de Pacientes</a>
+      <a href="/gestion-de-pacientes/st-rec-02-registrar-paciente" class="@linkClass("/gestion-de-pacientes/st-rec-02-registrar-paciente")" data-icon="➕">Registrar Paciente + Cita</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Perfil <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/perfiles/st-aux-11-perfil-auxiliar" class="@linkClass("/perfiles/st-aux-11-perfil-auxiliar")" data-icon="👤">Mi Perfil</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="@linkClass("/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo")" data-icon="📊">Panel Auxiliar</a>
+      <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="@linkClass("/gestion-de-citas/st-aux-02-agenda-apoyo")" data-icon="📅">Gestión de Citas</a>
+      <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="@linkClass("/gestion-de-citas/st-aux-10-citas-finalizadas")" data-icon="✅">Citas Finalizadas</a>
+    </div>
+  </div>
+  <div class="nav-separator" aria-hidden="true"></div>
+  <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+</nav>

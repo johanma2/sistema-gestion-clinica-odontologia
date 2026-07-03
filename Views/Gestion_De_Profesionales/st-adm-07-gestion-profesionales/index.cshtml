@@ -1,0 +1,323 @@
+@{ Layout = null; }
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Gestión de odontólogos y especialistas de la clínica SmileTrack" />
+  <title>SmileTrack — Gestión de Profesionales</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css")" />
+</head>
+
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Gestión Profesionales) ═════ -->
+  
+<aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+  </div>
+  @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">AD</div>
+    <div class="user-info">
+      <span class="user-role">Administrador</span>
+      <span class="user-email">admin@smiletrack.co</span>
+    </div>
+  </div>
+</aside>
+
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Administración</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Gestión de Profesionales</span>
+        </nav>
+        <h1 class="page-title">Gestión de Profesionales</h1>
+        <p class="page-subtitle">Administra los odontólogos y especialistas de la clínica</p>
+      </div>
+      <button class="btn-primary" id="btnNewProfessional" aria-label="Crear nuevo profesional">
+        + Nuevo Profesional
+      </button>
+    </header>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid" aria-label="Estadísticas de profesionales">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number" id="metricTotal" data-target="0" aria-live="polite">0</span>
+        <span class="stat-label">Total Profesionales</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number" id="metricActives" data-target="0" aria-live="polite">0</span>
+        <span class="stat-label">Activos</span>
+      </div>
+      <div class="stat-card" data-color="orange">
+        <span class="stat-number" id="metricVacations" data-target="0" aria-live="polite">0</span>
+        <span class="stat-label">En vacaciones</span>
+      </div>
+      <div class="stat-card" data-color="red">
+        <span class="stat-number" id="metricInactives" data-target="0" aria-live="polite">0</span>
+        <span class="stat-label">Inactivos</span>
+      </div>
+    </section>
+
+    <!-- Filtros -->
+    <section class="filters-section" aria-label="Filtros de búsqueda">
+      <div class="filters-row">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="searchInput" class="search-input"
+            placeholder="Buscar por nombre, especialidad o registro..." aria-label="Buscar profesional">
+        </div>
+        <div class="filter-wrap">
+          <label for="filterSpecialty" class="visually-hidden">Filtrar por especialidad</label>
+          <select id="filterSpecialty" class="status-select" aria-label="Filtrar profesionales por especialidad">
+            <option value="">Todas las especialidades</option>
+          </select>
+        </div>
+        <div class="filter-wrap">
+          <label for="filterStatus" class="visually-hidden">Filtrar por estado</label>
+          <select id="filterStatus" class="status-select" aria-label="Filtrar profesionales por estado">
+            <option value="">Todos los estados</option>
+            <option value="Activo">Activo</option>
+            <option value="Vacaciones">Vacaciones</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabla de profesionales -->
+    <section class="table-card" aria-labelledby="professionalsTitle">
+      <h2 class="visually-hidden" id="professionalsTitle">Lista de profesionales</h2>
+      <div class="table-wrap">
+        <table id="professionalsTable" class="table-base" aria-label="Tabla de profesionales de la clínica">
+          <thead>
+            <tr>
+              <th scope="col">PROFESIONAL</th>
+              <th scope="col">ESPECIALIDAD</th>
+              <th scope="col">REGISTRO</th>
+              <th scope="col">TELÉFONO</th>
+              <th scope="col">ESTADO</th>
+              <th scope="col">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody id="professionalsTbody" aria-live="polite">
+            <!-- Filas inyectadas por JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div class="pagination" role="navigation" aria-label="Paginación de profesionales">
+        <span id="paginationInfo" aria-live="polite">Mostrando 0-0 de 0 profesionales</span>
+        <div class="pagination-buttons" id="paginationButtons">
+          <!-- Botones generados por JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal: Crear/Editar Profesional -->
+  <div class="modal-overlay" id="modalForm" role="dialog" aria-modal="true" aria-labelledby="modalFormTitle"
+    aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalFormClose" aria-label="Cerrar ventana">×</button>
+      <h2 class="modal-title" id="modalFormTitle">Nuevo Profesional</h2>
+      <form id="formProfessional" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="formName">Nombre Completo *</label>
+          <input type="text" id="formName" class="form-input" required placeholder="Ej. Dr. Carlos Méndez">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formSpecialty">Especialidad *</label>
+          <input type="text" id="formSpecialty" class="form-input" required placeholder="Ej. Ortodoncia">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formRegistry">Registro Médico *</label>
+          <input type="text" id="formRegistry" class="form-input" required placeholder="Ej. RM-2026-001">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formPhone">Teléfono *</label>
+          <input type="tel" id="formPhone" class="form-input" required placeholder="Ej. 300 123 4567">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formStatus">Estado *</label>
+          <select id="formStatus" class="form-input" required>
+            <option value="Activo">Activo</option>
+            <option value="Vacaciones">Vacaciones</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="modalFormCancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Profesional</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Ver Detalle -->
+  <div class="modal-overlay" id="modalDetail" role="dialog" aria-modal="true" aria-labelledby="modalDetailTitle"
+    aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalDetailClose" aria-label="Cerrar ventana">×</button>
+      <h2 class="modal-title" id="modalDetailTitle">Ficha de Profesional</h2>
+      <div class="modal-detail">
+        <div class="detail-avatar-wrap">
+          <div class="detail-avatar" id="detailAvatar" aria-hidden="true">--</div>
+        </div>
+        <h3 class="detail-name" id="detailName">--</h3>
+        <p class="detail-specialty" id="detailSpecialty">--</p>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-key">Registro Médico</span>
+            <span class="detail-value" id="detailRegistry">--</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-key">Teléfono</span>
+            <span class="detail-value" id="detailPhone">--</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-key">Estado</span>
+            <span class="detail-value"><span class="badge-status" id="detailStatus">--</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="modalDetailCloseBtn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Usuarios</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">🩺</span>
+      <span>Profesionales</span>
+    </a>
+    <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">💳</span>
+      <span>Facturación</span>
+    </a>
+    <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
+      <span>Config</span>
+    </a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+
+    .skip-link:focus {
+      top: 0;
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+  <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/app.js")"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+</body>
+
+</html>

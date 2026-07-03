@@ -1,0 +1,84 @@
+﻿/* ════════════════════════════════════════════════════════
+   SMILETRACK — RECUPERAR CONTRASEÑA
+   recover.css
+   ════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Iconos */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    display: inline-flex; align-items: center; justify-content: center;
+    user-select: none;
+}
+
+/* Animaciones */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes floatIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+main { animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+main > div { animation: floatIn 0.6s ease-out 0.2s both; }
+
+/* Inputs */
+input { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+input:focus { transform: translateY(-1px); box-shadow: 0 10px 25px rgba(30, 136, 229, 0.15); }
+
+/* Feedback de validación */
+.text-success { color: #43A047 !important; }
+.text-error { color: #E53935 !important; }
+.border-success { border-color: #43A047 !important; }
+.border-error { border-color: #E53935 !important; }
+
+/* Indicador de pasos */
+.step-indicator {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transition: all 0.3s ease;
+}
+.step-indicator.active { background: #a0c9ff; transform: scale(1.2); }
+.step-indicator.completed { background: #43A047; }
+
+/* Requisitos de contraseña */
+#passLength.dot, #passUpper.dot, #passNumber.dot { color: #E53935; }
+#passLength.valid, #passUpper.valid, #passNumber.valid { color: #43A047; }
+
+/* Toggle password visibility */
+.toggle-password { background: none; border: none; cursor: pointer; padding: 4px; }
+.toggle-password:hover { color: white !important; }
+
+/* Toast notifications */
+.toast {
+    min-width: 320px; max-width: 400px; padding: 1rem 1.25rem;
+    border-radius: 1rem; font-weight: 500; font-size: 0.9rem; color: white;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 12px;
+    transform: translateX(400px); opacity: 0; transition: transform 0.4s ease, opacity 0.3s ease;
+    pointer-events: auto; z-index: 10000;
+}
+.toast.show { transform: translateX(0); opacity: 1; }
+.toast.success { background: linear-gradient(135deg, #43A047, #4CAF50); }
+.toast.error { background: linear-gradient(135deg, #E53935, #F44336); }
+.toast.info { background: linear-gradient(135deg, #1E88E5, #42A5F5); }
+.toast-close { background: none; border: none; color: white; cursor: pointer; padding: 4px; margin-left: auto; border-radius: 4px; opacity: 0.8; }
+.toast-close:hover { opacity: 1; }
+
+/* Responsive */
+@media (max-width: 480px) {
+    .font-title.text-h1 { font-size: 26px !important; }
+    main { padding: 1rem; margin: 0; }
+    main > div { border-radius: 2rem; margin: 0 -1rem; }
+    .toast { min-width: calc(100vw - 3rem); right: 1.5rem; left: 1.5rem; }
+    #code { font-size: 1.5rem; letter-spacing: 0.5em !important; }
+}
+
+/* Accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid #1E88E5; outline-offset: 2px; border-radius: 0.75rem; }
+
+/* Utilidades */
+.hidden { display: none !important; }
+[aria-hidden="true"] { pointer-events: none; }
+.flex-2 { flex: 2; }

@@ -1,0 +1,42 @@
+@{
+    var currentPath = Context.Request.Path.Value ?? "/";
+    Func<string, string> linkClass = href => currentPath.Equals(href, StringComparison.OrdinalIgnoreCase) ? "nav-item active" : "nav-item";
+}
+<nav class="sidebar-nav">
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/" class="@linkClass("/")" data-icon="🏠">Homepage</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="@linkClass("/gestion-de-pacientes/st-adm-05-gestion-pacientes")" data-icon="👥">Gestión de Pacientes</a>
+      <a href="/gestion-de-pacientes/st-rec-02-registrar-paciente" class="@linkClass("/gestion-de-pacientes/st-rec-02-registrar-paciente")" data-icon="➕">Registrar Paciente + Cita</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Perfil <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/perfiles/st-rec-06-perfil-recepcionista" class="@linkClass("/perfiles/st-rec-06-perfil-recepcionista")" data-icon="👤">Perfil del Recepcionista</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/gestion-de-citas/st-rec-01-dashboard" class="@linkClass("/gestion-de-citas/st-rec-01-dashboard")" data-icon="📊">Panel de Recepción</a>
+      <a href="/gestion-de-citas/st-rec-03-gestion-citas" class="@linkClass("/gestion-de-citas/st-rec-03-gestion-citas")" data-icon="📅">Gestión de Citas</a>
+      <a href="/gestion-de-citas/st-rec-05-recordatorios" class="@linkClass("/gestion-de-citas/st-rec-05-recordatorios")" data-icon="🔔">Recordatorios</a>
+      <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="@linkClass("/gestion-de-citas/st-aux-10-citas-finalizadas")" data-icon="✅">Citas Finalizadas</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/facturacion-y-pagos/st-rec-04-generar-factura" class="@linkClass("/facturacion-y-pagos/st-rec-04-generar-factura")" data-icon="🧾">Generar Factura y Pago</a>
+    </div>
+  </div>
+  <div class="nav-separator" aria-hidden="true"></div>
+  <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+</nav>

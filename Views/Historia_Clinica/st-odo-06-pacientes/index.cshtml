@@ -1,0 +1,232 @@
+@{ Layout = null; }
+
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Mis Pacientes</title>
+  <meta name="description" content="Gestiona y consulta la información de tus pacientes en SmileTrack." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Historia_Clinica/st-odo-06-pacientes/pacientes.css")" />
+</head>
+
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  @{ await Html.RenderPartialAsync("_SidebarProfesional"); }
+
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Odontólogo</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Mis Pacientes</span>
+        </nav>
+        <h1 class="page-title">Mis Pacientes</h1>
+        <p class="page-subtitle">Consulta y gestiona la información de tus pacientes atendidos</p>
+      </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid" aria-label="Resumen de pacientes">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number" id="statTotal" data-target="42" aria-live="polite">0</span>
+        <span class="stat-label">Total pacientes</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number" id="statActivos" data-target="28" aria-live="polite">0</span>
+        <span class="stat-label">Activos</span>
+      </div>
+      <div class="stat-card" data-color="orange">
+        <span class="stat-number" id="statSeguimiento" data-target="9" aria-live="polite">0</span>
+        <span class="stat-label">En seguimiento</span>
+      </div>
+      <div class="stat-card" data-color="purple">
+        <span class="stat-number" id="statAltas" data-target="5" aria-live="polite">0</span>
+        <span class="stat-label">Altas médicas</span>
+      </div>
+    </section>
+
+    <!-- Filtros y búsqueda -->
+    <section class="filters-section" aria-label="Filtros de pacientes">
+      <div class="filters-row">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="searchInput" class="search-input" placeholder="Buscar paciente por nombre..."
+            aria-label="Buscar paciente por nombre o cédula">
+        </div>
+        <div class="filter-wrap">
+          <label for="filterEstado" class="visually-hidden">Filtrar por estado</label>
+          <select id="filterEstado" class="status-select" aria-label="Filtrar pacientes por estado">
+            <option value="">Todos los estados</option>
+            <option value="activo">Activos</option>
+            <option value="seguimiento">En seguimiento</option>
+            <option value="alta">Altas médicas</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabla de pacientes -->
+    <section class="table-card" aria-labelledby="pacientesTitle">
+      <h2 class="visually-hidden" id="pacientesTitle">Lista de pacientes</h2>
+      <div class="table-wrap">
+        <table id="pacientesTable" class="table-base" aria-label="Tabla de pacientes atendidos">
+          <thead>
+            <tr>
+              <th scope="col">PACIENTE</th>
+              <th scope="col">ÚLTIMA CONSULTA</th>
+              <th scope="col">SERVICIO</th>
+              <th scope="col">PRÓXIMA CITA</th>
+              <th scope="col">ESTADO</th>
+              <th scope="col">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody id="pacientesTbody" aria-live="polite">
+            <!-- Filas inyectadas por pacientes.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal de detalle de paciente -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle"
+    aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalClose" aria-label="Cerrar ventana de detalle">×</button>
+      <h2 class="modal-title" id="modalTitle">Detalle del Paciente</h2>
+      <div id="modalContent" role="document"></div>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="/gestion-de-profesionales/st-odo-01-dashboard" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">🏠</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="/gestion-de-citas/st-odo-02-agenda" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
+    </a>
+    <a href="/historia-clinica/st-odo-06-pacientes" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Pacientes</span>
+    </a>
+    <a href="/historia-clinica/st-odo-03-historial" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📋</span>
+      <span>Historial</span>
+    </a>
+    <a href="/gestion-de-profesionales/st-odo-09-perfil-profesional"
+      class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Perfil</span>
+    </a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+
+    .skip-link:focus {
+      top: 0;
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <script src="@Url.Content("~/js/Historia_Clinica/st-odo-06-pacientes/pacientes.js")"></script>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+
+</html>

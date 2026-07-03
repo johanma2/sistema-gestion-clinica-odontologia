@@ -1,0 +1,432 @@
+@{ Layout = null; }
+
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Gestión de Citas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-rec-03-gestion-citas/styles.css")" />
+</head>
+
+<body>
+
+  <!-- Skip link para accesibilidad -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Citas) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+  </div>
+  @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">RE</div>
+    <div class="user-info">
+      <span class="user-role">Recepción</span>
+      <span class="user-email">recepcion@smiletrack.co</span>
+    </div>
+  </div>
+</aside>
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Page header -->
+    <header class="page-header">
+      <div class="header-left">
+        <div class="breadcrumb">Recepción → Gestión de citas</div>
+        <h1 class="page-title">Gestión de Citas</h1>
+        <p class="page-subtitle">Programa, modifica y cancela citas de manera eficiente.</p>
+      </div>
+      <button class="btn-primary" id="btnNuevaCita" aria-label="Crear nueva cita">➕ Nueva cita</button>
+    </header>
+
+    <!-- View toggles -->
+    <div class="view-toggles" role="tablist" aria-label="Vistas de citas">
+      <button class="view-toggle active" data-view="table" role="tab" aria-selected="true" aria-controls="panel-table"
+        tabindex="0">📊 Tabla</button>
+      <button class="view-toggle" data-view="calendar" role="tab" aria-selected="false" aria-controls="panel-calendar"
+        tabindex="-1">📅 Calendario</button>
+      <button class="view-toggle" data-view="paused" role="tab" aria-selected="false" aria-controls="panel-paused"
+        tabindex="-1">⏸️ Pausado (1)</button>
+    </div>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid" aria-label="Resumen de citas del día">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number" id="metricToday" aria-live="polite">24</span>
+        <span class="stat-label">Citas hoy</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number" id="metricConfirmed" aria-live="polite">18</span>
+        <span class="stat-label">Confirmadas</span>
+      </div>
+      <div class="stat-card" data-color="orange">
+        <span class="stat-number" id="metricPending" aria-live="polite">3</span>
+        <span class="stat-label">Pendientes</span>
+      </div>
+      <div class="stat-card" data-color="purple">
+        <span class="stat-number" id="metricCancelled" aria-live="polite">3</span>
+        <span class="stat-label">Canceladas hoy</span>
+      </div>
+    </section>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" role="toolbar" aria-label="Filtros de citas">
+      <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input type="search" class="search-input" id="searchPatient" placeholder="Buscar paciente…"
+          aria-label="Buscar por nombre de paciente" autocomplete="off" />
+      </div>
+      <select class="status-select" id="filterProfessional" aria-label="Filtrar por profesional">
+        <option value="">Todos los profesionales</option>
+        <option value="Dr. Carlos Méndez">Dr. Carlos Méndez</option>
+        <option value="Dra. Laura Gómez">Dra. Laura Gómez</option>
+        <option value="Dr. Andrés Torres">Dr. Andrés Torres</option>
+      </select>
+      <select class="status-select" id="filterDate" aria-label="Filtrar por fecha">
+        <option value="today">Hoy</option>
+        <option value="tomorrow">Mañana</option>
+        <option value="week">Esta semana</option>
+        <option value="month">Este mes</option>
+      </select>
+      <select class="status-select" id="filterStatus" aria-label="Filtrar por estado">
+        <option value="">Todos los estados</option>
+        <option value="Agendada">Agendada</option>
+        <option value="Confirmada">Confirmada</option>
+        <option value="En consulta">En consulta</option>
+        <option value="Atendida">Atendida</option>
+        <option value="Cancelada">Cancelada</option>
+        <option value="No asistió">No asistió</option>
+      </select>
+    </div>
+
+    <!-- Availability alert -->
+    <div class="availability-alert" role="status" aria-live="polite">
+      <span class="availability-alert-icon" aria-hidden="true">✅</span>
+      <p class="availability-alert-text">Disponibilidad validada: <strong><time datetime="2026-03-20T10:00">10:00
+            AM</time></strong> - Dr. Méndez - Consultorio 1 está <u>disponible</u></p>
+    </div>
+
+    <!-- Panel de tabla (visible por defecto) -->
+    <div id="panel-table" role="tabpanel" aria-labelledby="">
+      <div class="table-wrap">
+        <table class="table-base" aria-label="Listado de citas">
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Hora</th>
+              <th scope="col">Paciente</th>
+              <th scope="col">Profesional</th>
+              <th scope="col">Servicio</th>
+              <th scope="col">Consultorio</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="appointmentsTable" aria-live="polite"></tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div class="pagination" role="navigation" aria-label="Paginación de citas">
+        <span class="pagination-info" id="paginationInfo" aria-live="polite">Mostrando 1-5 de 24 citas</span>
+        <div class="pagination-buttons">
+          <button class="pagination-btn" id="prevPage" disabled aria-label="Página anterior">← Anterior</button>
+          <div class="pagination-numbers" role="list" aria-label="Números de página">
+            <button class="pagination-number active" role="listitem" aria-current="page" data-page="1">1</button>
+            <button class="pagination-number" role="listitem" data-page="2">2</button>
+          </div>
+          <button class="pagination-btn" id="nextPage" aria-label="Página siguiente">Siguiente →</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="/gestion-de-citas/st-rec-01-dashboard" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">🏠</span>
+      <span>Inicio</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Citas</span>
+    </a>
+    <a href="/gestion-de-pacientes/st-rec-02-registrar-paciente"
+      class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Pacientes</span>
+    </a>
+    <button class="mobile-nav-item" id="mobileMoreBtn" aria-label="Más opciones">
+      <span class="mobile-nav-icon" aria-hidden="true">⋮</span>
+      <span>Más</span>
+    </button>
+  </nav>
+
+  <!-- FAB móvil -->
+  <button class="fab" id="fabNuevaCita" aria-label="Crear nueva cita">➕</button>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ═════ MODAL: NUEVA CITA ═════ -->
+  <div class="modal-overlay" id="modalNewAppointment" role="dialog" aria-modal="true" aria-labelledby="modalNewTitle"
+    aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalNewClose" aria-label="Cerrar modal">×</button>
+      <h2 class="modal-title" id="modalNewTitle">Nueva Cita</h2>
+      <form id="formNewAppointment" class="modal-form" novalidate>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="newPatient">Paciente <span class="required"
+                aria-hidden="true">*</span></label>
+            <input type="text" id="newPatient" class="form-input" required placeholder="Nombre del paciente"
+              autocomplete="name" />
+            <span class="error-message" id="error-newPatient" role="alert">Por favor ingresa el nombre del
+              paciente</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newDate">Fecha <span class="required" aria-hidden="true">*</span></label>
+            <input type="date" id="newDate" class="form-input" required />
+            <span class="error-message" id="error-newDate" role="alert">Por favor selecciona una fecha válida</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newTime">Hora <span class="required" aria-hidden="true">*</span></label>
+            <input type="time" id="newTime" class="form-input" required />
+            <span class="error-message" id="error-newTime" role="alert">Por favor selecciona una hora válida</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newDoctor">Profesional <span class="required"
+                aria-hidden="true">*</span></label>
+            <select id="newDoctor" class="form-select" required>
+              <option value="">Seleccionar profesional</option>
+              <option value="Dr. Carlos Méndez">Dr. Carlos Méndez</option>
+              <option value="Dra. Laura Gómez">Dra. Laura Gómez</option>
+              <option value="Dr. Andrés Torres">Dr. Andrés Torres</option>
+            </select>
+            <span class="error-message" id="error-newDoctor" role="alert">Por favor selecciona un profesional</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newService">Servicio <span class="required"
+                aria-hidden="true">*</span></label>
+            <select id="newService" class="form-select" required>
+              <option value="">Seleccionar servicio</option>
+              <option value="Consulta">Consulta General</option>
+              <option value="Control">Control de tratamiento</option>
+              <option value="Resina">Resina dental</option>
+              <option value="Limpieza">Limpieza dental</option>
+              <option value="Extracción">Extracción</option>
+            </select>
+            <span class="error-message" id="error-newService" role="alert">Por favor selecciona un servicio</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newOffice">Consultorio <span class="required"
+                aria-hidden="true">*</span></label>
+            <select id="newOffice" class="form-select" required>
+              <option value="C1">Consultorio 1</option>
+              <option value="C2">Consultorio 2</option>
+              <option value="C3">Consultorio 3</option>
+            </select>
+            <span class="error-message" id="error-newOffice" role="alert">Por favor selecciona un consultorio</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="newNotes">Notas adicionales</label>
+          <textarea id="newNotes" class="form-textarea" rows="3"
+            placeholder="Información adicional sobre la cita"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="modalNewCancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar cita</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═════ MODAL: VER DETALLES ═════ -->
+  <div class="modal-overlay" id="modalViewAppointment" role="dialog" aria-modal="true" aria-labelledby="modalViewTitle"
+    aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalViewClose" aria-label="Cerrar modal">×</button>
+      <h2 class="modal-title" id="modalViewTitle">Detalles de la Cita</h2>
+      <div id="modalViewContent" class="modal-content"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="modalViewCancel">Cerrar</button>
+        <button type="button" class="btn-primary" id="modalViewEdit">Editar cita</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════ MODAL: EDITAR CITA ═════ -->
+  <div class="modal-overlay" id="modalEditAppointment" role="dialog" aria-modal="true" aria-labelledby="modalEditTitle"
+    aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalEditClose" aria-label="Cerrar modal">×</button>
+      <h2 class="modal-title" id="modalEditTitle">Editar Cita</h2>
+      <form id="formEditAppointment" class="modal-form" novalidate>
+        <input type="hidden" id="editAppointmentId" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="editPatient">Paciente <span class="required"
+                aria-hidden="true">*</span></label>
+            <input type="text" id="editPatient" class="form-input" required />
+            <span class="error-message" id="error-editPatient" role="alert">Por favor ingresa el nombre del
+              paciente</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editDate">Fecha <span class="required" aria-hidden="true">*</span></label>
+            <input type="date" id="editDate" class="form-input" required />
+            <span class="error-message" id="error-editDate" role="alert">Por favor selecciona una fecha válida</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editTime">Hora <span class="required" aria-hidden="true">*</span></label>
+            <input type="time" id="editTime" class="form-input" required />
+            <span class="error-message" id="error-editTime" role="alert">Por favor selecciona una hora válida</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editDoctor">Profesional <span class="required"
+                aria-hidden="true">*</span></label>
+            <select id="editDoctor" class="form-select" required>
+              <option value="">Seleccionar profesional</option>
+              <option value="Dr. Carlos Méndez">Dr. Carlos Méndez</option>
+              <option value="Dra. Laura Gómez">Dra. Laura Gómez</option>
+              <option value="Dr. Andrés Torres">Dr. Andrés Torres</option>
+            </select>
+            <span class="error-message" id="error-editDoctor" role="alert">Por favor selecciona un profesional</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editService">Servicio <span class="required"
+                aria-hidden="true">*</span></label>
+            <select id="editService" class="form-select" required>
+              <option value="">Seleccionar servicio</option>
+              <option value="Consulta">Consulta General</option>
+              <option value="Control">Control de tratamiento</option>
+              <option value="Resina">Resina dental</option>
+              <option value="Limpieza">Limpieza dental</option>
+              <option value="Extracción">Extracción</option>
+            </select>
+            <span class="error-message" id="error-editService" role="alert">Por favor selecciona un servicio</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editOffice">Consultorio <span class="required"
+                aria-hidden="true">*</span></label>
+            <select id="editOffice" class="form-select" required>
+              <option value="C1">Consultorio 1</option>
+              <option value="C2">Consultorio 2</option>
+              <option value="C3">Consultorio 3</option>
+            </select>
+            <span class="error-message" id="error-editOffice" role="alert">Por favor selecciona un consultorio</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editStatus">Estado</label>
+            <select id="editStatus" class="form-select">
+              <option value="Agendada">Agendada</option>
+              <option value="Confirmada">Confirmada</option>
+              <option value="En consulta">En consulta</option>
+              <option value="Atendida">Atendida</option>
+              <option value="Cancelada">Cancelada</option>
+              <option value="No asistió">No asistió</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editNotes">Notas adicionales</label>
+          <textarea id="editNotes" class="form-textarea" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="modalEditCancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Actualizar cita</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═════ MODAL: SINCRONIZAR ═════ -->
+  <div class="modal-overlay" id="modalSyncCalendar" role="dialog" aria-modal="true" aria-labelledby="modalSyncTitle"
+    aria-hidden="true" inert>
+    <div class="modal modal--sm">
+      <button class="modal-close" id="modalSyncClose" aria-label="Cerrar modal">×</button>
+      <h2 class="modal-title" id="modalSyncTitle">Sincronizar con Calendario</h2>
+      <p class="modal-desc">Selecciona la plataforma para sincronizar esta cita:</p>
+      <div class="sync-options">
+        <button class="sync-option" id="syncGoogle" data-platform="google">
+          <span class="sync-icon" aria-hidden="true">📅</span><span>Google Calendar</span>
+        </button>
+        <button class="sync-option" id="syncOutlook" data-platform="outlook">
+          <span class="sync-icon" aria-hidden="true">🗓️</span><span>Outlook</span>
+        </button>
+        <button class="sync-option" id="syncApple" data-platform="apple">
+          <span class="sync-icon" aria-hidden="true">🍎</span><span>Apple Calendar</span>
+        </button>
+      </div>
+      <p class="sync-note">* La sincronización requiere permisos de acceso a tu calendario</p>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="modalSyncCancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="@Url.Content("~/js/Gestion_De_Citas/st-rec-03-gestion-citas/app.js")"></script>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+
+</html>

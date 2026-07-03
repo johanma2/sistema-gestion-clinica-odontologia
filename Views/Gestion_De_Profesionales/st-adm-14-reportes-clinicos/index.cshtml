@@ -1,0 +1,333 @@
+@{ Layout = null; }
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Consulta reportes clínicos, indicadores de pacientes y rendimiento médico en SmileTrack." />
+  <title>SmileTrack — Reportes Clínicos</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/styles.css")" />
+</head>
+
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Reportes Clínicos) ═════ -->
+
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow"
+            aria-hidden="true">▼</span></div>
+        <div class="nav-group-items">
+          <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-header" role="button" tabindex="0">Acceso y Seguridad <span class="nav-arrow"
+            aria-hidden="true">▼</span></div>
+        <div class="nav-group-items">
+          <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="nav-item "
+            data-icon="👥">Gestión de Usuarios</a>
+          <a href="/acceso-y-seguridad/st-adm-03-gestion-roles" class="nav-item" data-icon="🛡️">Gestión
+            de Roles</a>
+          <a href="/acceso-y-seguridad/st-adm-04-matriz-permisos" class="nav-item" data-icon="🔑">Matriz
+            de Permisos</a>
+          <a href="/acceso-y-seguridad/st-adm-15-bitacora" class="nav-item" data-icon="📜">Bitácora del
+            Sistema</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow"
+            aria-hidden="true">▼</span></div>
+        <div class="nav-group-items">
+          <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="nav-item"
+            data-icon="👥">Gestión de Pacientes</a>
+
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow"
+            aria-hidden="true">▼</span></div>
+        <div class="nav-group-items">
+          <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="nav-item"
+            data-icon="🩺">Gestión de Profesionales</a>
+          <a href="/gestion-de-profesionales/st-adm-14-reportes-clinicos" class="nav-item active"
+            data-icon="📈" aria-current="page">Reportes Clínicos</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow"
+            aria-hidden="true">▼</span></div>
+        <div class="nav-group-items">
+          <a href="/gestion-de-citas/st-adm-01-dashboard" class="nav-item" data-icon="📊">Dashboard
+            General</a>
+          <a href="/gestion-de-citas/st-adm-08-agenda" class="nav-item" data-icon="📅">Agenda
+            General</a>
+          <a href="/gestion-de-citas/st-adm-09-citas" class="nav-item" data-icon="🗓️">Gestión Integral
+            de Citas</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow"
+            aria-hidden="true">▼</span></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow"
+            aria-hidden="true">▼</span></div>
+        <div class="nav-group-items">
+          <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="nav-item"
+            data-icon="💰">Gestión de Facturación</a>
+          <a href="/facturacion-y-pagos/st-adm-13-reportes-financieros" class="nav-item"
+            data-icon="📊">Reportes Financieros</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-header" role="button" tabindex="0">Servicios y Recursos <span class="nav-arrow"
+            aria-hidden="true">▼</span></div>
+        <div class="nav-group-items">
+          <a href="/servicios-y-recursos/st-adm-10-servicios" class="nav-item"
+            data-icon="🔧">Catálogo de Servicios</a>
+          <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="nav-item"
+            data-icon="⚙️">Configuración General</a>
+        </div>
+      </div>
+      <div class="nav-separator" aria-hidden="true"></div>
+      <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪"
+        aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">AD</div>
+      <div class="user-info">
+        <span class="user-role">Administrador</span>
+        <span class="user-email">admin@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
+
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Administración</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Reportes Clínicos</span>
+        </nav>
+        <h1 class="page-title">Reportes Clínicos</h1>
+        <p class="page-subtitle">Análisis médico</p>
+      </div>
+    </header>
+
+    <!-- KPI Cards con aria-live para contadores -->
+    <section class="stats-grid" aria-label="Resumen clínico">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number" id="statPatients" data-target="1284" aria-live="polite">0</span>
+        <span class="stat-label">Pacientes Registrados</span>
+        <span class="stat-sub">Total histórico</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number" id="statConsults" data-target="342" aria-live="polite">0</span>
+        <span class="stat-label">Consultas Este Mes</span>
+        <span class="stat-sub">↑ +18% vs mes anterior</span>
+      </div>
+      <div class="stat-card" data-color="purple">
+        <span class="stat-number" id="statSatisfaction" data-target="96" aria-live="polite">0%</span>
+        <span class="stat-label">Satisfacción Pacientes</span>
+        <span class="stat-sub">Encuesta mensual</span>
+      </div>
+    </section>
+
+    <!-- Controles y filtros -->
+    <section class="controls-section">
+      <div class="filters-wrap">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="searchPatients" class="search-input" placeholder="Buscar paciente..."
+            aria-label="Buscar paciente">
+        </div>
+        <select id="filterProfessional" class="filter-select" aria-label="Filtrar por profesional">
+          <option value="">Todos los Profesionales</option>
+          <option value="mendez">Dr. Ricardo Méndez</option>
+          <option value="sotelo">Dra. Elena Sotelo</option>
+          <option value="ruiz">Dr. Carlos Ruiz</option>
+        </select>
+        <select id="filterMonth" class="filter-select" aria-label="Filtrar por mes">
+          <option value="">Todos los meses</option>
+          <option value="2026-05">Mayo 2026</option>
+          <option value="2026-04">Abril 2026</option>
+          <option value="2026-03">Marzo 2026</option>
+        </select>
+        <button class="btn-secondary" id="btnExport" aria-label="Exportar reporte a PDF">
+          📥 Exportar PDF
+        </button>
+      </div>
+    </section>
+
+    <!-- Tabla de pacientes -->
+    <section class="table-section" aria-labelledby="tableTitle">
+      <h2 class="visually-hidden" id="tableTitle">Lista de pacientes en reportes clínicos</h2>
+
+      <!-- Cabecera de tabla accesible -->
+      <div class="table-header" role="row">
+        <div class="table-col col-paciente" role="columnheader">Paciente</div>
+        <div class="table-col col-consulta" role="columnheader">Última Consulta</div>
+        <div class="table-col col-diagnostico" role="columnheader">Diagnóstico</div>
+        <div class="table-col col-profesional" role="columnheader">Profesional</div>
+        <div class="table-col col-cita" role="columnheader">Próxima Cita</div>
+        <div class="table-col col-alertas text-center" role="columnheader">Alertas</div>
+        <div class="table-col col-accion text-right" role="columnheader">Acción</div>
+      </div>
+
+      <!-- Cuerpo de tabla con aria-live -->
+      <div id="patientsBody" class="table-body" role="rowgroup" aria-live="polite">
+        <!-- Filas inyectadas por JS -->
+      </div>
+
+      <!-- Paginación accesible -->
+      <footer class="table-footer" aria-label="Navegación de páginas">
+        <span>Mostrando <strong id="pageShowing">5</strong> de <strong id="pageTotal">1284</strong> pacientes</span>
+        <nav class="pagination" aria-label="Páginas de resultados">
+          <button class="pagination-btn" id="btnPrev" aria-label="Página anterior" disabled>‹</button>
+          <button class="pagination-btn active" aria-current="page" aria-label="Página 1">1</button>
+          <button class="pagination-btn" aria-label="Página 2">2</button>
+          <button class="pagination-btn" aria-label="Página 3">3</button>
+          <span class="pagination-ellipsis">…</span>
+          <button class="pagination-btn" aria-label="Página 257">257</button>
+          <button class="pagination-btn" id="btnNext" aria-label="Página siguiente">›</button>
+        </nav>
+      </footer>
+    </section>
+
+  </main>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Usuarios</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">📋</span>
+      <span>Reportes</span>
+    </a>
+    <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">💳</span>
+      <span>Facturación</span>
+    </a>
+    <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
+      <span>Config</span>
+    </a>
+  </nav>
+
+  <!-- Toast para notificaciones accesibles -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+
+    .skip-link:focus {
+      top: 0;
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+  <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/reportes.js")"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+  </script>
+</body>
+
+</html>

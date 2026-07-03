@@ -1,0 +1,362 @@
+@{ Layout = null; }
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Configura y gestiona el catálogo de servicios odontológicos en SmileTrack." />
+  <title>SmileTrack — Catálogo de Servicios</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Servicios_Y_Recursos/st-adm-10-servicios/catalogoservicios.css")" />
+</head>
+
+<body>
+
+  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Servicios) ═════ -->
+  
+<aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Acceso y Seguridad <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="nav-item " data-icon="👥">Gestión de Usuarios</a>
+        <a href="/acceso-y-seguridad/st-adm-03-gestion-roles" class="nav-item" data-icon="🛡️">Gestión de Roles</a>
+        <a href="/acceso-y-seguridad/st-adm-04-matriz-permisos" class="nav-item" data-icon="🔑">Matriz de Permisos</a>
+        <a href="/acceso-y-seguridad/st-adm-15-bitacora" class="nav-item" data-icon="📜">Bitácora del Sistema</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="nav-item" data-icon="👥">Gestión de Pacientes</a>
+
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="nav-item" data-icon="🩺">Gestión de Profesionales</a>
+        <a href="/gestion-de-profesionales/st-adm-14-reportes-clinicos" class="nav-item" data-icon="📈">Reportes Clínicos</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-citas/st-adm-01-dashboard" class="nav-item" data-icon="📊">Dashboard General</a>
+        <a href="/gestion-de-citas/st-adm-08-agenda" class="nav-item" data-icon="📅">Agenda General</a>
+        <a href="/gestion-de-citas/st-adm-09-citas" class="nav-item" data-icon="🗓️">Gestión Integral de Citas</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="nav-item" data-icon="💰">Gestión de Facturación</a>
+        <a href="/facturacion-y-pagos/st-adm-13-reportes-financieros" class="nav-item" data-icon="📊">Reportes Financieros</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Servicios y Recursos <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/servicios-y-recursos/st-adm-10-servicios" class="nav-item active" data-icon="🔧" aria-current="page">Catálogo de Servicios</a>
+        <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="nav-item" data-icon="⚙️">Configuración General</a>
+      </div>
+    </div>
+    <div class="nav-separator" aria-hidden="true"></div>
+    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">AD</div>
+    <div class="user-info">
+      <span class="user-role">Administrador</span>
+      <span class="user-email">admin@smiletrack.co</span>
+    </div>
+  </div>
+</aside>
+
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main" id="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb" aria-label="Ruta de navegación">
+          <span>Administración</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Catálogo de Servicios</span>
+        </nav>
+        <h1 class="page-title">Catálogo de Servicios</h1>
+        <p class="page-subtitle">Configuración de precios</p>
+      </div>
+    </header>
+
+    <!-- KPI Cards con aria-live para contadores -->
+    <section class="stats-grid" aria-label="Resumen de servicios">
+      <div class="stat-card" data-color="blue">
+        <span class="stat-number" id="statTotal" data-target="12" aria-live="polite">0</span>
+        <span class="stat-label">Total Servicios</span>
+        <span class="stat-sub">Global</span>
+      </div>
+      <div class="stat-card" data-color="green">
+        <span class="stat-number" id="statActive" data-target="10" aria-live="polite">0</span>
+        <span class="stat-label">Servicios Activos</span>
+        <span class="stat-sub">↑ +8% vs mes anterior</span>
+      </div>
+      <div class="stat-card" data-color="red">
+        <span class="stat-number" id="statInactive" data-target="2" aria-live="polite">0</span>
+        <span class="stat-label">Inactivos / Pausados</span>
+        <span class="stat-sub">Sin cambios</span>
+      </div>
+    </section>
+
+    <!-- Controles y filtros -->
+    <section class="controls-section">
+      <div class="filters-wrap">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="searchServices" class="search-input" placeholder="Buscar por nombre..."
+            aria-label="Buscar servicio">
+        </div>
+        <select id="filterCategory" class="filter-select" aria-label="Filtrar por categoría">
+          <option value="">Todas las Categorías</option>
+          <option value="prevencion">Prevención</option>
+          <option value="estetica">Estética</option>
+          <option value="cirugia">Cirugía</option>
+          <option value="ortodoncia">Ortodoncia</option>
+          <option value="endodoncia">Endodoncia</option>
+        </select>
+        <select id="filterStatus" class="filter-select" aria-label="Filtrar por estado">
+          <option value="">Estado: Todos</option>
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
+        <button class="btn-primary" id="btnNewService" aria-label="Crear nuevo servicio">
+          ➕ Nuevo servicio
+        </button>
+      </div>
+    </section>
+
+    <!-- Tabla de servicios -->
+    <section class="table-section" aria-labelledby="tableTitle">
+      <h2 class="visually-hidden" id="tableTitle">Lista de servicios disponibles</h2>
+
+      <!-- Cabecera de tabla accesible -->
+      <div class="table-header" role="row">
+        <div class="table-col col-nombre" role="columnheader">Nombre del Servicio</div>
+        <div class="table-col col-categoria" role="columnheader">Categoría</div>
+        <div class="table-col col-duracion" role="columnheader">Duración</div>
+        <div class="table-col col-costo" role="columnheader">Costo</div>
+        <div class="table-col col-estado text-center" role="columnheader">Estado</div>
+        <div class="table-col col-acciones text-right" role="columnheader">Acciones</div>
+      </div>
+
+      <!-- Cuerpo de tabla con aria-live -->
+      <div id="servicesBody" class="table-body" role="rowgroup" aria-live="polite">
+        <!-- Filas inyectadas por JS -->
+      </div>
+
+      <!-- Paginación accesible -->
+      <footer class="table-footer" aria-label="Navegación de páginas">
+        <span>Mostrando <strong id="pageShowing">4</strong> de <strong id="pageTotal">12</strong> servicios</span>
+        <nav class="pagination" aria-label="Páginas de resultados">
+          <button class="pagination-btn" id="btnPrev" aria-label="Página anterior" disabled>‹</button>
+          <button class="pagination-btn active" aria-current="page" aria-label="Página 1">1</button>
+          <button class="pagination-btn" aria-label="Página 2">2</button>
+          <button class="pagination-btn" aria-label="Página 3">3</button>
+          <button class="pagination-btn" id="btnNext" aria-label="Página siguiente">›</button>
+        </nav>
+      </footer>
+    </section>
+
+  </main>
+
+  <!-- Drawer: Editar Servicio (accesible) -->
+  <div class="drawer-overlay" id="drawerOverlay" role="dialog" aria-modal="true" aria-labelledby="drawerTitle"
+    aria-hidden="true" inert>
+    <div class="drawer-panel" id="drawerPanel">
+      <header class="drawer-header">
+        <h3 class="drawer-title" id="drawerTitle">Editar Servicio</h3>
+        <button class="drawer-close" id="drawerClose" aria-label="Cerrar panel">×</button>
+      </header>
+      <form id="serviceForm" class="drawer-form" role="form">
+        <div class="form-group">
+          <label for="serviceName" class="form-label">Nombre del Servicio</label>
+          <input type="text" id="serviceName" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label for="serviceDescription" class="form-label">Descripción</label>
+          <textarea id="serviceDescription" class="form-textarea" rows="4"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="serviceCategory" class="form-label">Categoría</label>
+          <select id="serviceCategory" class="form-select" required>
+            <option value="prevencion">Prevención</option>
+            <option value="estetica">Estética</option>
+            <option value="cirugia">Cirugía</option>
+            <option value="ortodoncia">Ortodoncia</option>
+            <option value="endodoncia">Endodoncia</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="serviceCost" class="form-label">Costo ($)</label>
+            <input type="number" id="serviceCost" class="form-input" step="0.01" min="0" required>
+          </div>
+          <div class="form-group">
+            <label for="serviceDuration" class="form-label">Duración (min)</label>
+            <input type="number" id="serviceDuration" class="form-input" min="1" required>
+          </div>
+        </div>
+        <div class="form-group form-toggle">
+          <span class="toggle-label">
+            <strong>Estado del Servicio</strong>
+            <small>Habilitar visibilidad para citas</small>
+          </span>
+          <button type="button" class="toggle-switch" id="serviceActiveToggle" role="switch" aria-checked="true"
+            aria-label="Activar o desactivar servicio">
+            <span class="toggle-dot"></span>
+          </button>
+        </div>
+        <footer class="drawer-footer">
+          <button type="button" class="btn-secondary" id="drawerCancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Cambios</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+      <span>Usuarios</span>
+    </a>
+    <a href="#" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">💼</span>
+      <span>Servicios</span>
+    </a>
+    <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">💳</span>
+      <span>Facturación</span>
+    </a>
+    <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
+      <span>Config</span>
+    </a>
+  </nav>
+
+  <!-- Toast para notificaciones accesibles -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Estilos para screen readers -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 1000;
+      transition: top var(--tr);
+    }
+
+    .skip-link:focus {
+      top: 0;
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+  <script src="@Url.Content("~/js/Servicios_Y_Recursos/st-adm-10-servicios/catalogoservicios.js")"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+</body>
+
+</html>

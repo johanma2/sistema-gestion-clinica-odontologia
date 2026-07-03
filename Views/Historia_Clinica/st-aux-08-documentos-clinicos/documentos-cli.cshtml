@@ -1,0 +1,292 @@
+@{ Layout = null; }
+
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmileTrack — Carga de Documentos Clínicos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/documentos-clinicos.css")" />
+</head>
+
+<body>
+
+  <!-- ═════ SIDEBAR UNIFICADO (Activo: Carga Documentos) ═════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-pacientes/st-aux-03-preparacion-consulta" class="nav-item" data-icon="📋">Preparación de Consulta</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/perfiles/st-aux-11-perfil-auxiliar" class="nav-item" data-icon="👤">Perfil del Auxiliar</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="nav-item" data-icon="📊">Panel Operativo</a>
+        <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="nav-item" data-icon="🗓️">Agenda de Apoyo</a>
+        <a href="/gestion-de-citas/st-aux-05-historial-parcial" class="nav-item" data-icon="📋">Historial Parcial</a>
+        <a href="/gestion-de-citas/st-aux-06-asistencia-procedi" class="nav-item" data-icon="🔄">Asistencia en Procedimiento</a>
+        <a href="/gestion-de-citas/st-aux-09-estado-consultorio" class="nav-item" data-icon="🚑">Estado de Consultorio</a>
+        <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="nav-item" data-icon="✅">Citas Finalizadas</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
+      <div class="nav-group-items">
+        <a href="/historia-clinica/st-aux-07-control-postoperato" class="nav-item" data-icon="🏥">Control Postoperatorio</a>
+        <a href="/historia-clinica/st-aux-08-documentos-clinicos" class="nav-item active" data-icon="📎" aria-current="page">Documentos Clínicos</a>
+      </div>
+    </div>
+    <div class="nav-separator" aria-hidden="true"></div>
+    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">AU</div>
+    <div class="user-info">
+      <span class="user-role">Auxiliar</span>
+      <span class="user-email">auxiliar@smiletrack.co</span>
+    </div>
+  </div>
+</aside>
+
+  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir menú">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ═════ MAIN ═════ -->
+  <main class="main">
+
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <nav class="breadcrumb">
+          <span>Auxiliar</span>
+          <span class="bc-sep">→</span>
+          <span class="bc-active">Carga de documentos</span>
+        </nav>
+        <h1 class="page-title">Carga de Documentos Clínicos</h1>
+        <p class="page-subtitle">Pedro García · HC-2026-001</p>
+      </div>
+    </header>
+
+    <!-- Layout -->
+    <div class="content-layout">
+
+      <!-- Columna izquierda: Formulario de carga -->
+      <div class="content-left">
+        <div class="card">
+          <h3 class="card-title">Adjuntar nuevo documento</h3>
+
+          <form id="uploadForm" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="docType">Tipo de documento <span class="required">*</span></label>
+              <div class="select-wrapper">
+                <select class="form-select" id="docType" required>
+                  <option value="">Seleccionar tipo...</option>
+                  <option value="Radiografía panorámica">Radiografía panorámica</option>
+                  <option value="Radiografía periapical">Radiografía periapical</option>
+                  <option value="Fotografía inicial">Fotografía inicial</option>
+                  <option value="Fotografía final">Fotografía final</option>
+                  <option value="Examen de coagulación">Examen de coagulación</option>
+                  <option value="Consentimiento informado">Consentimiento informado</option>
+                  <option value="Historia clínica">Historia clínica</option>
+                  <option value="Otro">Otro</option>
+                </select>
+                <span class="error-message" id="error-docType">Selecciona un tipo</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="docDate">Fecha de expedición <span class="required">*</span></label>
+              <div class="date-input-wrapper">
+                <input type="date" class="form-input" id="docDate" required />
+                <span class="date-icon">📅</span>
+              </div>
+              <span class="error-message" id="error-docDate">Selecciona una fecha</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="docDesc">Descripción</label>
+              <input type="text" class="form-input" id="docDesc" placeholder="Descripción del documento..." />
+            </div>
+
+            <!-- Drag & Drop -->
+            <div class="drop-zone" id="dropZone" role="button" tabindex="0">
+              <input type="file" id="fileInput" class="file-input" accept=".jpg,.jpeg,.png,.pdf" />
+              <div class="drop-zone-content" id="dropContent">
+                <span class="folder-icon">📁</span>
+                <p class="drop-text-primary">Arrastra el archivo aquí</p>
+                <p class="drop-text-secondary">o haz clic para seleccionar</p>
+                <p class="drop-text-formats">JPG, PNG, PDF — Máx. 10MB</p>
+              </div>
+              <div class="file-preview" id="filePreview" style="display:none;">
+                <span class="file-icon" id="fileIcon"></span>
+                <div class="file-info">
+                  <p class="file-name" id="fileName"></p>
+                  <p class="file-size" id="fileSize"></p>
+                </div>
+                <button type="button" class="file-remove" id="btnRemoveFile">×</button>
+              </div>
+            </div>
+
+            <button type="submit" class="upload-btn" id="uploadBtn">Subir documento</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Columna derecha: Lista de documentos -->
+      <aside class="content-right">
+        <div class="card">
+          <h3 class="card-title">Documentos del paciente</h3>
+          <div class="docs-list" id="docsList">
+            <!-- Documentos existentes -->
+            <div class="doc-item">
+              <span class="doc-icon">🦷</span>
+              <div class="doc-info">
+                <p class="doc-name">Radiografía panorámica</p>
+                <p class="doc-meta">15 Dic 2025 · Auxiliar: Sara Jiménez</p>
+              </div>
+              <button class="doc-eye" onclick="viewDocument('radiografia.jpg','Radiografía panorámica')"
+                aria-label="Ver documento">👁️</button>
+            </div>
+            <div class="doc-item">
+              <span class="doc-icon">📸</span>
+              <div class="doc-info">
+                <p class="doc-name">Fotografía inicial</p>
+                <p class="doc-meta">02 Nov 2025 · Auxiliar: Sara Jiménez</p>
+              </div>
+              <button class="doc-eye" onclick="viewDocument('foto.jpg','Fotografía inicial')"
+                aria-label="Ver documento">👁️</button>
+            </div>
+            <div class="doc-item">
+              <span class="doc-icon">🧪</span>
+              <div class="doc-info">
+                <p class="doc-name">Examen de coagulación</p>
+                <p class="doc-meta">02 Nov 2025 · Auxiliar: Sara Jiménez</p>
+              </div>
+              <button class="doc-eye" onclick="viewDocument('examen.pdf','Examen de coagulación')"
+                aria-label="Ver documento">👁️</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Modal de vista previa -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="modal-icon" id="modalIcon">📄</span>
+          <div>
+            <p class="modal-name" id="modalTitle"></p>
+            <p class="modal-role">Vista previa del documento</p>
+          </div>
+        </div>
+        <button class="modal-close" id="modalCloseBtn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-doc-placeholder" id="modalPreview">
+          <span class="placeholder-icon">📄</span>
+          <p class="placeholder-text">Vista previa del documento</p>
+          <p class="placeholder-subtext">El archivo se cargará aquí</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="modal-btn modal-btn-secondary" id="modalCloseBtn2">Cerrar</button>
+        <button type="button" class="modal-btn modal-btn-primary" id="modalDownloadBtn">⬇ Descargar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile nav -->
+  <nav class="mobile-nav">
+    <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="mobile-nav-item"><span
+        class="mobile-nav-icon">📊</span><span>Panel</span></a>
+    <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="mobile-nav-item"><span
+        class="mobile-nav-icon">📅</span><span>Agenda</span></a>
+    <a href="/gestion-de-citas/st-aux-05-historial-parcial" class="mobile-nav-item"><span
+        class="mobile-nav-icon">📋</span><span>Historial</span></a>
+    <a href="#" class="mobile-nav-item active"><span class="mobile-nav-icon">📎</span><span>Documentos</span></a>
+    <a href="/perfiles/st-aux-11-perfil-auxiliar" class="mobile-nav-item"><span
+        class="mobile-nav-icon">👤</span><span>Perfil</span></a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="font-size:1rem;">🦷</span>
+      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+    </div>
+    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <script src="@Url.Content("~/js/footer.js")"></script>
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+  </footer>
+
+
+  <script src="@Url.Content("~/js/documentos-clinicos.js")"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+
+</html>
