@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SmileTrack_MVC")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fdf8e3280b7284104de1e9b72fcafa22786e6108")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cd845b001bcb18c82c1e3a917b7e1e66439865c1")]
 [assembly: System.Reflection.AssemblyProductAttribute("SmileTrack_MVC")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SmileTrack_MVC")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

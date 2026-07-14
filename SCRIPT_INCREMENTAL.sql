@@ -10,8 +10,8 @@ USE [master];
 GO
 
 -- Cambia de contexto a tu base de datos si es necesario:
--- USE SmileTrackDB;
--- GO
+USE SmileTrackDB;
+GO
 
 -- ------------------------------------------------------------
 -- MÓDULO 1: ACCESO Y SEGURIDAD (Tablas)
@@ -74,7 +74,7 @@ BEGIN
         fecha_creacion   DATETIME      NOT NULL DEFAULT GETDATE(),
         ultimo_login     DATETIME      NULL,
         CONSTRAINT FK_Usuario_Rol FOREIGN KEY (id_rol) REFERENCES Rol(id_rol),
-        CONSTRAINT FK_Usuario_Creador FOREIGN KEY (creado_por) REFERENCES Usuario(id_usuario) ON DELETE SET NULL
+        CONSTRAINT FK_Usuario_Creador FOREIGN KEY (creado_por) REFERENCES Usuario(id_usuario) ON DELETE NO ACTION
     );
 END
 GO

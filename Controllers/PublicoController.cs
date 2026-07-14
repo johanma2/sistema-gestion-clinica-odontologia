@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace SmileTrack_MVC.Controllers;
 
@@ -10,4 +11,11 @@ public class PublicoController : Controller
 
     [Route("shared")]
     public IActionResult Shared() => View("~/Views/shared/index.cshtml");
+    [HttpGet]
+[Route("dev/generar-hash")]
+public IActionResult GenerarHash(string pwd = "Admin123!")
+{
+    var hash = BCrypt.Net.BCrypt.HashPassword(pwd);
+    return Content($"Contraseña: {pwd}\nHash: {hash}");
+}
 }

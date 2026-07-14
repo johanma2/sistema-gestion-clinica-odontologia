@@ -3,19 +3,29 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using SmileTrack_MVC.Data;
+using SmileTrack_MVC.Models;
 
 namespace SmileTrack_MVC.Controllers;
 
 public class AccesoYSeguridadController : Controller
 {
+      private readonly AppDbContext _context;
+
+    public AccesoYSeguridadController(AppDbContext context)
+    {
+        _context = context;
+    }
     [HttpGet]
     [Route("acceso-y-seguridad/login")]
     public IActionResult Login() => View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
 
+  
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Route("acceso-y-seguridad/login")]
-    public async Task<IActionResult> LoginPost(string email, string password, string rol)
+    public async Task<IActionResult> LoginPost(string email, string password)
     {
         var redirecciones = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -26,23 +36,45 @@ public class AccesoYSeguridadController : Controller
             { "Paciente", "/gestion-de-citas/st-pac-01-mis-citas" },
         };
 
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(rol))
-            return BadRequest("Faltan datos.");
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            ModelState.AddModelError("", "Correo y contraseña son obligatorios.");
+            return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
+        }
 
-        var rolNormalizado = rol.Trim();
-        if (!redirecciones.TryGetValue(rolNormalizado, out var rutaDestino))
-            return BadRequest("Rol inválido.");
+        var usuario = await _context.Usuarios
+            .Include(u => u.Rol)
+            .FirstOrDefaultAsync(u => u.Correo == email && u.Estado == "activo");
+
+        if (usuario == null || !BCrypt.Net.BCrypt.Verify(password, usuario.Contrasena))
+        {
+            ModelState.AddModelError("", "Correo o contraseña incorrectos.");
+            return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
+        }
+
+        var rolNombre = usuario.Rol?.NombreRol ?? "";
+        if (!redirecciones.TryGetValue(rolNombre, out var rutaDestino))
+        {
+            ModelState.AddModelError("", "El usuario no tiene un rol válido asignado.");
+            return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
+        }
 
         var claims = new List<Claim>
         {
-            new(ClaimTypes.Name, email),
-            new(ClaimTypes.Role, rolNormalizado),
+            new(ClaimTypes.NameIdentifier, usuario.IdUsuario.ToString()),
+            new(ClaimTypes.Name, $"{usuario.Nombre} {usuario.Apellidos}"),
+            new(ClaimTypes.Email, usuario.Correo),
+            new(ClaimTypes.Role, rolNombre),
         };
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, new AuthenticationProperties { IsPersistent = true });
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
+            new AuthenticationProperties { IsPersistent = true });
+
+        usuario.UltimoLogin = DateTime.Now;
+        await _context.SaveChangesAsync();
 
         return Redirect(rutaDestino);
     }
