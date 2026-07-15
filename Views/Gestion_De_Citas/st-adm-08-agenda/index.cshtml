@@ -1,4 +1,4 @@
-@{ Layout = null; }
+@{ Layout = null; var agendaDias = ViewData["AgendaDias"] as List<SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel> ?? new(); var semanaLabel = ViewData["SemanaLabel"] ?? string.Empty; }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -21,76 +21,19 @@
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
- <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  <nav class="sidebar-nav">
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+    </div>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">AD</div>
+      <div class="user-info">
+        <span class="user-role">Administrador</span>
+        <span class="user-email">admin@smiletrack.co</span>
       </div>
     </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Acceso y Seguridad <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="nav-item " data-icon="👥">Gestión de Usuarios</a>
-        <a href="/acceso-y-seguridad/st-adm-03-gestion-roles" class="nav-item" data-icon="🛡️">Gestión de Roles</a>
-        <a href="/acceso-y-seguridad/st-adm-04-matriz-permisos" class="nav-item" data-icon="🔑">Matriz de Permisos</a>
-        <a href="/acceso-y-seguridad/st-adm-15-bitacora" class="nav-item" data-icon="📜">Bitácora del Sistema</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="nav-item" data-icon="👥">Gestión de Pacientes</a>
-
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="nav-item" data-icon="🩺">Gestión de Profesionales</a>
-        <a href="/gestion-de-profesionales/st-adm-14-reportes-clinicos" class="nav-item" data-icon="📈">Reportes Clínicos</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-citas/st-adm-01-dashboard" class="nav-item" data-icon="📊">Dashboard General</a>
-        <a href="/gestion-de-citas/st-adm-08-agenda" class="nav-item active" data-icon="📅" aria-current="page">Agenda General</a>
-        <a href="/gestion-de-citas/st-adm-09-citas" class="nav-item" data-icon="🗓️">Gestión Integral de Citas</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="nav-item" data-icon="💰">Gestión de Facturación</a>
-        <a href="/facturacion-y-pagos/st-adm-13-reportes-financieros" class="nav-item" data-icon="📊">Reportes Financieros</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Servicios y Recursos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/servicios-y-recursos/st-adm-10-servicios" class="nav-item" data-icon="🔧">Catálogo de Servicios</a>
-        <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="nav-item" data-icon="⚙️">Configuración General</a>
-      </div>
-    </div>
-    <div class="nav-separator" aria-hidden="true"></div>
-    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
-  </nav>
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AD</div>
-    <div class="user-info">
-      <span class="user-role">Administrador</span>
-      <span class="user-email">admin@smiletrack.co</span>
-    </div>
-  </div>
-</aside>
+  </aside>
 
 
   <!-- ═════ HAMBURGER (móvil) ═════ -->
@@ -124,7 +67,7 @@
           <button class="btn-week" id="btnPrev" aria-label="Semana anterior">
             <span aria-hidden="true">◀</span>
           </button>
-          <span class="week-label" id="weekLabel" aria-live="polite">19-25 mayo 2026</span>
+          <span class="week-label" id="weekLabel" aria-live="polite">@semanaLabel</span>
           <button class="btn-week" id="btnNext" aria-label="Próxima semana">
             <span aria-hidden="true">▶</span>
           </button>
@@ -198,121 +141,37 @@
 
       <!-- Cuerpo del calendario -->
       <div class="calendar-body" role="grid" aria-label="Citas por día">
-        <!-- Lunes -->
-        <div class="calendar-day" role="row" aria-labelledby="day-lunes">
-          <span id="day-lunes" class="visually-hidden">Lunes 19 de mayo</span>
-          <div class="appointment confirmed" tabindex="0" role="button"
-            aria-label="Cita confirmada: Carlos Ruiz, 09:00, Limpieza, Box 01"
-            data-appointment='{"id":1,"time":"09:00","patient":"Carlos Ruiz","service":"Limpieza","office":"Box 01","status":"confirmed"}'>
-            <time datetime="2026-05-19T09:00:00" class="appt-time">09:00</time>
-            <span class="appt-patient">Carlos Ruiz</span>
-            <span class="appt-detail">Limpieza · Box 01</span>
+        @foreach (var dia in agendaDias)
+        {
+          <div class="calendar-day @(dia.EsHoy ? "current" : string.Empty) @(dia.Cerrado ? "closed" : string.Empty)" role="row" aria-labelledby="day-@dia.Fecha.ToString("yyyyMMdd")">
+            <span id="day-@dia.Fecha.ToString("yyyyMMdd")" class="visually-hidden">@dia.NombreDia @dia.Fecha.Day de @dia.Fecha.ToString("MMMM")</span>
+            @if (dia.Cerrado)
+            {
+              <div class="day-closed">
+                <span aria-hidden="true">🏥</span>
+                <span>CERRADO</span>
+              </div>
+            }
+            else
+            {
+              @foreach (var cita in dia.Citas)
+              {
+                <div class="appointment @cita.ClaseEstado" tabindex="0" role="button" aria-label="Cita @cita.Estado: @cita.Paciente, @cita.Hora, @cita.Servicio, @cita.Consultorio">
+                  <time datetime="@dia.Fecha.ToString("yyyy-MM-dd")T@cita.Hora:00" class="appt-time">@cita.Hora</time>
+                  <span class="appt-patient">@cita.Paciente</span>
+                  <span class="appt-detail">@cita.Servicio · @cita.Consultorio</span>
+                </div>
+              }
+              @if (!dia.Citas.Any())
+              {
+                <div class="appointment available" tabindex="0" role="button" aria-label="Sin citas registradas para @dia.Fecha.ToString("dd/MM")">
+                  <time datetime="@dia.Fecha.ToString("yyyy-MM-dd")" class="appt-time">—</time>
+                  <span class="appt-patient">Sin citas</span>
+                </div>
+              }
+            }
           </div>
-          <div class="appointment attended" tabindex="0" role="button"
-            aria-label="Cita asistida: Elena Gómez, 11:30, Revisión, Box 02"
-            data-appointment='{"id":2,"time":"11:30","patient":"Elena Gómez","service":"Revisión","office":"Box 02","status":"attended"}'>
-            <time datetime="2026-05-19T11:30:00" class="appt-time">11:30</time>
-            <span class="appt-patient">Elena Gómez</span>
-            <span class="appt-detail">Revisión · Box 02</span>
-          </div>
-        </div>
-
-        <!-- Martes -->
-        <div class="calendar-day" role="row" aria-labelledby="day-martes">
-          <span id="day-martes" class="visually-hidden">Martes 20 de mayo</span>
-          <div class="appointment cancelled" tabindex="0" role="button" aria-label="Cita cancelada: Marc Vila, 10:00"
-            data-appointment='{"id":3,"time":"10:00","patient":"Marc Vila","service":"—","office":"—","status":"cancelled"}'>
-            <time datetime="2026-05-20T10:00:00" class="appt-time">10:00</time>
-            <span class="appt-patient">Marc Vila</span>
-            <span class="appt-status">CANCELADA</span>
-          </div>
-          <div class="appointment confirmed" tabindex="0" role="button"
-            aria-label="Cita confirmada: Sara Ortiz, 16:00, Ortodoncia, Box 03"
-            data-appointment='{"id":4,"time":"16:00","patient":"Sara Ortiz","service":"Ortodoncia","office":"Box 03","status":"confirmed"}'>
-            <time datetime="2026-05-20T16:00:00" class="appt-time">16:00</time>
-            <span class="appt-patient">Sara Ortiz</span>
-            <span class="appt-detail">Ortodoncia · Box 03</span>
-          </div>
-        </div>
-
-        <!-- Miércoles (día actual) -->
-        <div class="calendar-day current" role="row" aria-labelledby="day-miercoles">
-          <span id="day-miercoles" class="visually-hidden">Miércoles 21 de mayo - Día actual</span>
-          <div class="appointment attended" tabindex="0" role="button" aria-label="Cita asistida: Paula Jiménez, 08:30"
-            data-appointment='{"id":5,"time":"08:30","patient":"Paula Jiménez","service":"—","office":"—","status":"attended"}'>
-            <time datetime="2026-05-21T08:30:00" class="appt-time">08:30</time>
-            <span class="appt-patient">Paula Jiménez</span>
-            <span class="appt-status">Asistida</span>
-          </div>
-          <div class="appointment available" tabindex="0" role="button" aria-label="Espacio disponible: 12:00"
-            data-appointment='{"id":6,"time":"12:00","available":true}'>
-            <time datetime="2026-05-21T12:00:00" class="appt-time">12:00</time>
-            <span class="appt-patient">Espacio Disponible</span>
-          </div>
-          <div class="appointment confirmed" tabindex="0" role="button"
-            aria-label="Cita confirmada: Daniel Castro, 17:45"
-            data-appointment='{"id":7,"time":"17:45","patient":"Daniel Castro","service":"—","office":"—","status":"confirmed"}'>
-            <time datetime="2026-05-21T17:45:00" class="appt-time">17:45</time>
-            <span class="appt-patient">Daniel Castro</span>
-            <span class="appt-status">Confirmada</span>
-          </div>
-        </div>
-
-        <!-- Jueves -->
-        <div class="calendar-day" role="row" aria-labelledby="day-jueves">
-          <span id="day-jueves" class="visually-hidden">Jueves 22 de mayo</span>
-          <div class="appointment confirmed" tabindex="0" role="button"
-            aria-label="Cita confirmada: Marta Soler, 10:00, Control, Box 01"
-            data-appointment='{"id":8,"time":"10:00","patient":"Marta Soler","service":"Control","office":"Box 01","status":"confirmed"}'>
-            <time datetime="2026-05-22T10:00:00" class="appt-time">10:00</time>
-            <span class="appt-patient">Marta Soler</span>
-            <span class="appt-detail">Control · Box 01</span>
-          </div>
-        </div>
-
-        <!-- Viernes -->
-        <div class="calendar-day" role="row" aria-labelledby="day-viernes">
-          <span id="day-viernes" class="visually-hidden">Viernes 23 de mayo</span>
-          <div class="appointment confirmed" tabindex="0" role="button"
-            aria-label="Cita confirmada: Luis Navarro, 09:00, Limpieza, Box 01"
-            data-appointment='{"id":9,"time":"09:00","patient":"Luis Navarro","service":"Limpieza","office":"Box 01","status":"confirmed"}'>
-            <time datetime="2026-05-23T09:00:00" class="appt-time">09:00</time>
-            <span class="appt-patient">Luis Navarro</span>
-            <span class="appt-detail">Limpieza · Box 01</span>
-          </div>
-          <div class="appointment attended" tabindex="0" role="button" aria-label="Cita asistida: Ana Belén, 11:00"
-            data-appointment='{"id":10,"time":"11:00","patient":"Ana Belén","service":"—","office":"—","status":"attended"}'>
-            <time datetime="2026-05-23T11:00:00" class="appt-time">11:00</time>
-            <span class="appt-patient">Ana Belén</span>
-            <span class="appt-status">Asistida</span>
-          </div>
-          <div class="appointment confirmed" tabindex="0" role="button"
-            aria-label="Cita confirmada: Pedro Páez, 15:30, Consulta, Box 02"
-            data-appointment='{"id":11,"time":"15:30","patient":"Pedro Páez","service":"Consulta","office":"Box 02","status":"confirmed"}'>
-            <time datetime="2026-05-23T15:30:00" class="appt-time">15:30</time>
-            <span class="appt-patient">Pedro Páez</span>
-            <span class="appt-detail">Consulta · Box 02</span>
-          </div>
-        </div>
-
-        <!-- Sábado -->
-        <div class="calendar-day" role="row" aria-labelledby="day-sabado">
-          <span id="day-sabado" class="visually-hidden">Sábado 24 de mayo</span>
-          <div class="appointment reserved" tabindex="0" role="button" aria-label="Reservado para urgencias, 10:00"
-            data-appointment='{"id":12,"time":"10:00","reserved":true}'>
-            <time datetime="2026-05-24T10:00:00" class="appt-time">10:00</time>
-            <span class="appt-patient">Urgencia - Reservado</span>
-          </div>
-        </div>
-
-        <!-- Domingo (cerrado) -->
-        <div class="calendar-day closed" role="row" aria-labelledby="day-domingo">
-          <span id="day-domingo" class="visually-hidden">Domingo 25 de mayo - Cerrado</span>
-          <div class="day-closed">
-            <span aria-hidden="true">🏥</span>
-            <span>CERRADO</span>
-          </div>
-        </div>
+        }
       </div>
     </section>
 
@@ -368,10 +227,6 @@
       <span class="mobile-nav-icon" aria-hidden="true">📊</span>
       <span>Dashboard</span>
     </a>
-    <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">🩺</span>
-      <span>Profesionales</span>
-    </a>
     <a href="#" class="mobile-nav-item active" aria-current="page">
       <span class="mobile-nav-icon" aria-hidden="true">📅</span>
       <span>Agenda</span>
@@ -379,10 +234,6 @@
     <a href="/gestion-de-citas/st-adm-09-citas" class="mobile-nav-item">
       <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
       <span>Citas</span>
-    </a>
-    <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
-      <span>Config</span>
     </a>
   </nav>
 

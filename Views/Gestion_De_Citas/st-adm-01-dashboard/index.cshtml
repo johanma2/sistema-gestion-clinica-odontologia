@@ -57,12 +57,12 @@
           <span class="bc-active">Dashboard</span>
         </nav>
         <h1 class="page-title">Dashboard General</h1>
-        <p class="page-subtitle">
-          Resumen en tiempo real ·
-          <time datetime="2026-03-24" id="headerDate">martes 24 de marzo 2026</time>
-        </p>
+       <p class="page-subtitle">
+  Resumen en tiempo real ·
+  <time datetime="@DateTime.Now.ToString("yyyy-MM-dd")" id="headerDate">@DateTime.Now.ToString("dddd d 'de' MMMM yyyy", new System.Globalization.CultureInfo("es-ES"))</time>
+</p>
       </div>
-      <button class="btn-primary" id="btnExport" aria-label="Exportar reporte en PDF y Excel">
+      <button class="btn-primary" id="btnExport" aria-label="Función en desarrollo" disabled title="Disponible próximamente">
         📊 Exportar reporte
       </button>
     </header>
@@ -79,24 +79,21 @@
     <!-- Stats Grid -->
     <section class="stats-grid" aria-label="Métricas principales">
       <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="statPacientes" data-target="142" aria-live="polite">0</span>
+        <span class="stat-number" id="statPacientes" data-target="@ViewData["TotalPacientes"]" aria-live="polite">0</span>
         <span class="stat-label">Pacientes activos</span>
-        <span class="stat-vs up" aria-live="polite">↑ 12</span>
       </div>
       <div class="stat-card" data-color="green">
-        <span class="stat-number" id="statCitas" data-target="24" aria-live="polite">0</span>
+        <span class="stat-number" id="statCitas" data-target="@ViewData["CitasHoy"]" aria-live="polite">0</span>
         <span class="stat-label">Citas hoy</span>
-        <span class="stat-vs up" aria-live="polite">↑ 4</span>
       </div>
       <div class="stat-card" data-color="orange">
-        <span class="stat-number" id="statProfesionales" data-target="8" aria-live="polite">0</span>
+        <span class="stat-number" id="statProfesionales" data-target="@ViewData["ProfesionalesActivos"]" aria-live="polite">0</span>
         <span class="stat-label">Profesionales activos</span>
-        <span class="stat-vs" style="visibility:hidden" aria-hidden="true">↑ 0</span>
       </div>
       <div class="stat-card" data-color="purple">
-        <span class="stat-number" id="statIngresos" aria-live="polite">$4.2M</span>
+        <span class="stat-number" id="statIngresos" aria-live="polite">$@(((decimal)ViewData["IngresosDelMes"]!).ToString("N0"))</span>
         <span class="stat-label">Ingresos del mes</span>
-        <span class="stat-vs up" aria-live="polite">↑ 13.5%</span>
+        <span class="stat-vs" style="visibility:hidden" aria-hidden="true">— módulo en desarrollo</span>
       </div>
     </section>
 
@@ -108,34 +105,8 @@
 
         <!-- Gráfico de ingresos -->
         <section class="card" aria-labelledby="revenueTitle">
-          <h2 class="card-title" id="revenueTitle">Ingresos por mes — 2026</h2>
-          <div class="chart-container" id="revenueChart" role="img" aria-label="Gráfico de barras: ingresos mensuales">
-            <div class="chart-row">
-              <span class="chart-label">Enero</span>
-              <div class="chart-bar-bg">
-                <div class="chart-bar-fill blue" data-width="65" style="width:0" role="progressbar" aria-valuenow="65"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Enero: $3.1M, 65% del máximo"></div>
-              </div>
-              <span class="chart-val">$3.1M</span>
-            </div>
-            <div class="chart-row">
-              <span class="chart-label">Febrero</span>
-              <div class="chart-bar-bg">
-                <div class="chart-bar-fill blue" data-width="75" style="width:0" role="progressbar" aria-valuenow="75"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Febrero: $3.7M, 75% del máximo"></div>
-              </div>
-              <span class="chart-val">$3.7M</span>
-            </div>
-            <div class="chart-row">
-              <span class="chart-label">Marzo</span>
-              <div class="chart-bar-bg">
-                <div class="chart-bar-fill green" data-width="85" style="width:0" role="progressbar" aria-valuenow="85"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Marzo: $4.2M, 85% del máximo"></div>
-              </div>
-              <span class="chart-val">$4.2M</span>
-            </div>
-          </div>
-          <p class="chart-summary" aria-live="polite">↑ 13.5% vs mes anterior</p>
+          <h2 class="card-title" id="revenueTitle">Ingresos por mes</h2>
+          <p class="chart-summary">📊 Este panel se activará cuando el módulo de Facturación esté implementado.</p>
         </section>
 
         <!-- Tabla de profesionales top -->
@@ -148,37 +119,25 @@
                   <th scope="col">Profesional</th>
                   <th scope="col" style="text-align:center">Espec.</th>
                   <th scope="col" style="text-align:center">Citas</th>
-                  <th scope="col" style="text-align:right">Ingresos</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <div class="td-avatar avatar-blue" aria-hidden="true">CM</div>
-                    <span class="td-name">Dr. Carlos Méndez</span>
-                  </td>
-                  <td style="text-align:center"><span class="badge-spec">Gral.</span></td>
-                  <td style="text-align:center" class="td-strong">42</td>
-                  <td style="text-align:right" class="td-success">$1.8M</td>
-                </tr>
-                <tr>
-                  <td>
-                    <div class="td-avatar avatar-green" aria-hidden="true">LG</div>
-                    <span class="td-name">Dra. Laura Gómez</span>
-                  </td>
-                  <td style="text-align:center"><span class="badge-spec">Ortod.</span></td>
-                  <td style="text-align:center" class="td-strong">38</td>
-                  <td style="text-align:right" class="td-success">$1.4M</td>
-                </tr>
-                <tr>
-                  <td>
-                    <div class="td-avatar avatar-purple" aria-hidden="true">AT</div>
-                    <span class="td-name">Dr. Andrés Torres</span>
-                  </td>
-                  <td style="text-align:center"><span class="badge-spec">Cirugía</span></td>
-                  <td style="text-align:center" class="td-strong">35</td>
-                  <td style="text-align:right" class="td-success">$1.3M</td>
-                </tr>
+                @{ var topProfesionales = ViewData["TopProfesionales"] as IEnumerable<dynamic>; }
+                @if (topProfesionales != null && topProfesionales.Any())
+                {
+                  foreach (var prof in topProfesionales)
+                  {
+                    <tr>
+                      <td><span class="td-name">@prof.Nombre</span></td>
+                      <td style="text-align:center"><span class="badge-spec">@prof.Especialidad</span></td>
+                      <td style="text-align:center" class="td-strong">@prof.TotalCitas</td>
+                    </tr>
+                  }
+                }
+                else
+                {
+                  <tr><td colspan="3">Sin citas registradas este mes.</td></tr>
+                }
               </tbody>
             </table>
           </div>
@@ -196,34 +155,30 @@
             <div class="status-row">
               <span class="status-label">Atendidas</span>
               <div class="status-bar-bg">
-                <div class="status-bar-fill green" data-width="80" style="width:0" role="progressbar" aria-valuenow="80"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Atendidas: 186 citas, 80%"></div>
+                <div class="status-bar-fill green" data-width="@ViewData["PctAtendidas"]" style="width:0" role="progressbar" aria-valuenow="@ViewData["PctAtendidas"]" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-              <span class="status-val">186</span>
+              <span class="status-val">@ViewData["CitasAtendidas"]</span>
             </div>
             <div class="status-row">
-              <span class="status-label">Agendadas</span>
+              <span class="status-label">Confirmadas</span>
               <div class="status-bar-bg">
-                <div class="status-bar-fill blue" data-width="35" style="width:0" role="progressbar" aria-valuenow="35"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Agendadas: 67 citas, 35%"></div>
+                <div class="status-bar-fill blue" data-width="@ViewData["PctConfirmadas"]" style="width:0" role="progressbar" aria-valuenow="@ViewData["PctConfirmadas"]" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-              <span class="status-val">67</span>
+              <span class="status-val">@ViewData["CitasConfirmadas"]</span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">Programadas</span>
+              <div class="status-bar-bg">
+                <div class="status-bar-fill orange" data-width="@ViewData["PctProgramadas"]" style="width:0" role="progressbar" aria-valuenow="@ViewData["PctProgramadas"]" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <span class="status-val">@ViewData["CitasProgramadas"]</span>
             </div>
             <div class="status-row">
               <span class="status-label">Canceladas</span>
               <div class="status-bar-bg">
-                <div class="status-bar-fill red" data-width="15" style="width:0" role="progressbar" aria-valuenow="15"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Canceladas: 29 citas, 15%"></div>
+                <div class="status-bar-fill red" data-width="@ViewData["PctCanceladas"]" style="width:0" role="progressbar" aria-valuenow="@ViewData["PctCanceladas"]" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
-              <span class="status-val">29</span>
-            </div>
-            <div class="status-row">
-              <span class="status-label">No asistió</span>
-              <div class="status-bar-bg">
-                <div class="status-bar-fill orange" data-width="10" style="width:0" role="progressbar"
-                  aria-valuenow="10" aria-valuemin="0" aria-valuemax="100" aria-label="No asistió: 14 citas, 10%"></div>
-              </div>
-              <span class="status-val">14</span>
+              <span class="status-val">@ViewData["CitasCanceladas"]</span>
             </div>
           </div>
         </section>
@@ -232,31 +187,11 @@
         <section class="card" aria-labelledby="invoicesTitle">
           <h2 class="card-title" id="invoicesTitle">Facturas pendientes de cobro</h2>
           <div class="invoices-list" role="list">
-            <div class="invoice-item warning" role="listitem">
-              <div>
-                <p class="invoice-code">FAC-2026-0015</p>
-                <p class="invoice-desc"><time datetime="2026-03-24">Vence hoy</time> · María López</p>
-              </div>
-              <p class="invoice-amount">$120.000</p>
-            </div>
-            <div class="invoice-item danger" role="listitem">
-              <div>
-                <p class="invoice-code">FAC-2026-0012</p>
-                <p class="invoice-desc"><time datetime="2026-03-21">Vencida</time> · Carlos Ruiz</p>
-              </div>
-              <p class="invoice-amount">$450.000</p>
-            </div>
-            <div class="invoice-item muted" role="listitem">
-              <div>
-                <p class="invoice-code">FAC-2026-0018</p>
-                <p class="invoice-desc"><time datetime="2026-03-31">Vence en 7 días</time> · Pedro García</p>
-              </div>
-              <p class="invoice-amount">$75.000</p>
-            </div>
+            <p class="chart-summary">💳 Disponible cuando el módulo de Facturación esté implementado.</p>
           </div>
           <div class="invoices-total" aria-live="polite">
             <span>Total pendiente:</span>
-            <strong>$645.000</strong>
+            <strong>$0</strong>
           </div>
         </section>
 
@@ -272,21 +207,17 @@
       <span class="mobile-nav-icon" aria-hidden="true">📊</span>
       <span>Inicio</span>
     </a>
-    <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
-      <span>Pacientes</span>
-    </a>
-    <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">🩺</span>
-      <span>Profesionales</span>
+    <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item active" aria-current="page">
+      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span>Dashboard</span>
     </a>
     <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item">
       <span class="mobile-nav-icon" aria-hidden="true">📅</span>
       <span>Agenda</span>
     </a>
-    <a href="/gestion-de-profesionales/st-adm-14-reportes-clinicos" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📈</span>
-      <span>Reportes</span>
+    <a href="/gestion-de-citas/st-adm-09-citas" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
+      <span>Citas</span>
     </a>
   </nav>
 

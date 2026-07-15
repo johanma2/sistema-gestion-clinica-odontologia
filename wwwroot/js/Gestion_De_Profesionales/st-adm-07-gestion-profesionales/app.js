@@ -67,6 +67,11 @@ const SAMPLE_PROFESSIONALS = [
 
 let professionals = [...SAMPLE_PROFESSIONALS];
 let searchQuery = '';
+
+const shouldUseServerRenderedTable = () => {
+  const tbody = safeGetElement('professionalsTbody');
+  return !!(tbody && tbody.children.length > 0);
+};
 let selectedSpecialty = '';
 let selectedStatus = '';
 let currentPage = 1;
@@ -118,7 +123,7 @@ const getAvatarColor = (specialty) => {
 // Renderiza tabla de profesionales con accesibilidad
 const renderTable = () => {
   const tbody = safeGetElement('professionalsTbody');
-  if (!tbody) return;
+  if (!tbody || shouldUseServerRenderedTable()) return;
   
   // Filtrar datos
   const filtered = professionals.filter(p =>
@@ -177,6 +182,7 @@ const renderTable = () => {
 
 // Actualiza contadores de estadísticas
 const updateStats = () => {
+  if (shouldUseServerRenderedTable()) return;
   const total = professionals.length;
   const actives = professionals.filter(p => p.status === 'Activo').length;
   const vacations = professionals.filter(p => p.status === 'Vacaciones').length;
@@ -190,6 +196,7 @@ const updateStats = () => {
 
 // Actualiza botones de paginación
 const updatePagination = (total, count) => {
+  if (shouldUseServerRenderedTable()) return;
   const info = safeGetElement('paginationInfo');
   const buttons = safeGetElement('paginationButtons');
   if (!info || !buttons) return;
@@ -553,6 +560,7 @@ const initSidebar = () => {
 
 // Inicializa filtros de búsqueda
 const initFilters = () => {
+  if (shouldUseServerRenderedTable()) return;
   const searchInput = safeGetElement('searchInput');
   const filterSpecialty = safeGetElement('filterSpecialty');
   const filterStatus = safeGetElement('filterStatus');

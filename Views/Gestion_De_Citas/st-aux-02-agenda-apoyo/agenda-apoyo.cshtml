@@ -19,59 +19,7 @@
   <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <!-- ═════ SIDEBAR UNIFICADO (Activo: Agenda de apoyo) ═════ -->
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  <nav class="sidebar-nav">
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-pacientes/st-aux-03-preparacion-consulta" class="nav-item" data-icon="📋">Preparación de Consulta</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/perfiles/st-aux-11-perfil-auxiliar" class="nav-item" data-icon="👤">Perfil del Auxiliar</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="nav-item" data-icon="📊">Panel Operativo</a>
-        <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="nav-item active" data-icon="🗓️" aria-current="page">Agenda de Apoyo</a>
-        <a href="/gestion-de-citas/st-aux-05-historial-parcial" class="nav-item" data-icon="📋">Historial Parcial</a>
-        <a href="/gestion-de-citas/st-aux-06-asistencia-procedi" class="nav-item" data-icon="🔄">Asistencia en Procedimiento</a>
-        <a href="/gestion-de-citas/st-aux-09-estado-consultorio" class="nav-item" data-icon="🚑">Estado de Consultorio</a>
-        <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="nav-item" data-icon="✅">Citas Finalizadas</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/historia-clinica/st-aux-07-control-postoperato" class="nav-item" data-icon="🏥">Control Postoperatorio</a>
-        <a href="/historia-clinica/st-aux-08-documentos-clinicos" class="nav-item" data-icon="📎">Documentos Clínicos</a>
-      </div>
-    </div>
-    <div class="nav-separator" aria-hidden="true"></div>
-    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
-  </nav>
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AU</div>
-    <div class="user-info">
-      <span class="user-role">Auxiliar</span>
-      <span class="user-email">auxiliar@smiletrack.co</span>
-    </div>
-  </div>
-</aside>
+@{ await Html.RenderPartialAsync("_SidebarAuxiliar"); }
 
   <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
@@ -172,15 +120,6 @@
     <a href="/gestion-de-citas/st-aux-05-historial-parcial" class="mobile-nav-item">
       <span class="mobile-nav-icon" aria-hidden="true">📋</span>
       <span>Historial</span>
-    </a>
-    <a href="/gestion-de-pacientes/st-aux-03-preparacion-consulta"
-      class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">✅</span>
-      <span>Preparación</span>
-    </a>
-    <a href="/perfiles/st-aux-11-perfil-auxiliar" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
-      <span>Perfil</span>
     </a>
   </nav>
 

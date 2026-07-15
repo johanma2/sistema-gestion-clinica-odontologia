@@ -98,6 +98,11 @@ const avatarColors = {
   purple: 'bg-purple-100 text-purple-600', red: 'bg-red-100 text-red-600', slate: 'bg-slate-100 text-slate-600'
 };
 
+const shouldUseServerRenderedList = () => {
+  const body = safeGetElement('citasBody');
+  return !!(body && body.children.length > 0);
+};
+
 const statusLabels = {
   programada: { label: 'Programada', class: 'programada' },
   confirmada: { label: 'Confirmada', class: 'confirmada' },
@@ -161,7 +166,7 @@ const getFilteredAppointments = () => {
 
 const renderAppointments = () => {
   const body = safeGetElement('citasBody');
-  if (!body) return;
+  if (!body || shouldUseServerRenderedList()) return;
   
   // Obtener datos filtrados con TODOS los filtros aplicados
   const filtered = getFilteredAppointments();
@@ -357,6 +362,7 @@ const animateCounter = (el, target) => {
 };
 
 const updateStats = () => {
+  if (shouldUseServerRenderedList()) return;
   const total = appointments.length;
   const scheduled = appointments.filter(a => a.status === 'programada' || a.status === 'confirmada').length;
   const cancelled = appointments.filter(a => a.status === 'cancelada').length;
@@ -396,6 +402,7 @@ const initSidebar = () => {
 };
 
 const initTabs = () => {
+  if (shouldUseServerRenderedList()) return;
   const tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -411,6 +418,7 @@ const initTabs = () => {
 
 // ═══ CORRECCIÓN: BÚSQUEDA CON DEBOUNCE ═══
 const initSearch = () => {
+  if (shouldUseServerRenderedList()) return;
   const searchInput = safeGetElement('searchAppointments');
   searchInput?.addEventListener('input', debounce((e) => {
     searchQuery = e.target.value.toLowerCase();
@@ -421,6 +429,7 @@ const initSearch = () => {
 
 // ═══ CORRECCIÓN: FILTROS FUNCIONALES ═══
 const initFilters = () => {
+  if (shouldUseServerRenderedList()) return;
   const filterStatusEl = safeGetElement('filterStatus');
   const filterProfessionalEl = safeGetElement('filterProfessional');
   const filterDateEl = safeGetElement('filterDate');
@@ -448,6 +457,7 @@ const initFilters = () => {
 };
 
 const initPagination = () => {
+  if (shouldUseServerRenderedList()) return;
   const btnPrev = safeGetElement('btnPrev');
   const btnNext = safeGetElement('btnNext');
   

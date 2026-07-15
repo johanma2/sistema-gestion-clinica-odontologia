@@ -1,4 +1,9 @@
-@{ Layout = null; }
+@{ Layout = null;
+  var especialidades = ViewData["Especialidades"] as List<string> ?? new List<string>();
+  var usuarios = ViewData["Usuarios"] as List<SmileTrack_MVC.Models.Entities.Usuario> ?? new();
+  var profesionales = ViewData["Profesionales"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
+  var pageResult = ViewData["ProfesionalesPage"] as SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.Entities.Profesional>;
+}
 
 <!DOCTYPE html>
 <html lang="es">
@@ -21,21 +26,19 @@
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <!-- ═════ SIDEBAR UNIFICADO (Activo: Gestión Profesionales) ═════ -->
-  
-<aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AD</div>
-    <div class="user-info">
-      <span class="user-role">Administrador</span>
-      <span class="user-email">admin@smiletrack.co</span>
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
     </div>
-  </div>
-</aside>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">AD</div>
+      <div class="user-info">
+        <span class="user-role">Administrador</span>
+        <span class="user-email">admin@smiletrack.co</span>
+      </div>
+    </div>
+  </aside>
 
 
   <!-- ═════ HAMBURGER (móvil) ═════ -->
@@ -87,31 +90,92 @@
 
     <!-- Filtros -->
     <section class="filters-section" aria-label="Filtros de búsqueda">
-      <div class="filters-row">
+      <form method="get" class="filters-row">
         <div class="search-wrap">
           <span class="search-icon" aria-hidden="true">🔍</span>
-          <input type="search" id="searchInput" class="search-input"
-            placeholder="Buscar por nombre, especialidad o registro..." aria-label="Buscar profesional">
+          <input type="search" id="searchInput" name="search" class="search-input"
+            placeholder="Buscar por nombre, especialidad o registro..." aria-label="Buscar profesional" value="@ViewData["SearchFilter"]">
         </div>
         <div class="filter-wrap">
           <label for="filterSpecialty" class="visually-hidden">Filtrar por especialidad</label>
-          <select id="filterSpecialty" class="status-select" aria-label="Filtrar profesionales por especialidad">
+          <select id="filterSpecialty" name="especialidad" class="status-select" aria-label="Filtrar profesionales por especialidad">
             <option value="">Todas las especialidades</option>
+            @foreach (var especialidad in especialidades)
+            {
+              if (ViewData["EspecialidadFilter"]?.ToString() == especialidad)
+              {
+                <option value="@especialidad" selected>@especialidad</option>
+              }
+              else
+              {
+                <option value="@especialidad">@especialidad</option>
+              }
+            }
           </select>
         </div>
         <div class="filter-wrap">
           <label for="filterStatus" class="visually-hidden">Filtrar por estado</label>
-          <select id="filterStatus" class="status-select" aria-label="Filtrar profesionales por estado">
+          <select id="filterStatus" name="estado" class="status-select" aria-label="Filtrar profesionales por estado">
             <option value="">Todos los estados</option>
-            <option value="Activo">Activo</option>
-            <option value="Vacaciones">Vacaciones</option>
-            <option value="Inactivo">Inactivo</option>
+            @if (ViewData["EstadoFilter"]?.ToString() == "activo")
+            {
+              <option value="activo" selected>Activo</option>
+            }
+            else
+            {
+              <option value="activo">Activo</option>
+            }
+            @if (ViewData["EstadoFilter"]?.ToString() == "vacaciones")
+            {
+              <option value="vacaciones" selected>Vacaciones</option>
+            }
+            else
+            {
+              <option value="vacaciones">Vacaciones</option>
+            }
+            @if (ViewData["EstadoFilter"]?.ToString() == "inactivo")
+            {
+              <option value="inactivo" selected>Inactivo</option>
+            }
+            else
+            {
+              <option value="inactivo">Inactivo</option>
+            }
           </select>
         </div>
-      </div>
+        <input type="hidden" name="page" value="1" />
+        <button class="btn-primary" type="submit">Aplicar</button>
+        <a class="btn-secondary" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales")">Limpiar</a>
+      </form>
     </section>
 
-    <!-- Tabla de profesionales -->
+    <form method="post" asp-action="GuardarProfesional" asp-controller="GestionProfesionales" class="table-card" aria-labelledby="professionalsTitle">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+      <input type="hidden" name="IdProfesional" value="@(((SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"])?.IdProfesional ?? 0)" />
+      <div class="filters-row" style="margin-bottom:16px;">
+        <input type="text" name="Especialidad" class="search-input" placeholder="Especialidad" value="@(((SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"])?.Especialidad)" required />
+        <input type="email" name="Correo" class="search-input" placeholder="Correo" value="@(((SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"])?.Correo)" />
+        <input type="text" name="Telefono" class="search-input" placeholder="Teléfono" value="@(((SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"])?.Telefono)" />
+        <select name="IdUsuario" class="status-select">
+          <option value="">Sin usuario</option>
+          @foreach (var usuario in usuarios)
+          {
+            var editingProfesional = (SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"];
+            var selected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : "";
+            <option value="@usuario.IdUsuario" selected="@(selected)">@usuario.Nombre @usuario.Apellidos</option>
+          }
+        </select>
+        <select name="Estado" class="status-select">
+          @{ var editingProfesionalEstado = (SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"]; }
+          <option value="activo" selected="@(editingProfesionalEstado?.Estado == "activo")">Activo</option>
+          <option value="vacaciones" selected="@(editingProfesionalEstado?.Estado == "vacaciones")">Vacaciones</option>
+          <option value="inactivo" selected="@(editingProfesionalEstado?.Estado == "inactivo")">Inactivo</option>
+        </select>
+        <button class="btn-primary" type="submit">@(ViewData["EditingProfesional"] != null ? "Guardar cambios" : "Crear profesional")</button>
+      </div>
+    </form>
+
     <section class="table-card" aria-labelledby="professionalsTitle">
       <h2 class="visually-hidden" id="professionalsTitle">Lista de profesionales</h2>
       <div class="table-wrap">
@@ -127,16 +191,57 @@
             </tr>
           </thead>
           <tbody id="professionalsTbody" aria-live="polite">
-            <!-- Filas inyectadas por JS -->
+            @foreach (var profesional in profesionales)
+            {
+              <tr>
+                <td class="td-profesional">@profesional.Usuario?.Nombre @profesional.Usuario?.Apellidos</td>
+                <td><span class="badge-spec @((profesional.Especialidad ?? string.Empty).ToLowerInvariant())">@profesional.Especialidad</span></td>
+                <td>@profesional.Correo</td>
+                <td>@profesional.Telefono</td>
+                <td><span class="badge-status badge-@((profesional.Estado ?? string.Empty).ToLowerInvariant())">@profesional.Estado</span></td>
+                <td>
+                  <div class="actions-cell">
+                    <a class="btn-icon edit" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { editId = profesional.IdProfesional })">✏️</a>
+                    <form method="post" asp-action="EliminarProfesional" asp-controller="GestionProfesionales" style="display:inline;">
+                      @Html.AntiForgeryToken()
+                      <input type="hidden" name="IdProfesional" value="@profesional.IdProfesional" />
+                      <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+                      <button class="btn-icon toggle" type="submit" onclick="return confirm('¿Eliminar este profesional?');">❌</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            }
           </tbody>
         </table>
       </div>
 
       <!-- Paginación -->
       <div class="pagination" role="navigation" aria-label="Paginación de profesionales">
-        <span id="paginationInfo" aria-live="polite">Mostrando 0-0 de 0 profesionales</span>
+        @{ }
+        <span id="paginationInfo" aria-live="polite">Mostrando @Math.Min(pageResult?.PageSize ?? 10, pageResult?.Items.Count ?? 0) de @pageResult?.TotalCount profesionales</span>
         <div class="pagination-buttons" id="paginationButtons">
-          <!-- Botones generados por JS -->
+          @if (pageResult != null && pageResult.HasPreviousPage)
+          {
+            <a class="pagination-btn" aria-label="Página anterior" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { page = pageResult.Page - 1, pageSize = pageResult.PageSize, search = ViewData["SearchFilter"], especialidad = ViewData["EspecialidadFilter"], estado = ViewData["EstadoFilter"] })">‹</a>
+          }
+          else
+          {
+            <button class="pagination-btn" aria-label="Página anterior" disabled>‹</button>
+          }
+          @for (var i = 1; i <= (pageResult?.TotalPages ?? 1); i++)
+          {
+            var isActive = i == (pageResult?.Page ?? 1);
+            <a class="pagination-btn @(isActive ? "active" : string.Empty)" aria-current="@(isActive ? "page" : null)" aria-label="Página @i" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { page = i, pageSize = pageResult?.PageSize ?? 10, search = ViewData["SearchFilter"], especialidad = ViewData["EspecialidadFilter"], estado = ViewData["EstadoFilter"] })">@i</a>
+          }
+          @if (pageResult != null && pageResult.HasNextPage)
+          {
+            <a class="pagination-btn" aria-label="Página siguiente" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { page = pageResult.Page + 1, pageSize = pageResult.PageSize, search = ViewData["SearchFilter"], especialidad = ViewData["EspecialidadFilter"], estado = ViewData["EstadoFilter"] })">›</a>
+          }
+          else
+          {
+            <button class="pagination-btn" aria-label="Página siguiente" disabled>›</button>
+          }
         </div>
       </div>
     </section>
@@ -221,21 +326,13 @@
       <span class="mobile-nav-icon" aria-hidden="true">📊</span>
       <span>Dashboard</span>
     </a>
-    <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
-      <span>Usuarios</span>
-    </a>
     <a href="#" class="mobile-nav-item active" aria-current="page">
       <span class="mobile-nav-icon" aria-hidden="true">🩺</span>
       <span>Profesionales</span>
     </a>
-    <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">💳</span>
-      <span>Facturación</span>
-    </a>
-    <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
-      <span>Config</span>
+    <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
     </a>
   </nav>
 
