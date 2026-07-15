@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "JezRcDK0Luc=",
+  "dgSpecHash": "eA4c87L+pXc=",
   "success": true,
-  "projectFilePath": "C:\\Users\\APRENDIZ\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj",
+  "projectFilePath": "C:\\Users\\APRENDIZ\\Downloads\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\APRENDIZ\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\APRENDIZ\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

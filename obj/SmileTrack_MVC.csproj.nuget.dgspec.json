@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\APRENDIZ\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj": {}
+    "C:\\Users\\APRENDIZ\\Downloads\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj": {}
   },
   "projects": {
-    "C:\\Users\\APRENDIZ\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj": {
+    "C:\\Users\\APRENDIZ\\Downloads\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\APRENDIZ\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj",
+        "projectUniqueName": "C:\\Users\\APRENDIZ\\Downloads\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj",
         "projectName": "SmileTrack_MVC",
-        "projectPath": "C:\\Users\\APRENDIZ\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj",
+        "projectPath": "C:\\Users\\APRENDIZ\\Downloads\\sistema-gestion-clinica-odontologia\\SmileTrack_MVC.csproj",
         "packagesPath": "C:\\Users\\APRENDIZ\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\APRENDIZ\\sistema-gestion-clinica-odontologia\\obj\\",
+        "outputPath": "C:\\Users\\APRENDIZ\\Downloads\\sistema-gestion-clinica-odontologia\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
