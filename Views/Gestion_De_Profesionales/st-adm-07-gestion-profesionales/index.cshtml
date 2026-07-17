@@ -1,8 +1,9 @@
 @{ Layout = null;
-  var especialidades = ViewData["Especialidades"] as List<string> ?? new List<string>();
+  var especialidades = ViewData["Especialidades"] as List<SmileTrack_MVC.Models.Entities.Especialidad> ?? new();
   var usuarios = ViewData["Usuarios"] as List<SmileTrack_MVC.Models.Entities.Usuario> ?? new();
   var profesionales = ViewData["Profesionales"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
   var pageResult = ViewData["ProfesionalesPage"] as SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.Entities.Profesional>;
+  var editingProfesional = ViewData["EditingProfesional"] as SmileTrack_MVC.Models.Entities.Profesional;
 }
 
 <!DOCTYPE html>
@@ -102,14 +103,8 @@
             <option value="">Todas las especialidades</option>
             @foreach (var especialidad in especialidades)
             {
-              if (ViewData["EspecialidadFilter"]?.ToString() == especialidad)
-              {
-                <option value="@especialidad" selected>@especialidad</option>
-              }
-              else
-              {
-                <option value="@especialidad">@especialidad</option>
-              }
+              var selected = ViewData["EspecialidadFilter"]?.ToString() == especialidad.Nombre ? "selected" : "";
+              <option value="@especialidad.Nombre" @selected>@especialidad.Nombre</option>
             }
           </select>
         </div>
@@ -152,27 +147,34 @@
     <form method="post" asp-action="GuardarProfesional" asp-controller="GestionProfesionales" class="table-card" aria-labelledby="professionalsTitle">
       @Html.AntiForgeryToken()
       <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-      <input type="hidden" name="IdProfesional" value="@(((SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"])?.IdProfesional ?? 0)" />
-      <div class="filters-row" style="margin-bottom:16px;">
-        <input type="text" name="Especialidad" class="search-input" placeholder="Especialidad" value="@(((SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"])?.Especialidad)" required />
-        <input type="email" name="Correo" class="search-input" placeholder="Correo" value="@(((SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"])?.Correo)" />
-        <input type="text" name="Telefono" class="search-input" placeholder="Teléfono" value="@(((SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"])?.Telefono)" />
+      <input type="hidden" name="IdProfesional" value="@(editingProfesional?.IdProfesional ?? 0)" />
+      <div class="filters-row" style="margin-bottom:16px; gap:12px; flex-wrap:wrap;">
+        <input type="text" name="Nombres" class="search-input" placeholder="Nombres" value="@(editingProfesional?.Nombres)" required />
+        <input type="text" name="Apellidos" class="search-input" placeholder="Apellidos" value="@(editingProfesional?.Apellidos)" required />
+        <input type="text" name="RegistroMedico" class="search-input" placeholder="Registro Médico" value="@(editingProfesional?.RegistroMedico)" required />
+        <input type="text" name="Categoria" class="search-input" placeholder="Categoría" value="@(editingProfesional?.Categoria)" />
+        <input type="text" name="Telefono" class="search-input" placeholder="Teléfono" value="@(editingProfesional?.Telefono)" />
+        <select name="IdEspecialidad" class="status-select">
+          <option value="">Sin especialidad</option>
+          @foreach (var especialidad in especialidades)
+          {
+            <option value="@especialidad.IdEspecialidad">@especialidad.Nombre</option>
+          }
+        </select>
         <select name="IdUsuario" class="status-select">
-          <option value="">Sin usuario</option>
+          <option value="0">Sin usuario</option>
           @foreach (var usuario in usuarios)
           {
-            var editingProfesional = (SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"];
             var selected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : "";
             <option value="@usuario.IdUsuario" selected="@(selected)">@usuario.Nombre @usuario.Apellidos</option>
           }
         </select>
         <select name="Estado" class="status-select">
-          @{ var editingProfesionalEstado = (SmileTrack_MVC.Models.Entities.Profesional?)ViewData["EditingProfesional"]; }
-          <option value="activo" selected="@(editingProfesionalEstado?.Estado == "activo")">Activo</option>
-          <option value="vacaciones" selected="@(editingProfesionalEstado?.Estado == "vacaciones")">Vacaciones</option>
-          <option value="inactivo" selected="@(editingProfesionalEstado?.Estado == "inactivo")">Inactivo</option>
+          <option value="activo" selected="@(editingProfesional?.Estado == "activo")">Activo</option>
+          <option value="vacaciones" selected="@(editingProfesional?.Estado == "vacaciones")">Vacaciones</option>
+          <option value="inactivo" selected="@(editingProfesional?.Estado == "inactivo")">Inactivo</option>
         </select>
-        <button class="btn-primary" type="submit">@(ViewData["EditingProfesional"] != null ? "Guardar cambios" : "Crear profesional")</button>
+        <button class="btn-primary" type="submit">@(editingProfesional != null ? "Guardar cambios" : "Crear profesional")</button>
       </div>
     </form>
 
@@ -193,10 +195,11 @@
           <tbody id="professionalsTbody" aria-live="polite">
             @foreach (var profesional in profesionales)
             {
+              var especialidadPrincipal = profesional.Especialidades.FirstOrDefault(pe => pe.Principal)?.Especialidad?.Nombre ?? profesional.Especialidades.FirstOrDefault()?.Especialidad?.Nombre;
               <tr>
-                <td class="td-profesional">@profesional.Usuario?.Nombre @profesional.Usuario?.Apellidos</td>
-                <td><span class="badge-spec @((profesional.Especialidad ?? string.Empty).ToLowerInvariant())">@profesional.Especialidad</span></td>
-                <td>@profesional.Correo</td>
+                <td class="td-profesional">@profesional.Nombres @profesional.Apellidos</td>
+                <td><span class="badge-spec @((especialidadPrincipal ?? string.Empty).ToLowerInvariant())">@especialidadPrincipal</span></td>
+                <td>@profesional.RegistroMedico</td>
                 <td>@profesional.Telefono</td>
                 <td><span class="badge-status badge-@((profesional.Estado ?? string.Empty).ToLowerInvariant())">@profesional.Estado</span></td>
                 <td>
@@ -254,29 +257,56 @@
     <div class="modal">
       <button class="modal-close" id="modalFormClose" aria-label="Cerrar ventana">×</button>
       <h2 class="modal-title" id="modalFormTitle">Nuevo Profesional</h2>
-      <form id="formProfessional" novalidate>
+      <form id="formProfessional" method="post" asp-action="GuardarProfesional" asp-controller="GestionProfesionales" novalidate>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+        <input type="hidden" name="IdProfesional" id="formIdProfesional" value="0" />
         <div class="form-group">
-          <label class="form-label" for="formName">Nombre Completo *</label>
-          <input type="text" id="formName" class="form-input" required placeholder="Ej. Dr. Carlos Méndez">
+          <label class="form-label" for="formNombres">Nombres *</label>
+          <input type="text" id="formNombres" name="Nombres" class="form-input" required placeholder="Ej. Carlos">
         </div>
         <div class="form-group">
-          <label class="form-label" for="formSpecialty">Especialidad *</label>
-          <input type="text" id="formSpecialty" class="form-input" required placeholder="Ej. Ortodoncia">
+          <label class="form-label" for="formApellidos">Apellidos *</label>
+          <input type="text" id="formApellidos" name="Apellidos" class="form-input" required placeholder="Ej. Méndez Ruiz">
         </div>
         <div class="form-group">
-          <label class="form-label" for="formRegistry">Registro Médico *</label>
-          <input type="text" id="formRegistry" class="form-input" required placeholder="Ej. RM-2026-001">
+          <label class="form-label" for="formRegistroMedico">Registro Médico *</label>
+          <input type="text" id="formRegistroMedico" name="RegistroMedico" class="form-input" required placeholder="Ej. RM-2026-001">
         </div>
         <div class="form-group">
-          <label class="form-label" for="formPhone">Teléfono *</label>
-          <input type="tel" id="formPhone" class="form-input" required placeholder="Ej. 300 123 4567">
+          <label class="form-label" for="formCategoria">Categoría</label>
+          <input type="text" id="formCategoria" name="Categoria" class="form-input" placeholder="Ej. Odontología General">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formTelefono">Teléfono</label>
+          <input type="tel" id="formTelefono" name="Telefono" class="form-input" placeholder="Ej. 300 123 4567">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formEspecialidad">Especialidad</label>
+          <select id="formEspecialidad" name="IdEspecialidad" class="form-input">
+            <option value="">Sin especialidad</option>
+            @foreach (var especialidad in especialidades)
+            {
+              <option value="@especialidad.IdEspecialidad">@especialidad.Nombre</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formUsuario">Usuario</label>
+          <select id="formUsuario" name="IdUsuario" class="form-input">
+            <option value="0">Sin usuario</option>
+            @foreach (var usuario in usuarios)
+            {
+              <option value="@usuario.IdUsuario">@usuario.Nombre @usuario.Apellidos</option>
+            }
+          </select>
         </div>
         <div class="form-group">
           <label class="form-label" for="formStatus">Estado *</label>
-          <select id="formStatus" class="form-input" required>
-            <option value="Activo">Activo</option>
-            <option value="Vacaciones">Vacaciones</option>
-            <option value="Inactivo">Inactivo</option>
+          <select id="formStatus" name="Estado" class="form-input" required>
+            <option value="activo">Activo</option>
+            <option value="vacaciones">Vacaciones</option>
+            <option value="inactivo">Inactivo</option>
           </select>
         </div>
         <div class="modal-footer">

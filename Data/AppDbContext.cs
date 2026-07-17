@@ -11,6 +11,8 @@ public class AppDbContext : DbContext
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<Paciente> Pacientes => Set<Paciente>();
     public DbSet<Profesional> Profesionales => Set<Profesional>();
+    public DbSet<Especialidad> Especialidades => Set<Especialidad>();
+    public DbSet<Profesional_Especialidad> ProfesionalEspecialidades => Set<Profesional_Especialidad>();
     public DbSet<Servicio> Servicios => Set<Servicio>();
     public DbSet<Cita> Citas => Set<Cita>();
 
@@ -80,15 +82,52 @@ public class AppDbContext : DbContext
             entity.HasKey(p => p.IdProfesional);
             entity.Property(p => p.IdProfesional).HasColumnName("id_profesional");
             entity.Property(p => p.IdUsuario).HasColumnName("id_usuario");
-            entity.Property(p => p.Especialidad).HasColumnName("especialidad");
-            entity.Property(p => p.Correo).HasColumnName("correo");
+            entity.Property(p => p.Nombres).HasColumnName("nombres");
+            entity.Property(p => p.Apellidos).HasColumnName("apellidos");
+            entity.Property(p => p.RegistroMedico).HasColumnName("registro_medico");
+            entity.Property(p => p.Descripcion).HasColumnName("descripcion");
+            entity.Property(p => p.Categoria).HasColumnName("categoria");
             entity.Property(p => p.Telefono).HasColumnName("telefono");
             entity.Property(p => p.Estado).HasColumnName("estado");
+            entity.Property(p => p.FechaIngreso).HasColumnName("fecha_ingreso");
 
             entity.HasOne(p => p.Usuario)
                   .WithMany()
                   .HasForeignKey(p => p.IdUsuario)
-                  .OnDelete(DeleteBehavior.SetNull);
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(p => p.Especialidades)
+                  .WithOne(pe => pe.Profesional)
+                  .HasForeignKey(pe => pe.IdProfesional)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Especialidad>(entity =>
+        {
+            entity.ToTable("Especialidad");
+            entity.HasKey(e => e.IdEspecialidad);
+            entity.Property(e => e.IdEspecialidad).HasColumnName("id_especialidad");
+            entity.Property(e => e.Nombre).HasColumnName("nombre");
+            entity.Property(e => e.Descripcion).HasColumnName("descripcion");
+        });
+
+        modelBuilder.Entity<Profesional_Especialidad>(entity =>
+        {
+            entity.ToTable("Profesional_Especialidad");
+            entity.HasKey(pe => new { pe.IdProfesional, pe.IdEspecialidad });
+            entity.Property(pe => pe.IdProfesional).HasColumnName("id_profesional");
+            entity.Property(pe => pe.IdEspecialidad).HasColumnName("id_especialidad");
+            entity.Property(pe => pe.Principal).HasColumnName("principal");
+
+            entity.HasOne(pe => pe.Profesional)
+                  .WithMany(p => p.Especialidades)
+                  .HasForeignKey(pe => pe.IdProfesional)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(pe => pe.Especialidad)
+                  .WithMany()
+                  .HasForeignKey(pe => pe.IdEspecialidad)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Servicio>(entity =>

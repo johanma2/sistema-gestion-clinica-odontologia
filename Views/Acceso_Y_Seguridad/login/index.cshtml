@@ -57,6 +57,7 @@
       <form id="loginForm" class="login-form" action="/acceso-y-seguridad/login" method="post" novalidate>
         @Html.AntiForgeryToken()
         <input type="hidden" name="rol" id="selectedRole" value="Profesional" />
+        <input type="hidden" name="returnUrl" value="/acceso-y-seguridad/login" />
 
         <div class="form-group">
           <label class="form-label" for="email">

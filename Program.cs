@@ -86,80 +86,59 @@ using (var scope = app.Services.CreateScope())
     var recepcionistaRole = await db.Roles.FirstOrDefaultAsync(r => r.NombreRol == "Recepcionista");
     var auxiliarRole = await db.Roles.FirstOrDefaultAsync(r => r.NombreRol == "Auxiliar");
 
+    static async Task<Usuario?> EnsureUserAsync(AppDbContext db, string correo, string nombre, string apellidos, int rolId, string? password = null)
+    {
+        var existing = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == correo);
+        if (existing != null)
+        {
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                existing.Contrasena = BCrypt.Net.BCrypt.HashPassword(password);
+            }
+            existing.Estado = "activo";
+            existing.IdRol = rolId;
+            existing.Nombre = nombre;
+            existing.Apellidos = apellidos;
+            await db.SaveChangesAsync();
+            return existing;
+        }
+
+        var user = new Usuario
+        {
+            Nombre = nombre,
+            Apellidos = apellidos,
+            Correo = correo,
+            Contrasena = BCrypt.Net.BCrypt.HashPassword(password ?? "123456"),
+            IdRol = rolId,
+            Estado = "activo",
+            FechaCreacion = DateTime.UtcNow
+        };
+        db.Usuarios.Add(user);
+        await db.SaveChangesAsync();
+        return user;
+    }
+
     if (adminRole != null && pacienteRole != null)
     {
-        if (!await db.Usuarios.AnyAsync(u => u.Correo == "admin@smiletrack.co"))
-        {
-            db.Usuarios.Add(new Usuario
-            {
-                Nombre = "Admin",
-                Apellidos = "SmileTrack",
-                Correo = "admin@smiletrack.co",
-                Contrasena = BCrypt.Net.BCrypt.HashPassword("123456"),
-                IdRol = adminRole.IdRol,
-                Estado = "activo",
-                FechaCreacion = DateTime.UtcNow
-            });
-        }
-
-        if (!await db.Usuarios.AnyAsync(u => u.Correo == "pac@smiletrack.co"))
-        {
-            db.Usuarios.Add(new Usuario
-            {
-                Nombre = "Paciente",
-                Apellidos = "Prueba",
-                Correo = "pac@smiletrack.co",
-                Contrasena = BCrypt.Net.BCrypt.HashPassword("123456"),
-                IdRol = pacienteRole.IdRol,
-                Estado = "activo",
-                FechaCreacion = DateTime.UtcNow
-            });
-        }
+        await EnsureUserAsync(db, "admin@smiletrack.co", "Admin", "SmileTrack", adminRole.IdRol, "123456");
+        await EnsureUserAsync(db, "pac@smiletrack.co", "Paciente", "Prueba", pacienteRole.IdRol, "123456");
     }
 
-    if (profesionalRole != null && !await db.Usuarios.AnyAsync(u => u.Correo == "prof@smiletrack.co"))
+    if (profesionalRole != null)
     {
-        db.Usuarios.Add(new Usuario
-        {
-            Nombre = "Profesional",
-            Apellidos = "Prueba",
-            Correo = "prof@smiletrack.co",
-            Contrasena = BCrypt.Net.BCrypt.HashPassword("123456"),
-            IdRol = profesionalRole.IdRol,
-            Estado = "activo",
-            FechaCreacion = DateTime.UtcNow
-        });
+        await EnsureUserAsync(db, "prof@smiletrack.co", "Profesional", "Prueba", profesionalRole.IdRol, "123456");
     }
 
-    if (recepcionistaRole != null && !await db.Usuarios.AnyAsync(u => u.Correo == "recep@smiletrack.co"))
+    if (recepcionistaRole != null)
     {
-        db.Usuarios.Add(new Usuario
-        {
-            Nombre = "Recepcionista",
-            Apellidos = "Prueba",
-            Correo = "recep@smiletrack.co",
-            Contrasena = BCrypt.Net.BCrypt.HashPassword("123456"),
-            IdRol = recepcionistaRole.IdRol,
-            Estado = "activo",
-            FechaCreacion = DateTime.UtcNow
-        });
+        await EnsureUserAsync(db, "recep@smiletrack.co", "Recepcionista", "Prueba", recepcionistaRole.IdRol, "123456");
     }
 
-    if (auxiliarRole != null && !await db.Usuarios.AnyAsync(u => u.Correo == "aux@smiletrack.co"))
+    if (auxiliarRole != null)
     {
-        db.Usuarios.Add(new Usuario
-        {
-            Nombre = "Auxiliar",
-            Apellidos = "Prueba",
-            Correo = "aux@smiletrack.co",
-            Contrasena = BCrypt.Net.BCrypt.HashPassword("123456"),
-            IdRol = auxiliarRole.IdRol,
-            Estado = "activo",
-            FechaCreacion = DateTime.UtcNow
-        });
+        await EnsureUserAsync(db, "aux@smiletrack.co", "Auxiliar", "Prueba", auxiliarRole.IdRol, "123456");
     }
 
-    await db.SaveChangesAsync();
 }
 
 app.Run();

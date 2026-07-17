@@ -74,34 +74,66 @@ public class GestionProfesionalesController : Controller
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrador")]
     [Route("gestion-de-profesionales/guardar-profesional")]
-    public async Task<IActionResult> GuardarProfesional([FromForm] int? IdProfesional, [FromForm] int? IdUsuario, [FromForm] string? Especialidad, [FromForm] string? Correo, [FromForm] string? Telefono, [FromForm] string Estado, [FromForm] string? ReturnUrl)
+    public async Task<IActionResult> GuardarProfesional([FromForm] int? IdProfesional, [FromForm] int? IdUsuario, [FromForm] string? Nombres, [FromForm] string? Apellidos, [FromForm] string? RegistroMedico, [FromForm] string? Categoria, [FromForm] string? Telefono, [FromForm] int? IdEspecialidad, [FromForm] string? Descripcion, [FromForm] string Estado, [FromForm] string? ReturnUrl)
     {
+        var estado = string.IsNullOrWhiteSpace(Estado) ? "activo" : Estado;
+        var idUsuario = IdUsuario ?? 0;
+
+        Profesional profesional;
         if (IdProfesional.HasValue && IdProfesional.Value > 0)
         {
-            var profesional = await _context.Profesionales.FindAsync(IdProfesional.Value);
-            if (profesional != null)
+            profesional = await _context.Profesionales.Include(p => p.Especialidades).FirstOrDefaultAsync(p => p.IdProfesional == IdProfesional.Value) ?? new Profesional();
+            profesional.IdUsuario = idUsuario;
+            profesional.Nombres = Nombres ?? string.Empty;
+            profesional.Apellidos = Apellidos ?? string.Empty;
+            profesional.RegistroMedico = RegistroMedico ?? string.Empty;
+            profesional.Categoria = Categoria;
+            profesional.Telefono = Telefono;
+            profesional.Descripcion = Descripcion;
+            profesional.Estado = estado;
+            profesional.FechaIngreso = profesional.FechaIngreso ?? DateTime.Today;
+            if (profesional.IdProfesional == 0)
             {
-                profesional.IdUsuario = IdUsuario;
-                profesional.Especialidad = Especialidad;
-                profesional.Correo = Correo;
-                profesional.Telefono = Telefono;
-                profesional.Estado = string.IsNullOrWhiteSpace(Estado) ? "activo" : Estado;
+                _context.Profesionales.Add(profesional);
+            }
+            else
+            {
                 _context.Profesionales.Update(profesional);
             }
         }
         else
         {
-            _context.Profesionales.Add(new Profesional
+            profesional = new Profesional
             {
-                IdUsuario = IdUsuario,
-                Especialidad = Especialidad,
-                Correo = Correo,
+                IdUsuario = idUsuario,
+                Nombres = Nombres ?? string.Empty,
+                Apellidos = Apellidos ?? string.Empty,
+                RegistroMedico = RegistroMedico ?? string.Empty,
+                Categoria = Categoria,
                 Telefono = Telefono,
-                Estado = string.IsNullOrWhiteSpace(Estado) ? "activo" : Estado
+                Descripcion = Descripcion,
+                Estado = estado,
+                FechaIngreso = DateTime.Today
+            };
+            _context.Profesionales.Add(profesional);
+        }
+
+        await _context.SaveChangesAsync();
+
+        if (IdEspecialidad.HasValue && IdEspecialidad.Value > 0)
+        {
+            var relaciones = await _context.ProfesionalEspecialidades.Where(pe => pe.IdProfesional == profesional.IdProfesional).ToListAsync();
+            _context.ProfesionalEspecialidades.RemoveRange(relaciones);
+            _context.ProfesionalEspecialidades.Add(new Profesional_Especialidad
+            {
+                IdProfesional = profesional.IdProfesional,
+                IdEspecialidad = IdEspecialidad.Value,
+                Principal = true
             });
         }
 
         await _context.SaveChangesAsync();
+
         return Redirect(string.IsNullOrWhiteSpace(ReturnUrl) ? "/gestion-de-profesionales/st-adm-07-gestion-profesionales" : ReturnUrl);
     }
 
@@ -192,6 +224,8 @@ public class GestionProfesionalesController : Controller
 
         var profesionalesQuery = _context.Profesionales
             .Include(p => p.Usuario)
+            .Include(p => p.Especialidades)
+            .ThenInclude(pe => pe.Especialidad)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(pagination.Search))
@@ -199,14 +233,16 @@ public class GestionProfesionalesController : Controller
             var searchTerm = pagination.Search.Trim().ToLower();
             profesionalesQuery = profesionalesQuery.Where(p =>
                 (p.Usuario != null && ((p.Usuario.Nombre != null && p.Usuario.Nombre.ToLower().Contains(searchTerm)) || (p.Usuario.Apellidos != null && p.Usuario.Apellidos.ToLower().Contains(searchTerm)))) ||
-                (p.Especialidad != null && p.Especialidad.ToLower().Contains(searchTerm)) ||
-                (p.Correo != null && p.Correo.ToLower().Contains(searchTerm)));
+                (p.Nombres != null && p.Nombres.ToLower().Contains(searchTerm)) ||
+                (p.Apellidos != null && p.Apellidos.ToLower().Contains(searchTerm)) ||
+                (p.RegistroMedico != null && p.RegistroMedico.ToLower().Contains(searchTerm)) ||
+                (p.Especialidades.Any(pe => pe.Especialidad != null && pe.Especialidad.Nombre.ToLower().Contains(searchTerm))));
         }
 
         if (!string.IsNullOrWhiteSpace(pagination.Profesional))
         {
             var especialidad = pagination.Profesional.Trim().ToLower();
-            profesionalesQuery = profesionalesQuery.Where(p => p.Especialidad != null && p.Especialidad.ToLower() == especialidad);
+            profesionalesQuery = profesionalesQuery.Where(p => p.Especialidades.Any(pe => pe.Especialidad != null && pe.Especialidad.Nombre.ToLower() == especialidad));
         }
 
         if (!string.IsNullOrWhiteSpace(pagination.Estado))
@@ -215,7 +251,7 @@ public class GestionProfesionalesController : Controller
             profesionalesQuery = profesionalesQuery.Where(p => p.Estado != null && p.Estado.ToLower() == estado);
         }
 
-        profesionalesQuery = profesionalesQuery.OrderBy(p => p.Especialidad);
+        profesionalesQuery = profesionalesQuery.OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres);
 
         var paged = await profesionalesQuery.ToPagedResultAsync(page, pageSize);
 
@@ -225,7 +261,7 @@ public class GestionProfesionalesController : Controller
         ViewData["SearchFilter"] = pagination.Search ?? string.Empty;
         ViewData["EspecialidadFilter"] = pagination.Profesional ?? string.Empty;
         ViewData["EstadoFilter"] = pagination.Estado ?? string.Empty;
-        ViewData["Especialidades"] = await _context.Profesionales.Where(p => !string.IsNullOrWhiteSpace(p.Especialidad)).Select(p => p.Especialidad!).Distinct().OrderBy(e => e).ToListAsync();
+        ViewData["Especialidades"] = await _context.Especialidades.OrderBy(e => e.Nombre).ToListAsync();
         ViewData["Usuarios"] = await _context.Usuarios.OrderBy(u => u.Nombre).ThenBy(u => u.Apellidos).ToListAsync();
         ViewData["ReturnUrl"] = returnUrl;
 

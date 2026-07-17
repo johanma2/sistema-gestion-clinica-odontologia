@@ -78,6 +78,18 @@ BEGIN
 END
 GO
 
+IF COL_LENGTH(N'dbo.Usuario', N'codigo_recuperacion') IS NULL
+BEGIN
+    ALTER TABLE Usuario ADD codigo_recuperacion VARCHAR(10) NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.Usuario', N'fecha_expiracion_codigo') IS NULL
+BEGIN
+    ALTER TABLE Usuario ADD fecha_expiracion_codigo DATETIME NULL;
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.Auditoria') AND type = N'U')
 BEGIN
     CREATE TABLE Auditoria (
@@ -145,12 +157,64 @@ BEGIN
     CREATE TABLE Profesional (
         id_profesional INT IDENTITY(1,1) PRIMARY KEY,
         id_usuario INT NULL,
-        especialidad VARCHAR(100) NULL,
-        correo VARCHAR(150) NULL UNIQUE,
+        nombres VARCHAR(100) NOT NULL,
+        apellidos VARCHAR(100) NOT NULL,
+        registro_medico VARCHAR(50) NOT NULL,
+        descripcion VARCHAR(255) NULL,
+        categoria VARCHAR(100) NULL,
         telefono VARCHAR(20) NULL,
-        estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo','inactivo')),
+        estado VARCHAR(15) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo','inactivo')),
+        fecha_ingreso DATE NULL,
         CONSTRAINT FK_Profesional_Usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario) ON DELETE SET NULL
     );
+END
+GO
+
+IF COL_LENGTH(N'dbo.Profesional', N'nombres') IS NULL
+BEGIN
+    ALTER TABLE Profesional ADD nombres VARCHAR(100) NOT NULL CONSTRAINT DF_Profesional_Nombres DEFAULT '';
+END
+GO
+
+IF COL_LENGTH(N'dbo.Profesional', N'apellidos') IS NULL
+BEGIN
+    ALTER TABLE Profesional ADD apellidos VARCHAR(100) NOT NULL CONSTRAINT DF_Profesional_Apellidos DEFAULT '';
+END
+GO
+
+IF COL_LENGTH(N'dbo.Profesional', N'registro_medico') IS NULL
+BEGIN
+    ALTER TABLE Profesional ADD registro_medico VARCHAR(50) NOT NULL CONSTRAINT DF_Profesional_RegistroMedico DEFAULT '';
+END
+GO
+
+IF COL_LENGTH(N'dbo.Profesional', N'descripcion') IS NULL
+BEGIN
+    ALTER TABLE Profesional ADD descripcion VARCHAR(255) NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.Profesional', N'categoria') IS NULL
+BEGIN
+    ALTER TABLE Profesional ADD categoria VARCHAR(100) NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.Profesional', N'telefono') IS NULL
+BEGIN
+    ALTER TABLE Profesional ADD telefono VARCHAR(20) NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.Profesional', N'estado') IS NULL
+BEGIN
+    ALTER TABLE Profesional ADD estado VARCHAR(15) NOT NULL CONSTRAINT DF_Profesional_Estado DEFAULT 'activo';
+END
+GO
+
+IF COL_LENGTH(N'dbo.Profesional', N'fecha_ingreso') IS NULL
+BEGIN
+    ALTER TABLE Profesional ADD fecha_ingreso DATE NULL;
 END
 GO
 
@@ -226,6 +290,18 @@ BEGIN
 END
 GO
 
+IF COL_LENGTH(N'dbo.Servicio', N'precio') IS NULL
+BEGIN
+    ALTER TABLE Servicio ADD precio DECIMAL(12,2) NOT NULL CONSTRAINT DF_Servicio_Precio DEFAULT 0.00;
+END
+GO
+
+IF COL_LENGTH(N'dbo.Servicio', N'estado') IS NULL
+BEGIN
+    ALTER TABLE Servicio ADD estado VARCHAR(10) NOT NULL CONSTRAINT DF_Servicio_Estado DEFAULT 'activo';
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.Profesional_Servicio') AND type = N'U')
 BEGIN
     CREATE TABLE Profesional_Servicio (
@@ -279,6 +355,31 @@ BEGIN
         CONSTRAINT FK_Cita_Profesional FOREIGN KEY (id_profesional) REFERENCES Profesional(id_profesional) ON DELETE SET NULL,
         CONSTRAINT FK_Cita_Servicio FOREIGN KEY (id_servicio) REFERENCES Servicio(id_servicio) ON DELETE SET NULL
     );
+END
+GO
+
+IF COL_LENGTH(N'dbo.Cita', N'id_servicio') IS NULL
+BEGIN
+    ALTER TABLE Cita ADD id_servicio INT NULL;
+    ALTER TABLE Cita ADD CONSTRAINT FK_Cita_Servicio FOREIGN KEY (id_servicio) REFERENCES Servicio(id_servicio) ON DELETE SET NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.Cita', N'fecha_hora') IS NULL
+BEGIN
+    ALTER TABLE Cita ADD fecha_hora DATETIME NOT NULL CONSTRAINT DF_Cita_FechaHora DEFAULT GETDATE();
+END
+GO
+
+IF COL_LENGTH(N'dbo.Cita', N'estado') IS NULL
+BEGIN
+    ALTER TABLE Cita ADD estado VARCHAR(30) NOT NULL CONSTRAINT DF_Cita_Estado DEFAULT 'programada';
+END
+GO
+
+IF COL_LENGTH(N'dbo.Cita', N'notas') IS NULL
+BEGIN
+    ALTER TABLE Cita ADD notas VARCHAR(MAX) NULL;
 END
 GO
 
@@ -389,38 +490,104 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM Profesional WHERE correo='dr.smith@smiletrack.co')
+IF NOT EXISTS (SELECT 1 FROM Profesional WHERE registro_medico='SMT-001')
 BEGIN
-    INSERT INTO Profesional (id_usuario, especialidad, correo, telefono, estado)
-    VALUES (NULL, 'Ortodoncia', 'dr.smith@smiletrack.co', '3001234567', 'activo');
+    DECLARE @id_usuario_admin INT = (SELECT TOP 1 id_usuario FROM Usuario WHERE correo='admin@smiletrack.co');
+    IF @id_usuario_admin IS NOT NULL
+    BEGIN
+        INSERT INTO Profesional (id_usuario, nombres, apellidos, registro_medico, descripcion, categoria, telefono, estado, fecha_ingreso)
+        VALUES (@id_usuario_admin, 'Dr. Juan', 'Smith', 'SMT-001', 'Especialista en ortodoncia', 'Ortodoncia', '3001234567', 'activo', CAST(GETDATE() AS DATE));
+    END
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM Profesional_Especialidad pe
+    JOIN Profesional p ON p.id_profesional = pe.id_profesional
+    JOIN Especialidad e ON e.id_especialidad = pe.id_especialidad
+    WHERE p.registro_medico = 'SMT-001' AND e.nombre = 'Ortodoncia'
+)
+BEGIN
+    INSERT INTO Profesional_Especialidad (id_profesional, id_especialidad, principal)
+    SELECT p.id_profesional, e.id_especialidad, 1
+    FROM Profesional p
+    JOIN Especialidad e ON e.nombre = 'Ortodoncia'
+    WHERE p.registro_medico = 'SMT-001';
 END
 GO
 
 IF NOT EXISTS (SELECT 1 FROM Servicio WHERE nombre='Limpieza dental')
 BEGIN
-    INSERT INTO Servicio (nombre, descripcion, precio, estado) VALUES ('Limpieza dental', 'Prevención y profilaxis', 80000, 'activo');
+    IF COL_LENGTH(N'dbo.Servicio', N'precio') IS NOT NULL AND COL_LENGTH(N'dbo.Servicio', N'estado') IS NOT NULL
+    BEGIN
+        EXEC sys.sp_executesql N'INSERT INTO Servicio (nombre, descripcion, precio, estado) VALUES (@p1, @p2, @p3, @p4);',
+            N'@p1 nvarchar(150), @p2 nvarchar(500), @p3 decimal(12,2), @p4 nvarchar(10)',
+            N'Limpieza dental', N'Prevención y profilaxis', 80000, N'activo';
+    END
+    ELSE
+    BEGIN
+        EXEC sys.sp_executesql N'INSERT INTO Servicio (nombre, descripcion, categoria, costo, duracion, telefono, activo) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7);',
+            N'@p1 nvarchar(150), @p2 nvarchar(500), @p3 nvarchar(50), @p4 decimal(12,2), @p5 nvarchar(50), @p6 nvarchar(20), @p7 bit',
+            N'Limpieza dental', N'Prevención y profilaxis', N'Prevención', 80000, N'30 min', NULL, 1;
+    END
 END
 GO
 
 IF NOT EXISTS (SELECT 1 FROM Servicio WHERE nombre='Blanqueamiento')
 BEGIN
-    INSERT INTO Servicio (nombre, descripcion, precio, estado) VALUES ('Blanqueamiento', 'Estética dental', 350000, 'activo');
+    IF COL_LENGTH(N'dbo.Servicio', N'precio') IS NOT NULL AND COL_LENGTH(N'dbo.Servicio', N'estado') IS NOT NULL
+    BEGIN
+        EXEC sys.sp_executesql N'INSERT INTO Servicio (nombre, descripcion, precio, estado) VALUES (@p1, @p2, @p3, @p4);',
+            N'@p1 nvarchar(150), @p2 nvarchar(500), @p3 decimal(12,2), @p4 nvarchar(10)',
+            N'Blanqueamiento', N'Estética dental', 350000, N'activo';
+    END
+    ELSE
+    BEGIN
+        EXEC sys.sp_executesql N'INSERT INTO Servicio (nombre, descripcion, categoria, costo, duracion, telefono, activo) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7);',
+            N'@p1 nvarchar(150), @p2 nvarchar(500), @p3 nvarchar(50), @p4 decimal(12,2), @p5 nvarchar(50), @p6 nvarchar(20), @p7 bit',
+            N'Blanqueamiento', N'Estética dental', N'Estética', 350000, N'60 min', NULL, 1;
+    END
 END
 GO
 
 IF NOT EXISTS (SELECT 1 FROM Servicio WHERE nombre='Ortodoncia')
 BEGIN
-    INSERT INTO Servicio (nombre, descripcion, precio, estado) VALUES ('Ortodoncia', 'Alineación y corrección', 200000, 'activo');
+    IF COL_LENGTH(N'dbo.Servicio', N'precio') IS NOT NULL AND COL_LENGTH(N'dbo.Servicio', N'estado') IS NOT NULL
+    BEGIN
+        EXEC sys.sp_executesql N'INSERT INTO Servicio (nombre, descripcion, precio, estado) VALUES (@p1, @p2, @p3, @p4);',
+            N'@p1 nvarchar(150), @p2 nvarchar(500), @p3 decimal(12,2), @p4 nvarchar(10)',
+            N'Ortodoncia', N'Alineación y corrección', 200000, N'activo';
+    END
+    ELSE
+    BEGIN
+        EXEC sys.sp_executesql N'INSERT INTO Servicio (nombre, descripcion, categoria, costo, duracion, telefono, activo) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7);',
+            N'@p1 nvarchar(150), @p2 nvarchar(500), @p3 nvarchar(50), @p4 decimal(12,2), @p5 nvarchar(50), @p6 nvarchar(20), @p7 bit',
+            N'Ortodoncia', N'Alineación y corrección', N'Ortodoncia', 200000, N'45 min', NULL, 1;
+    END
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM Cita WHERE notas='Primera consulta de valoración')
+IF NOT EXISTS (SELECT 1 FROM Cita WHERE motivo_consulta='Primera consulta de valoración')
 BEGIN
-    INSERT INTO Cita (id_paciente, id_profesional, id_servicio, fecha_hora, estado, notas)
-    SELECT p.id_paciente, pr.id_profesional, s.id_servicio, DATEADD(day, 2, GETDATE()), 'programada', 'Primera consulta de valoración'
-    FROM Paciente p
-    CROSS JOIN Profesional pr
-    CROSS JOIN Servicio s
-    WHERE p.documento='0000000001' AND pr.correo='dr.smith@smiletrack.co' AND s.nombre='Ortodoncia';
+    IF COL_LENGTH(N'dbo.Cita', N'fecha') IS NOT NULL
+       AND COL_LENGTH(N'dbo.Cita', N'hora_inicio') IS NOT NULL
+       AND COL_LENGTH(N'dbo.Cita', N'hora_fin') IS NOT NULL
+       AND COL_LENGTH(N'dbo.Cita', N'id_estado') IS NOT NULL
+       AND EXISTS (SELECT 1 FROM Paciente WHERE documento='0000000001')
+       AND EXISTS (SELECT 1 FROM Profesional WHERE registro_medico='SMT-001')
+       AND EXISTS (SELECT 1 FROM Estado_Cita WHERE nombre_estado='programada')
+    BEGIN
+        EXEC sys.sp_executesql N'
+            INSERT INTO Cita (fecha, hora_inicio, hora_fin, motivo_consulta, notas_previas, tipo_cita, id_paciente, id_profesional, id_consultorio, id_estado, fecha_creacion, creado_por, archivo_adjunto)
+            SELECT CAST(DATEADD(day, 2, GETDATE()) AS DATE), CAST(DATEADD(hour, 8, GETDATE()) AS TIME), CAST(DATEADD(hour, 9, GETDATE()) AS TIME), @motivo, NULL, @tipo, p.id_paciente, pr.id_profesional, NULL, ec.id_estado, GETDATE(), 1, NULL
+            FROM Paciente p
+            CROSS JOIN Profesional pr
+            CROSS JOIN Estado_Cita ec
+            WHERE p.documento=@documento AND pr.registro_medico=@registro AND ec.nombre_estado=@estado;
+        ',
+        N'@motivo nvarchar(200), @tipo nvarchar(50), @documento nvarchar(20), @registro nvarchar(50), @estado nvarchar(50)',
+        N'Primera consulta de valoración', N'Valoración', N'0000000001', N'SMT-001', N'programada';
+    END
 END
 GO

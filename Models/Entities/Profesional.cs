@@ -10,16 +10,32 @@ namespace SmileTrack_MVC.Models.Entities
         [Column("id_profesional")]
         public int IdProfesional { get; set; }
 
+        [Required]
         [Column("id_usuario")]
-        public int? IdUsuario { get; set; }
+        public int IdUsuario { get; set; }
 
-        [Column("especialidad")]
+        [Required]
+        [Column("nombres")]
         [StringLength(100)]
-        public string? Especialidad { get; set; }
+        public string Nombres { get; set; } = string.Empty;
 
-        [Column("correo")]
-        [StringLength(150)]
-        public string? Correo { get; set; }
+        [Required]
+        [Column("apellidos")]
+        [StringLength(100)]
+        public string Apellidos { get; set; } = string.Empty;
+
+        [Required]
+        [Column("registro_medico")]
+        [StringLength(50)]
+        public string RegistroMedico { get; set; } = string.Empty;
+
+        [Column("descripcion")]
+        [StringLength(255)]
+        public string? Descripcion { get; set; }
+
+        [Column("categoria")]
+        [StringLength(100)]
+        public string? Categoria { get; set; }
 
         [Column("telefono")]
         [StringLength(20)]
@@ -27,13 +43,18 @@ namespace SmileTrack_MVC.Models.Entities
 
         [Required]
         [Column("estado")]
-        [StringLength(10)]
+        [StringLength(15)]
         public string Estado { get; set; } = "activo";
 
-        [ForeignKey("IdUsuario")]
+        [Column("fecha_ingreso")]
+        public DateTime? FechaIngreso { get; set; }
+
+        [ForeignKey(nameof(IdUsuario))]
         public Usuario? Usuario { get; set; }
 
+        public ICollection<Profesional_Especialidad> Especialidades { get; set; } = new List<Profesional_Especialidad>();
+
         [NotMapped]
-        public string NombreProfesional => Usuario != null ? $"{Usuario.Nombre} {Usuario.Apellidos}".Trim() : (Especialidad ?? "Profesional");
+        public string NombreProfesional => Usuario != null ? $"{Usuario.Nombre} {Usuario.Apellidos}".Trim() : $"{Nombres} {Apellidos}".Trim();
     }
 }

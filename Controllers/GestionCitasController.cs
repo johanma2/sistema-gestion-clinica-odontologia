@@ -393,7 +393,7 @@ public class GestionCitasController : Controller
         var topProfesionales = topIds.Select(t => new
         {
             Nombre = profesionales.FirstOrDefault(p => p.IdProfesional == t.IdProfesional)?.Usuario?.Nombre ?? "Sin nombre",
-            Especialidad = profesionales.FirstOrDefault(p => p.IdProfesional == t.IdProfesional)?.Especialidad ?? "General",
+            Especialidad = profesionales.FirstOrDefault(p => p.IdProfesional == t.IdProfesional)?.Especialidades.FirstOrDefault(pe => pe.Principal)?.Especialidad?.Nombre ?? "General",
             TotalCitas = t.Total
         }).ToList();
 

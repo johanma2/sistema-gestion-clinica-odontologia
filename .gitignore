@@ -1,0 +1,6 @@
+# Archivos de compilación de .NET
+bin/
+obj/
+
+# Configuraciones de VS Code (opcional, decide si deseas compartirla)
+.vscode/
