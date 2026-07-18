@@ -1,6 +1,71 @@
-# Archivos de compilación de .NET
+## Archivos de compilación de .NET
 bin/
 obj/
 
-# Configuraciones de VS Code (opcional, decide si deseas compartirla)
+## Archivos de usuario de Visual Studio
+*.user
+*.suo
+*.userprefs
+*.userosscache
+
+## Visual Studio
+.vs/
+*.rsuser
+*.vspx
+*.sap
+
+## Visual Studio Code
 .vscode/
+
+## Rider (JetBrains)
+.idea/
+*.sln.iml
+
+## Archivos de paquetes NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/
+!**/[Pp]ackages/build/
+*.lock.json
+!packages.lock.json
+
+## Archivos de caché
+*.cache
+*.log
+
+## Archivos de publicación de ASP.NET
+**/[Pp]ublish/
+**/[Pp]ublished/
+PublishProfiles/
+
+## Archivos temporales del sistema operativo
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+## Archivos de entorno (secretos)
+.env
+.env.local
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+## Archivos de base de datos locales
+*.mdf
+*.ldf
+*.ndf
+
+## Reportes de cobertura de código
+coverage/
+*.coverage
+*.coveragexml
+
+## Archivos de pruebas
+TestResults/
