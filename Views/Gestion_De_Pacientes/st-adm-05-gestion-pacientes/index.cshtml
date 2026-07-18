@@ -65,21 +65,28 @@
 
     <section class="stats-grid" aria-label="Resumen de pacientes">
       <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="statActive" data-target="@pacientes.Count(p => p.LastVisit.HasValue)">0</span>
-        <span class="stat-label">Pacientes activos</span>
+        <span class="stat-icon">🦷</span>
+        <span class="stat-number" id="statTotal" data-target="@pacientes.Count()">0</span>
+        <span class="stat-label">Total Pacientes</span>
+        <span class="stat-sub">Registrados en el sistema</span>
       </div>
       <div class="stat-card" data-color="green">
-        <span class="stat-number" id="statMonth" data-target="@pacientes.Count(p => p.LastVisit.HasValue && p.LastVisit.Value.Month == DateTime.Today.Month && p.LastVisit.Value.Year == DateTime.Today.Year)">0</span>
-        <span class="stat-label">Este mes</span>
-        <span class="stat-sub">@Math.Min(5, pacientes.Count())</span>
+        <span class="stat-icon">📋</span>
+        <span class="stat-number" id="statHistory" data-target="@pacientes.Count(p => p.History != null && p.History.Count > 0)">0</span>
+        <span class="stat-label">Con Historial Clínico</span>
+        <span class="stat-sub">Tienen registros médicos</span>
       </div>
       <div class="stat-card" data-color="orange">
-        <span class="stat-number" id="statWeek" data-target="@pacientes.Count(p => p.NextVisit.HasValue && p.NextVisit.Value >= DateTime.Today.AddDays(-7))">0</span>
-        <span class="stat-label">Esta semana</span>
+        <span class="stat-icon">📅</span>
+        <span class="stat-number" id="statNext" data-target="@pacientes.Count(p => p.NextVisit.HasValue && p.NextVisit.Value >= DateTime.Today)">0</span>
+        <span class="stat-label">Próximas Citas</span>
+        <span class="stat-sub">Citas programadas</span>
       </div>
       <div class="stat-card" data-color="purple">
-        <span class="stat-number" id="statNew" data-target="@Math.Min(3, pacientes.Count())">0</span>
-        <span class="stat-label">Nuevos</span>
+        <span class="stat-icon">✅</span>
+        <span class="stat-number" id="statNoAllergy" data-target="@pacientes.Count(p => p.Allergies == null || p.Allergies.Count == 0)">0</span>
+        <span class="stat-label">Sin Alergias</span>
+        <span class="stat-sub">Sin restricciones</span>
       </div>
     </section>
 
@@ -87,7 +94,7 @@
       <h2 class="visually-hidden" id="tableTitle">Lista de pacientes atendidos</h2>
 
       <div class="table-header" role="row">
-        <div class="table-col col-paciente" role="columnheader">Profesional</div>
+        <div class="table-col col-paciente" role="columnheader">Paciente</div>
         <div class="table-col col-fecha" role="columnheader">Última consulta</div>
         <div class="table-col col-diagnostico" role="columnheader">Diagnóstico</div>
         <div class="table-col col-cita" role="columnheader">Próxima cita</div>
@@ -106,9 +113,6 @@
       <span>Mostrando <strong id="pageShowing">0</strong> de <strong id="pageTotal">0</strong> pacientes</span>
       <nav class="pagination" aria-label="Páginas de resultados">
         <button class="pagination-btn" id="btnPrev" aria-label="Página anterior" disabled>‹</button>
-        <button class="pagination-btn active" aria-current="page" aria-label="Página 1">1</button>
-        <button class="pagination-btn" aria-label="Página 2">2</button>
-        <button class="pagination-btn" aria-label="Página 3">3</button>
         <button class="pagination-btn" id="btnNext" aria-label="Página siguiente">›</button>
       </nav>
     </footer>
@@ -127,7 +131,7 @@
 
   <nav class="mobile-nav" aria-label="Navegación móvil">
     <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Dashboard</span>
     </a>
     <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="mobile-nav-item">
@@ -151,8 +155,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script>
-    window.RAZOR_PATIENTS = @Html.Raw(pacientesJson);
+    window.RAZOR_PATIENTS = @Html.Raw(pacientesJson);      
   </script>
   <script src="@Url.Content("~/js/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/script.js")"></script>
 </body>
-</html>
+</Html
