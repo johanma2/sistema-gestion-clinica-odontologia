@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════
 //  CONFIGURACIÓN API
 // ═══════════════════════════════════════════════════════════════════
-const API_BASE = '/api';
+const API_BASE = '/gestion-de-profesionales';
 
 // ═══════════════════════════════════════════════════════════════════
 //  UTILIDADES GLOBALES
@@ -41,7 +41,7 @@ const showToast = (message, type = 'success') => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  DATOS DE EJEMPLO (Fallback si API falla)
+//  DATOS DE EJEMPLO (ya no se necesitan para el flujo real)
 // ═══════════════════════════════════════════════════════════════════
 const SPEC_COLORS = {
   'Odontología General': 'general',
@@ -54,19 +54,13 @@ const SPEC_COLORS = {
   'Rehabilitación Oral': 'rehab',
 };
 
-const SAMPLE_PROFESSIONALS = [
-  { id: 1, name: 'Dr. Carlos Méndez', specialty: 'Odontología General', registry: 'RM-2026-001', phone: '300 123 4567', status: 'Activo', initials: 'CM' },
-  { id: 2, name: 'Dra. Laura Gómez', specialty: 'Ortodoncia', registry: 'RM-2026-002', phone: '300 123 4568', status: 'Activo', initials: 'LG' },
-  { id: 3, name: 'Dr. Andrés Torres', specialty: 'Endodoncia', registry: 'RM-2026-003', phone: '302 345 6789', status: 'Vacaciones', initials: 'AT' },
-  { id: 4, name: 'Dr. Miguel Herrera', specialty: 'Odontopediatría', registry: 'RM-2026-004', phone: '304 567 8901', status: 'Inactivo', initials: 'MH' },
-  { id: 5, name: 'Dra. Sofía Ramírez', specialty: 'Cirugía Oral', registry: 'RM-2026-005', phone: '304 567 8902', status: 'Activo', initials: 'SR' },
-  { id: 6, name: 'Dra. Elena Beltrán', specialty: 'Periodoncia', registry: 'RM-2026-006', phone: '311 987 6543', status: 'Activo', initials: 'EB' },
-  { id: 7, name: 'Dr. Hugo Valencia', specialty: 'Implantología', registry: 'RM-2026-007', phone: '312 456 7890', status: 'Vacaciones', initials: 'HV' },
-  { id: 8, name: 'Dra. Patricia Ortiz', specialty: 'Rehabilitación Oral', registry: 'RM-2026-008', phone: '315 765 4321', status: 'Activo', initials: 'PO' },
-];
-
-let professionals = [...SAMPLE_PROFESSIONALS];
+let professionals = [];
 let searchQuery = '';
+
+const shouldUseServerRenderedTable = () => {
+  const tbody = safeGetElement('professionalsTbody');
+  return !!(tbody && tbody.children.length > 0);
+};
 let selectedSpecialty = '';
 let selectedStatus = '';
 let currentPage = 1;
@@ -118,7 +112,7 @@ const getAvatarColor = (specialty) => {
 // Renderiza tabla de profesionales con accesibilidad
 const renderTable = () => {
   const tbody = safeGetElement('professionalsTbody');
-  if (!tbody) return;
+  if (!tbody || shouldUseServerRenderedTable()) return;
   
   // Filtrar datos
   const filtered = professionals.filter(p =>
@@ -177,6 +171,7 @@ const renderTable = () => {
 
 // Actualiza contadores de estadísticas
 const updateStats = () => {
+  if (shouldUseServerRenderedTable()) return;
   const total = professionals.length;
   const actives = professionals.filter(p => p.status === 'Activo').length;
   const vacations = professionals.filter(p => p.status === 'Vacaciones').length;
@@ -190,6 +185,7 @@ const updateStats = () => {
 
 // Actualiza botones de paginación
 const updatePagination = (total, count) => {
+  if (shouldUseServerRenderedTable()) return;
   const info = safeGetElement('paginationInfo');
   const buttons = safeGetElement('paginationButtons');
   if (!info || !buttons) return;
@@ -371,52 +367,39 @@ const closeDetailModal = () => {
 };
 
 // Crea o actualiza profesional
-const saveProfessional = (e) => {
+const saveProfessional = async (e) => {
   e.preventDefault();
-  
-  const name = safeGetElement('formName')?.value.trim();
-  const specialty = safeGetElement('formSpecialty')?.value.trim();
-  const registry = safeGetElement('formRegistry')?.value.trim();
-  const phone = safeGetElement('formPhone')?.value.trim();
-  const status = safeGetElement('formStatus')?.value;
-  
-  if (!name || !specialty || !registry || !phone) {
-    showToast('⚠️ Completa todos los campos obligatorios', 'warning');
+
+  const form = e.currentTarget;
+  const nombres = safeGetElement('formNombres')?.value.trim() || '';
+  const apellidos = safeGetElement('formApellidos')?.value.trim() || '';
+  const registroMedico = safeGetElement('formRegistroMedico')?.value.trim() || '';
+
+  if (!nombres || !apellidos || !registroMedico) {
+    showToast('⚠️ Completa nombres, apellidos y registro médico', 'warning');
     return;
   }
-  
-  // Generar iniciales
-  const nameParts = name.replace(/^(Dr\.|Dra\.)\s+/i, '').split(' ');
-  const initials = nameParts.length >= 2 
-    ? (nameParts[0][0] + nameParts[1][0]).toUpperCase() 
-    : nameParts[0].substring(0, 2).toUpperCase();
-  
-  if (editingId === null) {
-    // Crear nuevo
-    const newProf = {
-      id: Date.now(),
-      name,
-      specialty,
-      registry,
-      phone,
-      status,
-      initials,
-    };
-    professionals.unshift(newProf);
-    showToast(`✅ ${name} registrado exitosamente`);
-  } else {
-    // Actualizar existente
-    const index = professionals.findIndex(p => p.id === editingId);
-    if (index !== -1) {
-      professionals[index] = { ...professionals[index], name, specialty, registry, phone, status, initials };
-      showToast(`✅ ${name} actualizado exitosamente`);
-    }
+
+  const formData = new FormData(form);
+  const actionUrl = form.getAttribute('action') || '/gestion-de-profesionales/guardar-profesional';
+  const antiForgery = form.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+  const response = await fetch(actionUrl, {
+    method: 'POST',
+    headers: {
+      'RequestVerificationToken': antiForgery,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    showToast('⚠️ No se pudo guardar el profesional', 'warning');
+    return;
   }
-  
+
+  showToast('✅ Profesional guardado correctamente');
   closeFormModal();
-  updateStats();
-  renderTable();
-  populateSpecialties();
+  window.location.reload();
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -451,58 +434,9 @@ const applyFilters = () => {
 //  API CALLS (Listas para conectar al backend C#)
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene lista de profesionales desde API
+// Obtiene lista de profesionales desde el servidor renderizado
 async function fetchProfessionals() {
-  try {
-    // En producción: fetch real a API
-    // const res = await fetch(`${API_BASE}/admin/professionals`);
-    // if (!res.ok) throw new Error('API error');
-    // return await res.json();
-    
-    // Simulación con fallback
-    return SAMPLE_PROFESSIONALS;
-  } catch (error) {
-    console.warn('Fallback a datos locales:', error);
-    return SAMPLE_PROFESSIONALS;
-  }
-}
-
-// Crea profesional en API
-async function createProfessionalAPI(data) {
-  try {
-    // En producción: POST real a API
-    // const res = await fetch(`${API_BASE}/admin/professionals`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(data),
-    // });
-    // if (!res.ok) throw new Error('Create failed');
-    // return await res.json();
-    
-    // Simulación
-    return { success: true, id: Date.now() };
-  } catch (error) {
-    console.warn('Error creando profesional en API:', error);
-    return null;
-  }
-}
-
-// Actualiza profesional en API
-async function updateProfessionalAPI(id, updates) {
-  try {
-    // En producción: PATCH real a API
-    // await fetch(`${API_BASE}/admin/professionals/${id}`, {
-    //   method: 'PATCH',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(updates),
-    // });
-    
-    // Simulación
-    return true;
-  } catch (error) {
-    console.warn('Error actualizando profesional en API:', error);
-    return false;
-  }
+  return [];
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -553,6 +487,7 @@ const initSidebar = () => {
 
 // Inicializa filtros de búsqueda
 const initFilters = () => {
+  if (shouldUseServerRenderedTable()) return;
   const searchInput = safeGetElement('searchInput');
   const filterSpecialty = safeGetElement('filterSpecialty');
   const filterStatus = safeGetElement('filterStatus');

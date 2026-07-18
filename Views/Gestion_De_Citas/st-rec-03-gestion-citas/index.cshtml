@@ -1,4 +1,8 @@
-@{ Layout = null; }
+@{ Layout = null;
+  var profesionalesFilterOptions = ViewData["ProfesionalesFilterOptions"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
+  var citas = ViewData["Citas"] as List<SmileTrack_MVC.Models.Entities.Cita> ?? new();
+  var pageResult = ViewData["CitasPage"] as SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.Entities.Cita>;
+}
 
 ﻿<!DOCTYPE html>
 <html lang="es">
@@ -85,35 +89,66 @@
       </div>
     </section>
 
-    <!-- Filter bar -->
-    <div class="filter-bar" role="toolbar" aria-label="Filtros de citas">
+    <form method="get" class="filter-bar" role="toolbar" aria-label="Filtros de citas">
       <div class="search-wrap">
         <span class="search-icon" aria-hidden="true">🔍</span>
-        <input type="search" class="search-input" id="searchPatient" placeholder="Buscar paciente…"
-          aria-label="Buscar por nombre de paciente" autocomplete="off" />
+        <input type="search" class="search-input" id="searchPatient" name="search" placeholder="Buscar paciente…"
+          aria-label="Buscar por nombre de paciente" autocomplete="off" value="@ViewData["SearchFilter"]" />
       </div>
-      <select class="status-select" id="filterProfessional" aria-label="Filtrar por profesional">
+      <select class="status-select" id="filterProfessional" name="profesional" aria-label="Filtrar por profesional">
         <option value="">Todos los profesionales</option>
-        <option value="Dr. Carlos Méndez">Dr. Carlos Méndez</option>
-        <option value="Dra. Laura Gómez">Dra. Laura Gómez</option>
-        <option value="Dr. Andrés Torres">Dr. Andrés Torres</option>
+        @foreach (var profesional in profesionalesFilterOptions)
+        {
+          if (ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString())
+          {
+            <option value="@profesional.IdProfesional" selected>@profesional.NombreProfesional</option>
+          }
+          else
+          {
+            <option value="@profesional.IdProfesional">@profesional.NombreProfesional</option>
+          }
+        }
       </select>
-      <select class="status-select" id="filterDate" aria-label="Filtrar por fecha">
-        <option value="today">Hoy</option>
-        <option value="tomorrow">Mañana</option>
-        <option value="week">Esta semana</option>
-        <option value="month">Este mes</option>
-      </select>
-      <select class="status-select" id="filterStatus" aria-label="Filtrar por estado">
+      <input type="date" class="status-select" id="filterDate" name="fecha" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]" />
+      <select class="status-select" id="filterStatus" name="estado" aria-label="Filtrar por estado">
         <option value="">Todos los estados</option>
-        <option value="Agendada">Agendada</option>
-        <option value="Confirmada">Confirmada</option>
-        <option value="En consulta">En consulta</option>
-        <option value="Atendida">Atendida</option>
-        <option value="Cancelada">Cancelada</option>
-        <option value="No asistió">No asistió</option>
+        @if (ViewData["EstadoFilter"]?.ToString() == "programada")
+        {
+          <option value="programada" selected>Programada</option>
+        }
+        else
+        {
+          <option value="programada">Programada</option>
+        }
+        @if (ViewData["EstadoFilter"]?.ToString() == "confirmada")
+        {
+          <option value="confirmada" selected>Confirmada</option>
+        }
+        else
+        {
+          <option value="confirmada">Confirmada</option>
+        }
+        @if (ViewData["EstadoFilter"]?.ToString() == "atendida")
+        {
+          <option value="atendida" selected>Atendida</option>
+        }
+        else
+        {
+          <option value="atendida">Atendida</option>
+        }
+        @if (ViewData["EstadoFilter"]?.ToString() == "cancelada")
+        {
+          <option value="cancelada" selected>Cancelada</option>
+        }
+        else
+        {
+          <option value="cancelada">Cancelada</option>
+        }
       </select>
-    </div>
+      <input type="hidden" name="page" value="1" />
+      <button class="btn-primary" type="submit">Aplicar</button>
+      <a class="btn-secondary" href="@Url.Action("Strec03GestionCitas", "GestionCitas")">Limpiar</a>
+    </form>
 
     <!-- Availability alert -->
     <div class="availability-alert" role="status" aria-live="polite">
@@ -138,20 +173,53 @@
               <th scope="col">Acciones</th>
             </tr>
           </thead>
-          <tbody id="appointmentsTable" aria-live="polite"></tbody>
+          <tbody id="appointmentsTable" aria-live="polite">
+            @foreach (var cita in citas)
+            {
+              <tr>
+                <td>@cita.FechaHora.ToString("dd/MM/yyyy")</td>
+                <td>@cita.FechaHora.ToString("HH:mm")</td>
+                <td>@cita.Paciente?.NombresCompleto</td>
+                <td>@cita.Profesional?.NombreProfesional</td>
+                <td>@cita.Servicio?.Nombre</td>
+                <td>—</td>
+                <td>@cita.Estado</td>
+                <td>
+                  <a class="action-btn" href="@Url.Action("Strec03GestionCitas", "GestionCitas", new { editId = cita.IdCita })">✏️</a>
+                </td>
+              </tr>
+            }
+          </tbody>
         </table>
       </div>
 
-      <!-- Paginación -->
       <div class="pagination" role="navigation" aria-label="Paginación de citas">
-        <span class="pagination-info" id="paginationInfo" aria-live="polite">Mostrando 1-5 de 24 citas</span>
+        @{ }
+        <span class="pagination-info" id="paginationInfo" aria-live="polite">Mostrando @Math.Min(pageResult?.PageSize ?? 10, pageResult?.Items.Count ?? 0) de @pageResult?.TotalCount citas</span>
         <div class="pagination-buttons">
-          <button class="pagination-btn" id="prevPage" disabled aria-label="Página anterior">← Anterior</button>
+          @if (pageResult != null && pageResult.HasPreviousPage)
+          {
+            <a class="pagination-btn" id="prevPage" aria-label="Página anterior" href="@Url.Action("Strec03GestionCitas", "GestionCitas", new { page = pageResult.Page - 1, pageSize = pageResult.PageSize, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">← Anterior</a>
+          }
+          else
+          {
+            <button class="pagination-btn" id="prevPage" disabled aria-label="Página anterior">← Anterior</button>
+          }
           <div class="pagination-numbers" role="list" aria-label="Números de página">
-            <button class="pagination-number active" role="listitem" aria-current="page" data-page="1">1</button>
-            <button class="pagination-number" role="listitem" data-page="2">2</button>
+            @for (var i = 1; i <= (pageResult?.TotalPages ?? 1); i++)
+            {
+              var isActive = i == (pageResult?.Page ?? 1);
+              <a class="pagination-number @(isActive ? "active" : string.Empty)" role="listitem" aria-current="@(isActive ? "page" : null)" href="@Url.Action("Strec03GestionCitas", "GestionCitas", new { page = i, pageSize = pageResult?.PageSize ?? 10, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">@i</a>
+            }
           </div>
-          <button class="pagination-btn" id="nextPage" aria-label="Página siguiente">Siguiente →</button>
+          @if (pageResult != null && pageResult.HasNextPage)
+          {
+            <a class="pagination-btn" id="nextPage" aria-label="Página siguiente" href="@Url.Action("Strec03GestionCitas", "GestionCitas", new { page = pageResult.Page + 1, pageSize = pageResult.PageSize, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">Siguiente →</a>
+          }
+          else
+          {
+            <button class="pagination-btn" id="nextPage" aria-label="Página siguiente" disabled>Siguiente →</button>
+          }
         </div>
       </div>
     </div>
@@ -168,10 +236,9 @@
       <span class="mobile-nav-icon" aria-hidden="true">📅</span>
       <span>Citas</span>
     </a>
-    <a href="/gestion-de-pacientes/st-rec-02-registrar-paciente"
-      class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
-      <span>Pacientes</span>
+    <a href="/acceso-y-seguridad/login" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span>Login</span>
     </a>
     <button class="mobile-nav-item" id="mobileMoreBtn" aria-label="Más opciones">
       <span class="mobile-nav-icon" aria-hidden="true">⋮</span>

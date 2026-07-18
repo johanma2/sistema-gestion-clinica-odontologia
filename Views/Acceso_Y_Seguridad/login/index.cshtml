@@ -36,19 +36,19 @@
       <div class="login-section">
         <p class="section-label" id="roleLabel">Selecciona tu rol</p>
         <div class="role-grid" role="radiogroup" aria-labelledby="roleLabel">
-          <button class="role-btn" type="button" data-role="administrador" data-role-label="Administrador" data-route="/gestion-de-citas/st-adm-01-dashboard" role="radio" aria-label="Ingresar como Administrador">
+          <button class="role-btn" type="button" data-role="administrador" data-role-label="Administrador" role="radio" aria-label="Ingresar como Administrador">
             <span class="role-text">Administrador</span>
           </button>
-          <button class="role-btn" type="button" data-role="profesional" data-role-label="Profesional" data-route="/gestion-de-profesionales/st-odo-01-dashboard" role="radio" aria-label="Ingresar como Odontólogo">
+          <button class="role-btn" type="button" data-role="profesional" data-role-label="Profesional" role="radio" aria-label="Ingresar como Profesional">
             <span class="role-text">Profesional</span>
           </button>
-          <button class="role-btn" type="button" data-role="paciente" data-role-label="Paciente" data-route="/gestion-de-citas/st-pac-01-mis-citas" role="radio" aria-label="Ingresar como Paciente">
+          <button class="role-btn" type="button" data-role="paciente" data-role-label="Paciente" role="radio" aria-label="Ingresar como Paciente">
             <span class="role-text">Paciente</span>
           </button>
-          <button class="role-btn" type="button" data-role="recepcionista" data-role-label="Recepcionista" data-route="/gestion-de-citas/st-rec-01-dashboard" role="radio" aria-label="Ingresar como Recepcionista">
+          <button class="role-btn" type="button" data-role="recepcionista" data-role-label="Recepcionista" role="radio" aria-label="Ingresar como Recepcionista">
             <span class="role-text">Recepcionista</span>
           </button>
-          <button class="role-btn" type="button" data-role="auxiliar" data-role-label="Auxiliar" data-route="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" role="radio" aria-label="Ingresar como Auxiliar">
+          <button class="role-btn" type="button" data-role="auxiliar" data-role-label="Auxiliar" role="radio" aria-label="Ingresar como Auxiliar">
             <span class="role-text">Auxiliar</span>
           </button>
         </div>
@@ -57,6 +57,7 @@
       <form id="loginForm" class="login-form" action="/acceso-y-seguridad/login" method="post" novalidate>
         @Html.AntiForgeryToken()
         <input type="hidden" name="rol" id="selectedRole" value="Profesional" />
+        <input type="hidden" name="returnUrl" value="/acceso-y-seguridad/login" />
 
         <div class="form-group">
           <label class="form-label" for="email">

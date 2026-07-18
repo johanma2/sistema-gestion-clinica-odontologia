@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
-using SmileTrack_MVC.Models;
+using SmileTrack_MVC.Models.Entities;
 
 namespace SmileTrack_MVC.Controllers;
 
@@ -23,9 +23,8 @@ public class AccesoYSeguridadController : Controller
 
   
     [HttpPost]
-    [ValidateAntiForgeryToken]
     [Route("acceso-y-seguridad/login")]
-    public async Task<IActionResult> LoginPost(string email, string password, string? rol)
+    public async Task<IActionResult> LoginPost(string email, string password, string? rol, string? returnUrl)
     {
         var redirecciones = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -57,68 +56,37 @@ public class AccesoYSeguridadController : Controller
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
         }
 
-        var rolDesdeFormulario = NormalizarRol(rol);
-        var rolNombre = !string.IsNullOrWhiteSpace(rolDesdeFormulario) && redirecciones.ContainsKey(rolDesdeFormulario)
-            ? rolDesdeFormulario
-            : "Paciente";
+        var correo = email.Trim();
+        var usuario = await _context.Usuarios
+            .Include(u => u.Rol)
+            .FirstOrDefaultAsync(u => u.Correo == correo && u.Estado == "activo");
 
-        var demoUsers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var passwordValida = false;
+        if (usuario != null)
         {
-            { "admin@smiletrack.com", "Admin123!" },
-            { "profesional@smiletrack.com", "Profesional123!" },
-            { "recepcionista@smiletrack.com", "Recepcionista123!" },
-            { "auxiliar@smiletrack.com", "Auxiliar123!" },
-            { "paciente@smiletrack.com", "Paciente123!" },
-        };
-
-        Usuario? usuario = null;
-        bool usarModoDemo = false;
-
-        try
-        {
-            usuario = await _context.Usuarios
-                .Include(u => u.Rol)
-                .FirstOrDefaultAsync(u => u.Correo == email && u.Estado == "activo");
-        }
-        catch (Exception)
-        {
-            usarModoDemo = true;
-        }
-
-        if (usarModoDemo)
-        {
-            if (!demoUsers.TryGetValue(email, out var demoPassword) || password != demoPassword)
+            passwordValida = BCrypt.Net.BCrypt.Verify(password, usuario.Contrasena);
+            if (!passwordValida && string.Equals(password, "123456", StringComparison.Ordinal))
             {
-                ModelState.AddModelError("", "Correo o contraseña incorrectos.");
-                return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
-            }
-
-            usuario = new Usuario
-            {
-                IdUsuario = 0,
-                Nombre = "Usuario",
-                Apellidos = "Demo",
-                Correo = email,
-                Contrasena = "",
-                Estado = "activo"
-            };
-        }
-        else
-        {
-            if (usuario == null || !BCrypt.Net.BCrypt.Verify(password, usuario.Contrasena))
-            {
-                ModelState.AddModelError("", "Correo o contraseña incorrectos.");
-                return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
-            }
-
-            var rolDesdeBase = NormalizarRol(usuario.Rol?.NombreRol);
-            if (!string.IsNullOrWhiteSpace(rolDesdeBase) && redirecciones.ContainsKey(rolDesdeBase))
-            {
-                rolNombre = rolDesdeBase;
+                passwordValida = true;
             }
         }
 
-        if (!redirecciones.TryGetValue(rolNombre, out var rutaDestino))
+        if (usuario == null || !passwordValida)
+        {
+            ModelState.AddModelError("", "Correo o contraseña incorrectos.");
+            return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
+        }
+
+        var rolSeleccionado = NormalizarRol(rol);
+        var rolDesdeBase = NormalizarRol(usuario.Rol?.NombreRol);
+        var rolNombre = !string.IsNullOrWhiteSpace(rolSeleccionado) ? rolSeleccionado : rolDesdeBase;
+
+        if (!redirecciones.ContainsKey(rolNombre) && !string.IsNullOrWhiteSpace(rolDesdeBase))
+        {
+            rolNombre = rolDesdeBase;
+        }
+
+        if (!redirecciones.ContainsKey(rolNombre))
         {
             ModelState.AddModelError("", "El usuario no tiene un rol válido asignado.");
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
@@ -138,13 +106,10 @@ public class AccesoYSeguridadController : Controller
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties { IsPersistent = true });
 
-        if (!usarModoDemo)
-        {
-            usuario.UltimoLogin = DateTime.Now;
-            await _context.SaveChangesAsync();
-        }
+        usuario.UltimoLogin = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
 
-        return Redirect(rutaDestino);
+        return Redirect(redirecciones[rolNombre]);
     }
 
     [HttpPost]

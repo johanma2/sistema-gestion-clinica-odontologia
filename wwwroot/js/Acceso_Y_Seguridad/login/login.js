@@ -1,16 +1,13 @@
 ﻿/**
- * SMILETRACK — LOGIN (MODO DEMO)
- * ✅ CORREGIDO: Roles funcionando + validación visual desactivada
+ * SMILETRACK — LOGIN
+ * El usuario puede elegir el rol desde la interfaz y el backend valida que coincida con el rol del usuario.
  */
 
 document.addEventListener('DOMContentLoaded', function () {
-
-  // Referencias
   const emailInput = document.getElementById('email');
   const passInput = document.getElementById('password');
   const loginForm = document.getElementById('loginForm');
   const loginBtn = document.getElementById('loginBtn');
-  const btnText = document.getElementById('btnText');
   const errorMsg = document.getElementById('errorMsg');
   const errorText = document.getElementById('errorText');
   const toggleBtn = document.getElementById('togglePassword');
@@ -20,11 +17,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const toast = document.getElementById('toast');
   const toastMsg = document.getElementById('toastMsg');
 
-  let selectedRoute = null;
-
-  // ═══════════════════════════════════════
-  //  TOGGLE PASSWORD
-  // ═══════════════════════════════════════
   if (toggleBtn && passInput && toggleIcon) {
     toggleBtn.addEventListener('click', () => {
       const isHidden = passInput.type === 'password';
@@ -36,29 +28,20 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // ═══════════════════════════════════════
-  //  SELECCIÓN DE ROL — ✅ CORREGIDO
-  // ═══════════════════════════════════════
   const activateRole = (btn) => {
-    roleButtons.forEach(b => {
+    roleButtons.forEach((b) => {
       b.classList.remove('active');
       b.setAttribute('aria-checked', 'false');
     });
     btn.classList.add('active');
     btn.setAttribute('aria-checked', 'true');
-    
-    // Guardar la ruta y actualizar el rol que se enviará al servidor
-    selectedRoute = btn.dataset.route;
+
     if (selectedRoleInput) {
       selectedRoleInput.value = btn.dataset.roleLabel || btn.dataset.role || 'Profesional';
     }
-    
-    // Efecto visual suave
-    btn.style.transform = 'scale(1.02)';
-    setTimeout(() => btn.style.transform = '', 150);
   };
 
-  roleButtons.forEach(btn => {
+  roleButtons.forEach((btn) => {
     btn.addEventListener('click', () => activateRole(btn));
     btn.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -68,13 +51,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Activar "Odontólogo" por defecto
-  const defaultBtn = Array.from(roleButtons).find(b => b.dataset.role === 'profesional') || roleButtons[0];
+  const defaultBtn = Array.from(roleButtons).find((b) => b.dataset.role === 'profesional') || roleButtons[0];
   if (defaultBtn) activateRole(defaultBtn);
 
-  // ═══════════════════════════════════════
-  //  TOAST NOTIFICATION
-  // ═══════════════════════════════════════
   const showToast = (msg) => {
     if (toastMsg) toastMsg.textContent = msg;
     if (toast) {
@@ -83,16 +62,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   };
 
-  // ═══════════════════════════════════════
-  //  SUBMIT FORM — MODO DEMO
-  // ═══════════════════════════════════════
   if (loginForm) {
     loginForm.addEventListener('submit', (e) => {
       if (errorMsg) errorMsg.classList.add('hidden');
 
       const email = emailInput?.value.trim();
       const pass = passInput?.value.trim();
-      
+
       if (!email || !pass) {
         e.preventDefault();
         if (errorText) errorText.textContent = 'Completa correo y contraseña';
@@ -103,17 +79,18 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
-      const originalHTML = loginBtn.innerHTML;
-      loginBtn.disabled = true;
-      loginBtn.setAttribute('aria-busy', 'true');
-      loginBtn.innerHTML = '<span class="loading-spinner" aria-hidden="true"></span> <span>Iniciando sesión...</span>';
+      const originalHTML = loginBtn?.innerHTML || '';
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.setAttribute('aria-busy', 'true');
+        loginBtn.innerHTML = '<span class="loading-spinner" aria-hidden="true"></span> <span>Iniciando sesión...</span>';
+      }
 
       showToast('✅ Bienvenido, redirigiendo...');
       loginForm.submit();
 
-      // Si por algún motivo el navegador no envía el formulario, se restablece el botón.
       setTimeout(() => {
-        if (loginBtn.disabled) {
+        if (loginBtn && loginBtn.disabled) {
           loginBtn.disabled = false;
           loginBtn.setAttribute('aria-busy', 'false');
           loginBtn.innerHTML = originalHTML;
@@ -122,9 +99,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // ═══════════════════════════════════════
-  //  KEYBOARD SUPPORT
-  // ═══════════════════════════════════════
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && loginForm?.contains(e.target)) {
       if (!loginBtn?.disabled) loginForm?.requestSubmit();
@@ -134,5 +108,4 @@ document.addEventListener('DOMContentLoaded', function () {
       emailInput?.focus();
     }
   });
-
 });

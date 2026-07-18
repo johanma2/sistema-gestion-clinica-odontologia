@@ -1,4 +1,11 @@
-@{ Layout = null; }
+@{ Layout = null;
+  var pacientes = ViewData["Pacientes"] as List<SmileTrack_MVC.Models.Entities.Paciente> ?? new();
+  var profesionales = ViewData["Profesionales"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
+  var servicios = ViewData["Servicios"] as List<SmileTrack_MVC.Models.Entities.Servicio> ?? new();
+  var citas = ViewData["Citas"] as List<SmileTrack_MVC.Models.Entities.Cita> ?? new();
+  var profesionalesFilterOptions = ViewData["ProfesionalesFilterOptions"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
+  var pageResult = ViewData["CitasPage"] as SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.Entities.Cita>;
+}
 
 <!DOCTYPE html>
 <html lang="es">
@@ -21,76 +28,19 @@
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
- <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  <nav class="sidebar-nav">
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <div class="sidebar-logo">
+      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+    </div>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">AD</div>
+      <div class="user-info">
+        <span class="user-role">Administrador</span>
+        <span class="user-email">admin@smiletrack.co</span>
       </div>
     </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Acceso y Seguridad <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="nav-item " data-icon="👥">Gestión de Usuarios</a>
-        <a href="/acceso-y-seguridad/st-adm-03-gestion-roles" class="nav-item" data-icon="🛡️">Gestión de Roles</a>
-        <a href="/acceso-y-seguridad/st-adm-04-matriz-permisos" class="nav-item" data-icon="🔑">Matriz de Permisos</a>
-        <a href="/acceso-y-seguridad/st-adm-15-bitacora" class="nav-item" data-icon="📜">Bitácora del Sistema</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="nav-item" data-icon="👥">Gestión de Pacientes</a>
-
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="nav-item" data-icon="🩺">Gestión de Profesionales</a>
-        <a href="/gestion-de-profesionales/st-adm-14-reportes-clinicos" class="nav-item" data-icon="📈">Reportes Clínicos</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-citas/st-adm-01-dashboard" class="nav-item" data-icon="📊">Dashboard General</a>
-        <a href="/gestion-de-citas/st-adm-08-agenda" class="nav-item" data-icon="📅">Agenda General</a>
-        <a href="/gestion-de-citas/st-adm-09-citas" class="nav-item active" data-icon="🗓️" aria-current="page">Gestión Integral de Citas</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="nav-item" data-icon="💰">Gestión de Facturación</a>
-        <a href="/facturacion-y-pagos/st-adm-13-reportes-financieros" class="nav-item" data-icon="📊">Reportes Financieros</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Servicios y Recursos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/servicios-y-recursos/st-adm-10-servicios" class="nav-item" data-icon="🔧">Catálogo de Servicios</a>
-        <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="nav-item" data-icon="⚙️">Configuración General</a>
-      </div>
-    </div>
-    <div class="nav-separator" aria-hidden="true"></div>
-    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
-  </nav>
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AD</div>
-    <div class="user-info">
-      <span class="user-role">Administrador</span>
-      <span class="user-email">admin@smiletrack.co</span>
-    </div>
-  </div>
-</aside>
+  </aside>
 
 
 
@@ -142,7 +92,51 @@
       </div>
     </section>
 
-    <!-- Tabla de citas -->
+    <form method="post" asp-action="GuardarCita" asp-controller="GestionCitas" class="table-section" aria-labelledby="tableTitle">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+      <input type="hidden" name="IdCita" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.IdCita ?? 0)" />
+      <div class="table-filters" style="margin-bottom:16px;">
+        <select name="IdPaciente" class="filter-select" required>
+          <option value="">Seleccione paciente</option>
+          @foreach (var paciente in pacientes)
+          {
+            var editingCita = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"];
+            var selected = editingCita?.IdPaciente == paciente.IdPaciente ? "selected" : "";
+            <option value="@paciente.IdPaciente" selected="@(selected)">@paciente.NombresCompleto</option>
+          }
+        </select>
+        <select name="IdProfesional" class="filter-select">
+          <option value="">Seleccione profesional</option>
+          @foreach (var profesional in profesionales)
+          {
+            var editingCita = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"];
+            var selected = editingCita?.IdProfesional == profesional.IdProfesional ? "selected" : "";
+            <option value="@profesional.IdProfesional" selected="@(selected)">@profesional.NombreProfesional</option>
+          }
+        </select>
+        <select name="IdServicio" class="filter-select">
+          <option value="">Seleccione servicio</option>
+          @foreach (var servicio in servicios)
+          {
+            var editingCita = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"];
+            var selected = editingCita?.IdServicio == servicio.IdServicio ? "selected" : "";
+            <option value="@servicio.IdServicio" selected="@(selected)">@servicio.Nombre</option>
+          }
+        </select>
+        <input type="datetime-local" name="FechaHora" class="filter-date" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.FechaHora.ToString("yyyy-MM-ddTHH:mm") ?? DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-ddTHH:mm"))" required />
+        <select name="Estado" class="filter-select">
+          @{ var editingCitaEstado = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"]; }
+          <option value="programada" selected="@(editingCitaEstado?.Estado == "programada")">Programada</option>
+          <option value="confirmada" selected="@(editingCitaEstado?.Estado == "confirmada")">Confirmada</option>
+          <option value="atendida" selected="@(editingCitaEstado?.Estado == "atendida")">Atendida</option>
+          <option value="cancelada" selected="@(editingCitaEstado?.Estado == "cancelada")">Cancelada</option>
+        </select>
+        <textarea name="Notas" class="search-input" placeholder="Notas">@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.Notas)</textarea>
+        <button class="btn-primary" type="submit">@(ViewData["EditingCita"] != null ? "Guardar cambios" : "Crear cita")</button>
+      </div>
+    </form>
+
     <section class="table-section" aria-labelledby="tableTitle">
       <h2 class="visually-hidden" id="tableTitle">Lista de citas</h2>
 
@@ -157,30 +151,66 @@
       </div>
 
       <!-- Filtros -->
-      <div class="table-filters">
+      <form method="get" class="table-filters">
         <div class="search-wrap">
           <span class="search-icon" aria-hidden="true">🔍</span>
-          <input type="search" id="searchAppointments" class="search-input" placeholder="Buscar paciente..."
-            aria-label="Buscar paciente">
+          <input type="search" id="searchAppointments" name="search" class="search-input" placeholder="Buscar paciente..."
+            aria-label="Buscar paciente" value="@ViewData["SearchFilter"]">
         </div>
-        <select id="filterStatus" class="filter-select" aria-label="Filtrar por estado">
+        <select id="filterStatus" name="estado" class="filter-select" aria-label="Filtrar por estado">
           <option value="">Todos los estados</option>
-          <option value="programada">Programada</option>
-          <option value="confirmada">Confirmada</option>
-          <option value="atendida">Atendida</option>
-          <option value="cancelada">Cancelada</option>
+          @if (ViewData["EstadoFilter"]?.ToString() == "programada")
+          {
+            <option value="programada" selected>Programada</option>
+          }
+          else
+          {
+            <option value="programada">Programada</option>
+          }
+          @if (ViewData["EstadoFilter"]?.ToString() == "confirmada")
+          {
+            <option value="confirmada" selected>Confirmada</option>
+          }
+          else
+          {
+            <option value="confirmada">Confirmada</option>
+          }
+          @if (ViewData["EstadoFilter"]?.ToString() == "atendida")
+          {
+            <option value="atendida" selected>Atendida</option>
+          }
+          else
+          {
+            <option value="atendida">Atendida</option>
+          }
+          @if (ViewData["EstadoFilter"]?.ToString() == "cancelada")
+          {
+            <option value="cancelada" selected>Cancelada</option>
+          }
+          else
+          {
+            <option value="cancelada">Cancelada</option>
+          }
         </select>
-        <select id="filterProfessional" class="filter-select" aria-label="Filtrar por profesional">
+        <select id="filterProfessional" name="profesional" class="filter-select" aria-label="Filtrar por profesional">
           <option value="">Cualquier profesional</option>
-          <option value="mendez">Dr. Ricardo Méndez</option>
-          <option value="sotelo">Dra. Elena Sotelo</option>
-          <option value="ruiz">Dr. Carlos Ruiz</option>
+          @foreach (var profesional in profesionalesFilterOptions)
+          {
+            if (ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString())
+            {
+              <option value="@profesional.IdProfesional" selected>@profesional.NombreProfesional</option>
+            }
+            else
+            {
+              <option value="@profesional.IdProfesional">@profesional.NombreProfesional</option>
+            }
+          }
         </select>
-        <input type="date" id="filterDate" class="filter-date" aria-label="Filtrar por fecha">
-        <button class="btn-primary" id="btnNewAppointment" aria-label="Crear nueva cita">
-          ➕ Nueva Cita
-        </button>
-      </div>
+        <input type="date" id="filterDate" name="fecha" class="filter-date" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]">
+        <input type="hidden" name="page" value="1" />
+        <button class="btn-primary" type="submit">Aplicar filtros</button>
+        <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">Limpiar</a>
+      </form>
 
       <!-- Cabecera de tabla accesible -->
       <div class="table-header" role="row">
@@ -195,20 +225,54 @@
 
       <!-- Cuerpo de tabla con aria-live -->
       <div id="citasBody" class="table-body" role="rowgroup" aria-live="polite">
-        <!-- Filas inyectadas por JS -->
+        @foreach (var cita in citas)
+        {
+          <div class="table-row" role="row">
+            <div class="table-col col-fecha" role="cell">@cita.FechaHora.ToString("dd/MM/yyyy")</div>
+            <div class="table-col col-hora" role="cell">@cita.FechaHora.ToString("HH:mm")</div>
+            <div class="table-col col-paciente" role="cell">@cita.Paciente?.NombresCompleto</div>
+            <div class="table-col col-profesional" role="cell">@cita.Profesional?.NombreProfesional</div>
+            <div class="table-col col-servicio" role="cell">@cita.Servicio?.Nombre</div>
+            <div class="table-col col-estado text-center" role="cell"><span class="status-badge @((cita.Estado ?? string.Empty).ToLowerInvariant())">@cita.Estado</span></div>
+            <div class="table-col col-acciones text-right" role="cell">
+              <a class="action-btn" href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })">✏️</a>
+              <form method="post" asp-action="EliminarCita" asp-controller="GestionCitas" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="IdCita" value="@cita.IdCita" />
+                <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+                <button class="action-btn btn-delete" type="submit" onclick="return confirm('¿Eliminar esta cita?');">❌</button>
+              </form>
+            </div>
+          </div>
+        }
       </div>
 
       <!-- Paginación accesible -->
       <footer class="table-footer" aria-label="Navegación de páginas">
-        <span>Mostrando <strong id="pageShowing">5</strong> de <strong id="pageTotal">284</strong> citas</span>
+        @{ }
+        <span>Mostrando <strong id="pageShowing">@Math.Min(pageResult?.PageSize ?? 10, pageResult?.Items.Count ?? 0)</strong> de <strong id="pageTotal">@pageResult?.TotalCount</strong> citas</span>
         <nav class="pagination" aria-label="Páginas de resultados">
-          <button class="pagination-btn" id="btnPrev" aria-label="Página anterior" disabled>‹</button>
-          <button class="pagination-btn active" aria-current="page" aria-label="Página 1">1</button>
-          <button class="pagination-btn" aria-label="Página 2">2</button>
-          <button class="pagination-btn" aria-label="Página 3">3</button>
-          <span class="pagination-ellipsis">…</span>
-          <button class="pagination-btn" aria-label="Página 57">57</button>
-          <button class="pagination-btn" id="btnNext" aria-label="Página siguiente">›</button>
+          @if (pageResult != null && pageResult.HasPreviousPage)
+          {
+            <a class="pagination-btn" aria-label="Página anterior" href="@Url.Action("Stadm09Citas", "GestionCitas", new { page = pageResult.Page - 1, pageSize = pageResult.PageSize, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">‹</a>
+          }
+          else
+          {
+            <button class="pagination-btn" aria-label="Página anterior" disabled>‹</button>
+          }
+          @for (var i = 1; i <= (pageResult?.TotalPages ?? 1); i++)
+          {
+            var isActive = i == (pageResult?.Page ?? 1);
+            <a class="pagination-btn @(isActive ? "active" : string.Empty)" aria-current="@(isActive ? "page" : null)" aria-label="Página @i" href="@Url.Action("Stadm09Citas", "GestionCitas", new { page = i, pageSize = pageResult?.PageSize ?? 10, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">@i</a>
+          }
+          @if (pageResult != null && pageResult.HasNextPage)
+          {
+            <a class="pagination-btn" aria-label="Página siguiente" href="@Url.Action("Stadm09Citas", "GestionCitas", new { page = pageResult.Page + 1, pageSize = pageResult.PageSize, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">›</a>
+          }
+          else
+          {
+            <button class="pagination-btn" aria-label="Página siguiente" disabled>›</button>
+          }
         </nav>
       </footer>
     </section>
@@ -246,21 +310,13 @@
       <span class="mobile-nav-icon" aria-hidden="true">📊</span>
       <span>Dashboard</span>
     </a>
-    <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
-      <span>Usuarios</span>
-    </a>
     <a href="#" class="mobile-nav-item active" aria-current="page">
       <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
       <span>Citas</span>
     </a>
-    <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">💳</span>
-      <span>Facturación</span>
-    </a>
-    <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
-      <span>Config</span>
+    <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
     </a>
   </nav>
 

@@ -1,4 +1,4 @@
-@{ Layout = null; }
+@{ Layout = null; var reportes = ViewData["ReportesClinicos"] as List<SmileTrack_MVC.Models.ViewModels.ReporteClinicoViewModel> ?? new(); var profesionales = ViewData["ProfesionalesReportes"] as List<string> ?? new(); var totalPacientes = ViewData["TotalPacientesReportes"] ?? 0; var consultasMes = ViewData["ConsultasMes"] ?? 0; var satisfaccionPromedio = ViewData["SatisfaccionPromedio"] ?? 0; }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -22,93 +22,11 @@
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <!-- ═════ SIDEBAR UNIFICADO (Activo: Reportes Clínicos) ═════ -->
-
   <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
     <div class="sidebar-logo">
       <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
     </div>
-    <nav class="sidebar-nav">
-      <div class="nav-group">
-        <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow"
-            aria-hidden="true">▼</span></div>
-        <div class="nav-group-items">
-          <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
-        </div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-header" role="button" tabindex="0">Acceso y Seguridad <span class="nav-arrow"
-            aria-hidden="true">▼</span></div>
-        <div class="nav-group-items">
-          <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="nav-item "
-            data-icon="👥">Gestión de Usuarios</a>
-          <a href="/acceso-y-seguridad/st-adm-03-gestion-roles" class="nav-item" data-icon="🛡️">Gestión
-            de Roles</a>
-          <a href="/acceso-y-seguridad/st-adm-04-matriz-permisos" class="nav-item" data-icon="🔑">Matriz
-            de Permisos</a>
-          <a href="/acceso-y-seguridad/st-adm-15-bitacora" class="nav-item" data-icon="📜">Bitácora del
-            Sistema</a>
-        </div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow"
-            aria-hidden="true">▼</span></div>
-        <div class="nav-group-items">
-          <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="nav-item"
-            data-icon="👥">Gestión de Pacientes</a>
-
-        </div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow"
-            aria-hidden="true">▼</span></div>
-        <div class="nav-group-items">
-          <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="nav-item"
-            data-icon="🩺">Gestión de Profesionales</a>
-          <a href="/gestion-de-profesionales/st-adm-14-reportes-clinicos" class="nav-item active"
-            data-icon="📈" aria-current="page">Reportes Clínicos</a>
-        </div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow"
-            aria-hidden="true">▼</span></div>
-        <div class="nav-group-items">
-          <a href="/gestion-de-citas/st-adm-01-dashboard" class="nav-item" data-icon="📊">Dashboard
-            General</a>
-          <a href="/gestion-de-citas/st-adm-08-agenda" class="nav-item" data-icon="📅">Agenda
-            General</a>
-          <a href="/gestion-de-citas/st-adm-09-citas" class="nav-item" data-icon="🗓️">Gestión Integral
-            de Citas</a>
-        </div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow"
-            aria-hidden="true">▼</span></div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow"
-            aria-hidden="true">▼</span></div>
-        <div class="nav-group-items">
-          <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="nav-item"
-            data-icon="💰">Gestión de Facturación</a>
-          <a href="/facturacion-y-pagos/st-adm-13-reportes-financieros" class="nav-item"
-            data-icon="📊">Reportes Financieros</a>
-        </div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-header" role="button" tabindex="0">Servicios y Recursos <span class="nav-arrow"
-            aria-hidden="true">▼</span></div>
-        <div class="nav-group-items">
-          <a href="/servicios-y-recursos/st-adm-10-servicios" class="nav-item"
-            data-icon="🔧">Catálogo de Servicios</a>
-          <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="nav-item"
-            data-icon="⚙️">Configuración General</a>
-        </div>
-      </div>
-      <div class="nav-separator" aria-hidden="true"></div>
-      <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪"
-        aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
-    </nav>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
     <div class="sidebar-user">
       <div class="user-avatar" aria-hidden="true">AD</div>
       <div class="user-info">
@@ -146,17 +64,17 @@
     <!-- KPI Cards con aria-live para contadores -->
     <section class="stats-grid" aria-label="Resumen clínico">
       <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="statPatients" data-target="1284" aria-live="polite">0</span>
+        <span class="stat-number" id="statPatients" data-target="@totalPacientes" aria-live="polite">@totalPacientes</span>
         <span class="stat-label">Pacientes Registrados</span>
         <span class="stat-sub">Total histórico</span>
       </div>
       <div class="stat-card" data-color="green">
-        <span class="stat-number" id="statConsults" data-target="342" aria-live="polite">0</span>
+        <span class="stat-number" id="statConsults" data-target="@consultasMes" aria-live="polite">@consultasMes</span>
         <span class="stat-label">Consultas Este Mes</span>
         <span class="stat-sub">↑ +18% vs mes anterior</span>
       </div>
       <div class="stat-card" data-color="purple">
-        <span class="stat-number" id="statSatisfaction" data-target="96" aria-live="polite">0%</span>
+        <span class="stat-number" id="statSatisfaction" data-target="@satisfaccionPromedio" aria-live="polite">@satisfaccionPromedio%</span>
         <span class="stat-label">Satisfacción Pacientes</span>
         <span class="stat-sub">Encuesta mensual</span>
       </div>
@@ -172,9 +90,10 @@
         </div>
         <select id="filterProfessional" class="filter-select" aria-label="Filtrar por profesional">
           <option value="">Todos los Profesionales</option>
-          <option value="mendez">Dr. Ricardo Méndez</option>
-          <option value="sotelo">Dra. Elena Sotelo</option>
-          <option value="ruiz">Dr. Carlos Ruiz</option>
+          @foreach (var profesional in profesionales)
+          {
+            <option value="@profesional">@profesional</option>
+          }
         </select>
         <select id="filterMonth" class="filter-select" aria-label="Filtrar por mes">
           <option value="">Todos los meses</option>
@@ -205,7 +124,44 @@
 
       <!-- Cuerpo de tabla con aria-live -->
       <div id="patientsBody" class="table-body" role="rowgroup" aria-live="polite">
-        <!-- Filas inyectadas por JS -->
+        @if (reportes.Any())
+        {
+          @foreach (var paciente in reportes)
+          {
+            <div class="table-row" role="row" tabindex="0" aria-label="Paciente @paciente.NombrePaciente">
+              <div class="table-col col-paciente" role="cell" data-label="Paciente">
+                <div class="patient-info">
+                  <div class="patient-avatar bg-@paciente.Color-100 text-@paciente.Color-600" aria-hidden="true">@paciente.Avatar</div>
+                  <div>
+                    <span class="patient-name">@paciente.NombrePaciente</span>
+                    <span class="patient-id">ID: @paciente.Documento · @paciente.Edad años</span>
+                  </div>
+                </div>
+              </div>
+              <div class="table-col col-consulta" role="cell" data-label="Última Consulta"><time datetime="@paciente.UltimaConsulta.ToString("yyyy-MM-dd")">@paciente.UltimaConsulta.ToString("dd/MM/yyyy")</time></div>
+              <div class="table-col col-diagnostico" role="cell" data-label="Diagnóstico">@paciente.Diagnostico</div>
+              <div class="table-col col-profesional" role="cell" data-label="Profesional">@paciente.ProfesionalNombre</div>
+              <div class="table-col col-cita" role="cell" data-label="Próxima Cita">
+                @if (paciente.ProximaCita.HasValue)
+                {
+                  <time datetime="@paciente.ProximaCita.Value.ToString("yyyy-MM-dd")">@paciente.ProximaCita.Value.ToString("dd/MM/yyyy")</time>
+                }
+                else
+                {
+                  <span class="text-[var(--red)] font-semibold">Sin cita programada</span>
+                }
+              </div>
+              <div class="table-col col-alertas text-center" role="cell" data-label="Alertas">@(string.IsNullOrWhiteSpace(paciente.Alerta) ? "—" : "⚠")</div>
+              <div class="table-col col-accion text-right" role="cell" data-label="Acción">
+                <button class="action-btn btn-view" type="button" aria-label="Ver reporte clínico de @paciente.NombrePaciente">🔍</button>
+              </div>
+            </div>
+          }
+        }
+        else
+        {
+          <div class="empty-state" role="status">No se encontraron pacientes con los criterios de búsqueda.</div>
+        }
       </div>
 
       <!-- Paginación accesible -->
@@ -231,21 +187,13 @@
       <span class="mobile-nav-icon" aria-hidden="true">📊</span>
       <span>Dashboard</span>
     </a>
-    <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">👥</span>
-      <span>Usuarios</span>
-    </a>
     <a href="#" class="mobile-nav-item active" aria-current="page">
       <span class="mobile-nav-icon" aria-hidden="true">📋</span>
       <span>Reportes</span>
     </a>
-    <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">💳</span>
-      <span>Facturación</span>
-    </a>
-    <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">⚙️</span>
-      <span>Config</span>
+    <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span>Agenda</span>
     </a>
   </nav>
 
@@ -294,8 +242,6 @@
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
 
-
-  <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/reportes.js")"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
