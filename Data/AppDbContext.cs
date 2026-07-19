@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Profesional_Especialidad> ProfesionalEspecialidades => Set<Profesional_Especialidad>();
     public DbSet<Servicio> Servicios => Set<Servicio>();
     public DbSet<Cita> Citas => Set<Cita>();
+    public DbSet<HistoriaClinica> HistoriasClinicas => Set<HistoriaClinica>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -167,6 +168,22 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(c => c.IdServicio)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<HistoriaClinica>(entity =>
+        {
+            entity.ToTable("Historia_Clinica");
+            entity.HasKey(h => h.IdHistoria);
+            entity.Property(h => h.IdHistoria).HasColumnName("id_historia");
+            entity.Property(h => h.IdPaciente).HasColumnName("id_paciente");
+            entity.Property(h => h.FechaApertura).HasColumnName("fecha_apertura");
+            entity.Property(h => h.ObservacionesGenerales).HasColumnName("observaciones_generales");
+            entity.Property(h => h.Activa).HasColumnName("activa");
+
+            entity.HasOne(h => h.Paciente)
+                  .WithOne()
+                  .HasForeignKey<HistoriaClinica>(h => h.IdPaciente)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
