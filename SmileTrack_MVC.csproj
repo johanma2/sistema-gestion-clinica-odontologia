@@ -6,12 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Smiletrack mvc/SmileTrack_MVC/**/*.cs" />
-    <Content Remove="Smiletrack mvc/SmileTrack_MVC/**" />
-    <EmbeddedResource Remove="Smiletrack mvc/SmileTrack_MVC/**" />
-    <None Remove="Smiletrack mvc/SmileTrack_MVC/**" />
-  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
