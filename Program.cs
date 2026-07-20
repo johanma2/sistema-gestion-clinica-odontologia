@@ -140,6 +140,60 @@ using (var scope = app.Services.CreateScope())
         await EnsureUserAsync(db, "aux@smiletrack.co", "Auxiliar", "Prueba", auxiliarRole.IdRol, "123456");
     }
 
+    // ─── PASO 2: Seed de Especialidades ───────────────────────────
+    if (!await db.Especialidades.AnyAsync())
+    {
+        db.Especialidades.AddRange(
+            new SmileTrack_MVC.Models.Entities.Especialidad { Nombre = "Odontología General", Descripcion = "Atención dental primaria y preventiva" },
+            new SmileTrack_MVC.Models.Entities.Especialidad { Nombre = "Ortodoncia", Descripcion = "Corrección de la posición dental" },
+            new SmileTrack_MVC.Models.Entities.Especialidad { Nombre = "Endodoncia", Descripcion = "Tratamiento de conductos radiculares" },
+            new SmileTrack_MVC.Models.Entities.Especialidad { Nombre = "Periodoncia", Descripcion = "Enfermedades de encías y tejidos de soporte" },
+            new SmileTrack_MVC.Models.Entities.Especialidad { Nombre = "Rehabilitación Oral y Estética Dental", Descripcion = "Restauración funcional y estética" },
+            new SmileTrack_MVC.Models.Entities.Especialidad { Nombre = "Cirugía Oral", Descripcion = "Procedimientos quirúrgicos orales" },
+            new SmileTrack_MVC.Models.Entities.Especialidad { Nombre = "Odontopediatría", Descripcion = "Odontología para niños y adolescentes" }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    // ─── Seed de Servicios ────────────────────────────────────────
+    if (!await db.Servicios.AnyAsync())
+    {
+        db.Servicios.AddRange(
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Limpieza dental", Descripcion = "Profilaxis y prevención", Precio = 80000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Blanqueamiento dental", Descripcion = "Estética dental", Precio = 350000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Ortodoncia", Descripcion = "Alineación y corrección dental", Precio = 200000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Endodoncia", Descripcion = "Tratamiento de conductos", Precio = 450000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Extracción dental", Descripcion = "Extracción de piezas dentales", Precio = 120000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Consulta general", Descripcion = "Valoración y diagnóstico", Precio = 50000, Estado = "activo" }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    // ─── Seed de Paciente de prueba ───────────────────────────────
+    if (!await db.Pacientes.AnyAsync(p => p.Documento == "0000000001"))
+    {
+        try
+        {
+            db.Pacientes.Add(new SmileTrack_MVC.Models.Entities.Paciente
+            {
+                TipoDocumento = "CC",
+                Documento = "0000000001",
+                Nombres = "Paciente",
+                Apellidos = "Prueba",
+                FechaNacimiento = new DateTime(2000, 1, 1),
+                Genero = "M",
+                Correo = "pac@smiletrack.co",
+                FechaRegistro = DateTime.UtcNow.Date,
+                Estado = "activo"
+            });
+            await db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Seed] Paciente de prueba omitido: {ex.Message}");
+        }
+    }
+
 }
 
 app.Run();

@@ -262,7 +262,11 @@ public class GestionProfesionalesController : Controller
         ViewData["EspecialidadFilter"] = pagination.Profesional ?? string.Empty;
         ViewData["EstadoFilter"] = pagination.Estado ?? string.Empty;
         ViewData["Especialidades"] = await _context.Especialidades.OrderBy(e => e.Nombre).ToListAsync();
-        ViewData["Usuarios"] = await _context.Usuarios.OrderBy(u => u.Nombre).ThenBy(u => u.Apellidos).ToListAsync();
+        ViewData["Usuarios"] = await _context.Usuarios
+            .Include(u => u.Rol)
+            .Where(u => u.Rol != null && u.Rol.NombreRol == "Profesional")
+            .OrderBy(u => u.Nombre).ThenBy(u => u.Apellidos)
+            .ToListAsync();
         ViewData["ReturnUrl"] = returnUrl;
 
         if (editId.HasValue && editId.Value > 0)

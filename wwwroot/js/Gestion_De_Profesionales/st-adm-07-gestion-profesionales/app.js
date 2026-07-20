@@ -366,40 +366,21 @@ const closeDetailModal = () => {
   }
 };
 
-// Crea o actualiza profesional
-const saveProfessional = async (e) => {
-  e.preventDefault();
-
+// Crea o actualiza profesional — submit nativo para que el antiforgery token viaje correctamente
+const saveProfessional = (e) => {
   const form = e.currentTarget;
   const nombres = safeGetElement('formNombres')?.value.trim() || '';
   const apellidos = safeGetElement('formApellidos')?.value.trim() || '';
   const registroMedico = safeGetElement('formRegistroMedico')?.value.trim() || '';
 
   if (!nombres || !apellidos || !registroMedico) {
+    e.preventDefault();
     showToast('⚠️ Completa nombres, apellidos y registro médico', 'warning');
     return;
   }
 
-  const formData = new FormData(form);
-  const actionUrl = form.getAttribute('action') || '/gestion-de-profesionales/guardar-profesional';
-  const antiForgery = form.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-
-  const response = await fetch(actionUrl, {
-    method: 'POST',
-    headers: {
-      'RequestVerificationToken': antiForgery,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    showToast('⚠️ No se pudo guardar el profesional', 'warning');
-    return;
-  }
-
-  showToast('✅ Profesional guardado correctamente');
-  closeFormModal();
-  window.location.reload();
+  // Dejar que el formulario se envíe de forma nativa (POST real al servidor)
+  // El antiforgery token ya está en el <input hidden> del form, no hace falta fetch
 };
 
 // ═══════════════════════════════════════════════════════════════════

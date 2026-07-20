@@ -222,7 +222,7 @@
       <!-- Paginación -->
       <div class="pagination" role="navigation" aria-label="Paginación de profesionales">
         @{ }
-        <span id="paginationInfo" aria-live="polite">Mostrando @Math.Min(pageResult?.PageSize ?? 10, pageResult?.Items.Count ?? 0) de @pageResult?.TotalCount profesionales</span>
+      <span id="paginationInfo" aria-live="polite">Mostrando <strong>@(pageResult?.Items.Count ?? 0)</strong> de <strong>@(pageResult?.TotalCount ?? 0)</strong> profesionales</span>
         <div class="pagination-buttons" id="paginationButtons">
           @if (pageResult != null && pageResult.HasPreviousPage)
           {
@@ -416,31 +416,29 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    // PASO 7: Filtros se auto-envían al cambiar select
+    const filterForm = document.querySelector('form[method="get"]');
+    if (filterForm) {
+      filterForm.querySelectorAll('select').forEach(sel => {
+        sel.addEventListener('change', () => filterForm.submit());
+      });
+    }
+
+    // Sidebar nav-group collapsible
     document.querySelectorAll('.nav-group-header').forEach(header => {
       const items = header.nextElementSibling;
       const arrow = header.querySelector('.nav-arrow');
-
       if (!items || !arrow) return;
-
       const setExpanded = (isExpanded) => {
         items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
         arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
         header.setAttribute('aria-expanded', String(isExpanded));
       };
-
       setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
+      const toggle = () => { const isExpanded = header.getAttribute('aria-expanded') === 'true'; setExpanded(!isExpanded); };
       header.addEventListener('click', toggle);
       header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
       });
     });
   });

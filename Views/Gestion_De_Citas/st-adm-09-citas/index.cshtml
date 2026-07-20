@@ -277,15 +277,23 @@
       </footer>
     </section>
 
-    <!-- Banner informativo -->
+    <!-- Banner con datos reales del controller -->
     <section class="info-banner" role="complementary" aria-label="Resumen de disponibilidad">
       <div class="banner-content">
-        <h3 class="banner-title">Resumen de Disponibilidad</h3>
-        <p class="banner-text">El Dr. Ricardo Méndez tiene 85% de su agenda ocupada esta semana. Considere reasignar
-          citas de limpieza a la Dra. Elena.</p>
+        <h3 class="banner-title">Resumen de Citas del Mes</h3>
+        <p class="banner-text">
+          @{
+            var totalCitas = citas.Count;
+            var atendidas = citas.Count(c => c.Estado == "atendida");
+            var canceladas = citas.Count(c => c.Estado == "cancelada");
+            var programadas = citas.Count(c => c.Estado == "programada");
+          }
+          Total en vista: <strong>@totalCitas</strong> citas —
+          <span style="color:#22c55e">✅ @atendidas atendidas</span> —
+          <span style="color:#f59e0b">📅 @programadas programadas</span> —
+          <span style="color:#ef4444">❌ @canceladas canceladas</span>
+        </p>
       </div>
-      <button class="btn-banner" id="btnOptimize" aria-label="Optimizar agenda automáticamente">Optimizar
-        Agenda</button>
     </section>
 
   </main>
@@ -368,37 +376,58 @@
 
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js")"></script>
 
-<script>
+  <script>
   document.addEventListener('DOMContentLoaded', () => {
+    // ─── PASO 7: Filtros se auto-envian al cambiar select ───
+    const filterForm = document.querySelector('form[method="get"]');
+    if (filterForm) {
+      filterForm.querySelectorAll('select').forEach(sel => {
+        sel.addEventListener('change', () => filterForm.submit());
+      });
+    }
+
+    // ─── PASO 8: Tabs filtran la tabla por estado ───
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const rows = document.querySelectorAll('#citasBody .table-row');
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+
+        const tab = btn.dataset.tab;
+        rows.forEach(row => {
+          const badge = row.querySelector('.status-badge');
+          const estado = badge ? badge.textContent.trim().toLowerCase() : '';
+          if (tab === 'all') {
+            row.style.display = '';
+          } else if (tab === 'cancelled') {
+            row.style.display = estado === 'cancelada' ? '' : 'none';
+          } else if (tab === 'no-show') {
+            row.style.display = estado === 'no asistió' || estado === 'inasistencia' ? '' : 'none';
+          }
+        });
+      });
+    });
+
+    // ─── Sidebar nav-group collapsible ───
     document.querySelectorAll('.nav-group-header').forEach(header => {
       const items = header.nextElementSibling;
       const arrow = header.querySelector('.nav-arrow');
-
       if (!items || !arrow) return;
-
       const setExpanded = (isExpanded) => {
         items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
         arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
         header.setAttribute('aria-expanded', String(isExpanded));
       };
-
       setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
+      const toggle = () => { const isExpanded = header.getAttribute('aria-expanded') === 'true'; setExpanded(!isExpanded); };
       header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
+      header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
     });
   });
-</script>
+  </script>
 </body>
 
 </html>
