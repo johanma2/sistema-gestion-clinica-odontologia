@@ -19,7 +19,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css?v=2")" />
 </head>
 
 <body>
@@ -71,20 +71,26 @@
 
     <!-- Stats Grid -->
     <section class="stats-grid" aria-label="Estadísticas de profesionales">
+      @{
+        var totalProf = profesionales.Count;
+        var profActivos = profesionales.Count(p => p.Estado == "activo");
+        var profVacaciones = profesionales.Count(p => p.Estado == "vacaciones");
+        var profInactivos = profesionales.Count(p => p.Estado == "inactivo");
+      }
       <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="metricTotal" data-target="0" aria-live="polite">0</span>
+        <span class="stat-number" id="metricTotal" data-target="@totalProf" aria-live="polite">0</span>
         <span class="stat-label">Total Profesionales</span>
       </div>
       <div class="stat-card" data-color="green">
-        <span class="stat-number" id="metricActives" data-target="0" aria-live="polite">0</span>
+        <span class="stat-number" id="metricActives" data-target="@profActivos" aria-live="polite">0</span>
         <span class="stat-label">Activos</span>
       </div>
       <div class="stat-card" data-color="orange">
-        <span class="stat-number" id="metricVacations" data-target="0" aria-live="polite">0</span>
+        <span class="stat-number" id="metricVacations" data-target="@profVacaciones" aria-live="polite">0</span>
         <span class="stat-label">En vacaciones</span>
       </div>
       <div class="stat-card" data-color="red">
-        <span class="stat-number" id="metricInactives" data-target="0" aria-live="polite">0</span>
+        <span class="stat-number" id="metricInactives" data-target="@profInactivos" aria-live="polite">0</span>
         <span class="stat-label">Inactivos</span>
       </div>
     </section>
@@ -144,40 +150,7 @@
       </form>
     </section>
 
-    <form method="post" asp-action="GuardarProfesional" asp-controller="GestionProfesionales" class="table-card" aria-labelledby="professionalsTitle">
-      @Html.AntiForgeryToken()
-      <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-      <input type="hidden" name="IdProfesional" value="@(editingProfesional?.IdProfesional ?? 0)" />
-      <div class="filters-row" style="margin-bottom:16px; gap:12px; flex-wrap:wrap;">
-        <input type="text" name="Nombres" class="search-input" placeholder="Nombres" value="@(editingProfesional?.Nombres)" required />
-        <input type="text" name="Apellidos" class="search-input" placeholder="Apellidos" value="@(editingProfesional?.Apellidos)" required />
-        <input type="text" name="RegistroMedico" class="search-input" placeholder="Registro Médico" value="@(editingProfesional?.RegistroMedico)" required />
-        <input type="text" name="Categoria" class="search-input" placeholder="Categoría" value="@(editingProfesional?.Categoria)" />
-        <input type="text" name="Telefono" class="search-input" placeholder="Teléfono" value="@(editingProfesional?.Telefono)" />
-        <select name="IdEspecialidad" class="status-select">
-          <option value="">Sin especialidad</option>
-          @foreach (var especialidad in especialidades)
-          {
-            <option value="@especialidad.IdEspecialidad">@especialidad.Nombre</option>
-          }
-        </select>
-        <select name="IdUsuario" class="status-select">
-          <option value="0">Sin usuario</option>
-          @foreach (var usuario in usuarios)
-          {
-            var selected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : "";
-            <option value="@usuario.IdUsuario" selected="@(selected)">@usuario.Nombre @usuario.Apellidos</option>
-          }
-        </select>
-        <select name="Estado" class="status-select">
-          <option value="activo" selected="@(editingProfesional?.Estado == "activo")">Activo</option>
-          <option value="vacaciones" selected="@(editingProfesional?.Estado == "vacaciones")">Vacaciones</option>
-          <option value="inactivo" selected="@(editingProfesional?.Estado == "inactivo")">Inactivo</option>
-        </select>
-        <button class="btn-primary" type="submit">@(editingProfesional != null ? "Guardar cambios" : "Crear profesional")</button>
-      </div>
-    </form>
-
+    <!-- modal -->
     <section class="table-card" aria-labelledby="professionalsTitle">
       <h2 class="visually-hidden" id="professionalsTitle">Lista de profesionales</h2>
       <div class="table-wrap">
@@ -197,7 +170,15 @@
             {
               var especialidadPrincipal = profesional.Especialidades.FirstOrDefault(pe => pe.Principal)?.Especialidad?.Nombre ?? profesional.Especialidades.FirstOrDefault()?.Especialidad?.Nombre;
               <tr>
-                <td class="td-profesional">@profesional.Nombres @profesional.Apellidos</td>
+                <td class="td-profesional">
+                  @{
+                    var name = $"{profesional.Nombres} {profesional.Apellidos}".Trim();
+                    var initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
+                    var color = (profesional.IdProfesional % 5) switch { 0 => "#3b82f6", 1 => "#10b981", 2 => "#f59e0b", 3 => "#ef4444", _ => "#8b5cf6" };
+                  }
+                  <div class="p-avatar" style="background-color: @color;">@initials</div>
+                  <span class="p-name">@name</span>
+                </td>
                 <td><span class="badge-spec @((especialidadPrincipal ?? string.Empty).ToLowerInvariant())">@especialidadPrincipal</span></td>
                 <td>@profesional.RegistroMedico</td>
                 <td>@profesional.Telefono</td>
@@ -260,58 +241,62 @@
       <form id="formProfessional" method="post" asp-action="GuardarProfesional" asp-controller="GestionProfesionales" novalidate>
         @Html.AntiForgeryToken()
         <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-        <input type="hidden" name="IdProfesional" id="formIdProfesional" value="0" />
-        <div class="form-group">
-          <label class="form-label" for="formNombres">Nombres *</label>
-          <input type="text" id="formNombres" name="Nombres" class="form-input" required placeholder="Ej. Carlos">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="formApellidos">Apellidos *</label>
-          <input type="text" id="formApellidos" name="Apellidos" class="form-input" required placeholder="Ej. Méndez Ruiz">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="formRegistroMedico">Registro Médico *</label>
-          <input type="text" id="formRegistroMedico" name="RegistroMedico" class="form-input" required placeholder="Ej. RM-2026-001">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="formCategoria">Categoría</label>
-          <input type="text" id="formCategoria" name="Categoria" class="form-input" placeholder="Ej. Odontología General">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="formTelefono">Teléfono</label>
-          <input type="tel" id="formTelefono" name="Telefono" class="form-input" placeholder="Ej. 300 123 4567">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="formEspecialidad">Especialidad</label>
-          <select id="formEspecialidad" name="IdEspecialidad" class="form-input">
-            <option value="">Sin especialidad</option>
-            @foreach (var especialidad in especialidades)
-            {
-              <option value="@especialidad.IdEspecialidad">@especialidad.Nombre</option>
-            }
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="formUsuario">Usuario</label>
-          <select id="formUsuario" name="IdUsuario" class="form-input">
-            <option value="0">Sin usuario</option>
-            @foreach (var usuario in usuarios)
-            {
-              <option value="@usuario.IdUsuario">@usuario.Nombre @usuario.Apellidos</option>
-            }
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="formStatus">Estado *</label>
-          <select id="formStatus" name="Estado" class="form-input" required>
-            <option value="activo">Activo</option>
-            <option value="vacaciones">Vacaciones</option>
-            <option value="inactivo">Inactivo</option>
-          </select>
+        <input type="hidden" name="IdProfesional" id="formIdProfesional" value="@(editingProfesional?.IdProfesional ?? 0)" />
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;">
+          <div class="form-group">
+            <label class="form-label" for="formNombres">Nombres *</label>
+            <input type="text" id="formNombres" name="Nombres" class="form-input" required placeholder="Ej. Carlos" value="@(editingProfesional?.Nombres)">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formApellidos">Apellidos *</label>
+            <input type="text" id="formApellidos" name="Apellidos" class="form-input" required placeholder="Ej. Méndez Ruiz" value="@(editingProfesional?.Apellidos)">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formRegistroMedico">Registro Médico *</label>
+            <input type="text" id="formRegistroMedico" name="RegistroMedico" class="form-input" required placeholder="Ej. RM-2026-001" value="@(editingProfesional?.RegistroMedico)">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formCategoria">Categoría</label>
+            <input type="text" id="formCategoria" name="Categoria" class="form-input" placeholder="Ej. Odontología General" value="@(editingProfesional?.Categoria)">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formTelefono">Teléfono</label>
+            <input type="tel" id="formTelefono" name="Telefono" class="form-input" placeholder="Ej. 300 123 4567" value="@(editingProfesional?.Telefono)">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formEspecialidad">Especialidad</label>
+            <select id="formEspecialidad" name="IdEspecialidad" class="form-input">
+              <option value="">Sin especialidad</option>
+              @foreach (var especialidad in especialidades)
+              {
+                var espSelected = editingProfesional?.Especialidades.Any(pe => pe.IdEspecialidad == especialidad.IdEspecialidad) == true ? "selected" : "";
+                <option value="@especialidad.IdEspecialidad" selected="@(espSelected)">@especialidad.Nombre</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formUsuario">Usuario</label>
+            <select id="formUsuario" name="IdUsuario" class="form-input">
+              <option value="0">Sin usuario</option>
+              @foreach (var usuario in usuarios)
+              {
+                var usrSelected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : "";
+                <option value="@usuario.IdUsuario" selected="@(usrSelected)">@usuario.Nombre @usuario.Apellidos</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="formStatus">Estado *</label>
+            <select id="formStatus" name="Estado" class="form-input" required>
+              <option value="activo" selected="@(editingProfesional?.Estado == "activo")">Activo</option>
+              <option value="vacaciones" selected="@(editingProfesional?.Estado == "vacaciones")">Vacaciones</option>
+              <option value="inactivo" selected="@(editingProfesional?.Estado == "inactivo")">Inactivo</option>
+            </select>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" id="modalFormCancel">Cancelar</button>
-          <button type="submit" class="btn-primary">Guardar Profesional</button>
+          <button type="submit" class="btn-primary">@(editingProfesional != null ? "Guardar Cambios" : "Guardar Profesional")</button>
         </div>
       </form>
     </div>
@@ -416,7 +401,7 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // PASO 7: Filtros se auto-envían al cambiar select
+    //  Filtros se auto-envían al cambiar select
     const filterForm = document.querySelector('form[method="get"]');
     if (filterForm) {
       filterForm.querySelectorAll('select').forEach(sel => {
@@ -441,6 +426,18 @@
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
       });
     });
+
+    // Auto-abrir modal si hay un profesional en edición
+    const isEditing = '@(editingProfesional != null ? "true" : "false")' === 'true';
+    if (isEditing) {
+      const modal = document.getElementById('modalForm');
+      if (modal) {
+        modal.classList.add('open');
+        modal.removeAttribute('aria-hidden');
+        modal.removeAttribute('inert');
+        document.body.style.overflow = 'hidden';
+      }
+    }
   });
 </script>
 </body>

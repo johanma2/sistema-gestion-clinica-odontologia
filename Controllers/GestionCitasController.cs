@@ -18,7 +18,7 @@ public class GestionCitasController : Controller
     }
 
     [HttpGet]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/st-adm-01-dashboard")]
     public async Task<IActionResult> Stadm01Dashboard([FromQuery] int? editId)
     {
@@ -27,7 +27,7 @@ public class GestionCitasController : Controller
         return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
     }
     [HttpGet]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/st-adm-08-agenda")]
     public async Task<IActionResult> Stadm08Agenda([FromQuery] int? editId)
     {
@@ -37,7 +37,7 @@ public class GestionCitasController : Controller
     }
 
     [HttpGet]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/st-adm-09-citas")]
     public async Task<IActionResult> Stadm09Citas([FromQuery] int? editId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? estado = null, [FromQuery] string? profesional = null, [FromQuery] string? fecha = null)
     {
@@ -171,7 +171,7 @@ public class GestionCitasController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize]
+    [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/guardar-cita")]
     public async Task<IActionResult> GuardarCita([FromForm] int? IdCita, [FromForm] int IdPaciente, [FromForm] int? IdProfesional, [FromForm] int? IdServicio, [FromForm] DateTime FechaHora, [FromForm] string Estado, [FromForm] string? Notas, [FromForm] string? ReturnUrl)
     {
@@ -208,7 +208,7 @@ public class GestionCitasController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize]
+    [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/eliminar-cita")]
     public async Task<IActionResult> EliminarCita([FromForm] int IdCita, [FromForm] string? ReturnUrl)
     {

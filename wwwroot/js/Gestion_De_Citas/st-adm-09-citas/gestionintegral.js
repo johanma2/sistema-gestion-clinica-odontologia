@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SMILETRACK — GESTIÓN DE CITAS (script.js)
  * API-ready + Accesibilidad + Persistencia fallback
  * CORRECCIÓN: Lógica de filtros completa + fechas actualizadas a mayo 2026
@@ -99,8 +99,7 @@ const avatarColors = {
 };
 
 const shouldUseServerRenderedList = () => {
-  const body = safeGetElement('citasBody');
-  return !!(body && body.children.length > 0);
+  return true; // Always use server rendered list
 };
 
 const statusLabels = {

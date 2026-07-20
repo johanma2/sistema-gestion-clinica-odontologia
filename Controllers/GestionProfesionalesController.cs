@@ -36,10 +36,10 @@ public class GestionProfesionalesController : Controller
     [HttpGet]
     [Authorize(Roles = "Administrador,Profesional")]
     [Route("gestion-de-profesionales/st-adm-14-reportes-clinicos")]
-    public async Task<IActionResult> Stadm14ReportesClinicos([FromQuery] int? editId)
+    public async Task<IActionResult> Stadm14ReportesClinicos([FromQuery] int? editId, [FromQuery] string? search = null, [FromQuery] string? profesional = null, [FromQuery] string? mes = null)
     {
         await CargarDatosProfesionales(editId, "/gestion-de-profesionales/st-adm-14-reportes-clinicos");
-        await CargarDatosReportesClinicos();
+        await CargarDatosReportesClinicos(search, profesional, mes);
         return View("~/Views/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/index.cshtml");
     }
 
@@ -156,20 +156,28 @@ public class GestionProfesionalesController : Controller
     /// <summary>
     /// Prepara los datos de reportes clínicos para la vista administrativa.
     /// </summary>
-    private async Task CargarDatosReportesClinicos()
+    private async Task CargarDatosReportesClinicos(string? search = null, string? profesional = null, string? mes = null)
     {
         var hoy = DateTime.Today;
         var inicioMes = new DateTime(hoy.Year, hoy.Month, 1);
         var finMes = inicioMes.AddMonths(1);
 
-        var citas = await _context.Citas
+        var citasQuery = _context.Citas
             .Include(c => c.Paciente)
             .Include(c => c.Profesional)
             .ThenInclude(p => p!.Usuario)
             .Include(c => c.Servicio)
             .Where(c => c.Paciente != null)
-            .OrderByDescending(c => c.FechaHora)
-            .ToListAsync();
+            .AsQueryable();
+
+        var citas = await citasQuery.OrderByDescending(c => c.FechaHora).ToListAsync();
+
+        var profesionalesOptions = citas
+            .Where(c => c.Profesional?.Usuario != null)
+            .Select(c => $"{c.Profesional!.Usuario!.Nombre} {c.Profesional.Usuario.Apellidos}".Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name)
+            .ToList();
 
         var reportes = citas
             .GroupBy(c => c.IdPaciente)
@@ -196,21 +204,37 @@ public class GestionProfesionalesController : Controller
                     Color = g.Count() % 2 == 0 ? "green" : "blue"
                 };
             })
-            .Take(10)
-            .ToList();
+            .AsEnumerable();
 
-        var profesionales = citas
-            .Where(c => c.Profesional?.Usuario != null)
-            .Select(c => $"{c.Profesional!.Usuario!.Nombre} {c.Profesional.Usuario.Apellidos}")
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name)
-            .ToList();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.ToLower();
+            reportes = reportes.Where(r => r.NombrePaciente.ToLower().Contains(searchLower) || r.Documento.ToLower().Contains(searchLower));
+        }
 
-        ViewData["ReportesClinicos"] = reportes;
-        ViewData["ProfesionalesReportes"] = profesionales;
+        if (!string.IsNullOrWhiteSpace(profesional))
+        {
+            reportes = reportes.Where(r => r.ProfesionalNombre == profesional);
+        }
+
+        if (!string.IsNullOrWhiteSpace(mes) && DateTime.TryParseExact(mes, "yyyy-MM", null, System.Globalization.DateTimeStyles.None, out var filterMonth))
+        {
+            var filterStart = filterMonth;
+            var filterEnd = filterMonth.AddMonths(1);
+            reportes = reportes.Where(r => r.UltimaConsulta >= filterStart && r.UltimaConsulta < filterEnd);
+        }
+
+        reportes = reportes.Take(15).ToList();
+
+        ViewData["ReportesClinicos"] = reportes.ToList();
+        ViewData["ProfesionalesReportes"] = profesionalesOptions;
         ViewData["TotalPacientesReportes"] = await _context.Pacientes.CountAsync();
         ViewData["ConsultasMes"] = citas.Count(c => c.FechaHora >= inicioMes && c.FechaHora < finMes);
-        ViewData["SatisfaccionPromedio"] = 92 + (reportes.Count % 5);
+        ViewData["SatisfaccionPromedio"] = 92 + (reportes.Count() % 5);
+        
+        ViewData["SearchFilter"] = search;
+        ViewData["ProfesionalFilter"] = profesional;
+        ViewData["MesFilter"] = mes;
     }
 
     /// <summary>

@@ -294,7 +294,7 @@ img { max-width: 100%; height: auto; display: block; }
   display: flex; align-items: center; justify-content: center;
   font-size: .75rem; font-weight: 700; color: #fff; flex-shrink: 0;
 }
-.p-name { font-weight: 600; color: var(--text); }
+.p-name { font-weight: 600; color: var(--text); max-width: 300px; }
 
 /* Badge de especialidad */
 .badge-spec {
@@ -313,17 +313,13 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* Badge de estado */
 .badge-status {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: .72rem; font-weight: 600;
-  padding: 4px 10px; border-radius: var(--radius-full);
+  padding: 4px 10px; border-radius: 20px;
+  font-size: .7rem; font-weight: 700; text-transform: uppercase;
 }
-.badge-status::before { content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.badge-activo { background: var(--status-activo-bg); color: var(--status-activo-text); }
-.badge-activo::before { background: var(--green); }
+.badge-activo, .badge-confirmada { background: var(--status-activo-bg); color: var(--status-activo-text); }
 .badge-vacaciones { background: var(--status-vacaciones-bg); color: var(--status-vacaciones-text); }
-.badge-vacaciones::before { background: var(--orange); }
-.badge-inactivo { background: var(--status-inactivo-bg); color: var(--status-inactivo-text); }
-.badge-inactivo::before { background: var(--text-muted); }
+.badge-inactivo, .badge-cancelada { background: #fef2f2; color: #991b1b; }
+.badge-no { background: #f1f5f9; color: #475569; } /* Gris para "no asistió" */
 
 /* Acciones */
 .actions-cell { display: flex; align-items: center; gap: 6px; justify-content: center; }
@@ -363,24 +359,24 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* ═══ MODAL ═══ */
 .modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
+  position: fixed !important;
+  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
   background: rgba(0,0,0,.55);
-  z-index: 400;
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 16px;
-  overflow-y: auto;
 }
-.modal-overlay.open { display: flex; }
+.modal-overlay.open { display: flex !important; }
 .modal {
   background: var(--white);
   border-radius: var(--radius);
-  padding: 28px 24px;
+  padding: 24px 20px;
   width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
+  max-width: 550px; /* Accommodates 2 columns */
+  max-height: 85vh; /* Prevent overflowing screen height */
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,.25);
   position: relative;

@@ -64,7 +64,7 @@ const SAMPLE_MODULES = [
   { id: 'usuario', name: 'Usuario', permissions: { ADM: 'CRUD', ODO: 'R', PAC: 'R', REC: 'R', AUX: 'R' } },
   { id: 'pacientes', name: 'Pacientes', permissions: { ADM: 'CRUD', ODO: 'R', PAC: 'CRU', REC: 'CRU', AUX: 'R' } },
   { id: 'profesionales', name: 'Profesionales', permissions: { ADM: 'CRUD', ODO: 'R', PAC: 'R', REC: 'R', AUX: 'R' } },
-  { id: 'citas', name: 'Citas', permissions: { ADM: 'CRUD', ODO: 'RU', PAC: 'CRUD', REC: 'CRUD', AUX: 'R' } },
+  { id: 'citas', name: 'Citas', permissions: { ADM: 'CRUD', ODO: 'RU', PAC: 'CRU', REC: 'CRUD', AUX: 'R' } },
   { id: 'historia_clinica', name: 'Historia clínica', permissions: { ADM: 'CRUD', ODO: 'CRU', PAC: 'R', REC: 'R', AUX: 'C' } },
   { id: 'facturacion', name: 'Facturación', permissions: { ADM: 'CRUD', ODO: 'R', PAC: 'CRU', REC: 'CRU', AUX: 'R' } },
   { id: 'servicios', name: 'Servicios', permissions: { ADM: 'CRUD', ODO: 'R', PAC: 'R', REC: 'R', AUX: 'R' } },

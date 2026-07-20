@@ -82,29 +82,32 @@
 
     <!-- Controles y filtros -->
     <section class="controls-section">
-      <div class="filters-wrap">
+      <form method="get" class="filters-wrap" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
         <div class="search-wrap">
           <span class="search-icon" aria-hidden="true">🔍</span>
-          <input type="search" id="searchPatients" class="search-input" placeholder="Buscar paciente..."
-            aria-label="Buscar paciente">
+          <input type="search" id="searchPatients" name="search" class="search-input" placeholder="Buscar paciente..."
+            aria-label="Buscar paciente" value="@ViewData["SearchFilter"]">
         </div>
-        <select id="filterProfessional" class="filter-select" aria-label="Filtrar por profesional">
+        <select id="filterProfessional" name="profesional" class="filter-select" aria-label="Filtrar por profesional">
           <option value="">Todos los Profesionales</option>
           @foreach (var profesional in profesionales)
           {
-            <option value="@profesional">@profesional</option>
+            var selected = ViewData["ProfesionalFilter"]?.ToString() == profesional ? "selected" : "";
+            <option value="@profesional" selected="@(selected)">@profesional</option>
           }
         </select>
-        <select id="filterMonth" class="filter-select" aria-label="Filtrar por mes">
+        <select id="filterMonth" name="mes" class="filter-select" aria-label="Filtrar por mes">
           <option value="">Todos los meses</option>
-          <option value="2026-05">Mayo 2026</option>
-          <option value="2026-04">Abril 2026</option>
-          <option value="2026-03">Marzo 2026</option>
+          <option value="2026-05" selected="@(ViewData["MesFilter"]?.ToString() == "2026-05")">Mayo 2026</option>
+          <option value="2026-04" selected="@(ViewData["MesFilter"]?.ToString() == "2026-04")">Abril 2026</option>
+          <option value="2026-03" selected="@(ViewData["MesFilter"]?.ToString() == "2026-03")">Marzo 2026</option>
         </select>
-        <button class="btn-secondary" id="btnExport" aria-label="Exportar reporte a PDF">
+        <button type="submit" class="btn-primary" aria-label="Aplicar filtros de búsqueda">Aplicar Filtros</button>
+        <a href="@Url.Action("Stadm14ReportesClinicos", "GestionProfesionales")" class="btn-secondary" aria-label="Limpiar todos los filtros">Limpiar</a>
+        <button class="btn-secondary" type="button" id="btnExport" aria-label="Exportar reporte a PDF" style="margin-left: auto;">
           📥 Exportar PDF
         </button>
-      </div>
+      </form>
     </section>
 
     <!-- Tabla de pacientes -->

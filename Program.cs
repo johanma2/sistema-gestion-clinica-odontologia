@@ -156,42 +156,69 @@ using (var scope = app.Services.CreateScope())
     }
 
     // ─── Seed de Servicios ────────────────────────────────────────
+    var oldServices = await db.Servicios.ToListAsync();
+    if (oldServices.Any(s => s.Nombre == "Consulta general"))
+    {
+        db.Servicios.RemoveRange(oldServices);
+        await db.SaveChangesAsync();
+    }
+
     if (!await db.Servicios.AnyAsync())
     {
         db.Servicios.AddRange(
-            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Limpieza dental", Descripcion = "Profilaxis y prevención", Precio = 80000, Estado = "activo" },
-            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Blanqueamiento dental", Descripcion = "Estética dental", Precio = 350000, Estado = "activo" },
-            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Ortodoncia", Descripcion = "Alineación y corrección dental", Precio = 200000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Limpieza dental", Descripcion = "Elimina el sarro y placa bacteriana", Precio = 80000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Blanqueamiento", Descripcion = "Recupera el brillo natural", Precio = 350000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Ortodoncia", Descripcion = "Corrección de la posición dental", Precio = 200000, Estado = "activo" },
             new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Endodoncia", Descripcion = "Tratamiento de conductos", Precio = 450000, Estado = "activo" },
-            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Extracción dental", Descripcion = "Extracción de piezas dentales", Precio = 120000, Estado = "activo" },
-            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Consulta general", Descripcion = "Valoración y diagnóstico", Precio = 50000, Estado = "activo" }
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Implantes", Descripcion = "Reemplaza piezas perdidas", Precio = 2800000, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Servicio { Nombre = "Odontopediatría", Descripcion = "Cuidado dental especializado para niños", Precio = 60000, Estado = "activo" }
         );
         await db.SaveChangesAsync();
     }
 
-    // ─── Seed de Paciente de prueba ───────────────────────────────
-    if (!await db.Pacientes.AnyAsync(p => p.Documento == "0000000001"))
+    // ─── Seed de Pacientes Reales ───────────────────────────────
+    var fakePacientes = await db.Pacientes.Where(p => p.Nombres == "Paciente" && p.Apellidos == "Prueba").ToListAsync();
+    if (fakePacientes.Any())
     {
-        try
-        {
-            db.Pacientes.Add(new SmileTrack_MVC.Models.Entities.Paciente
-            {
-                TipoDocumento = "CC",
-                Documento = "0000000001",
-                Nombres = "Paciente",
-                Apellidos = "Prueba",
-                FechaNacimiento = new DateTime(2000, 1, 1),
-                Genero = "M",
-                Correo = "pac@smiletrack.co",
-                FechaRegistro = DateTime.UtcNow.Date,
-                Estado = "activo"
-            });
-            await db.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Seed] Paciente de prueba omitido: {ex.Message}");
-        }
+        db.Pacientes.RemoveRange(fakePacientes);
+        await db.SaveChangesAsync();
+    }
+
+    if (!await db.Pacientes.AnyAsync())
+    {
+        db.Pacientes.AddRange(
+            new SmileTrack_MVC.Models.Entities.Paciente { TipoDocumento = "CC", Documento = "10239485", Nombres = "Julián", Apellidos = "Restrepo", FechaNacimiento = new DateTime(1995, 4, 12), Genero = "M", Correo = "julian@ejemplo.com", FechaRegistro = DateTime.UtcNow.Date, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Paciente { TipoDocumento = "CC", Documento = "52109432", Nombres = "Lucía", Apellidos = "Torres", FechaNacimiento = new DateTime(1990, 8, 25), Genero = "F", Correo = "lucia@ejemplo.com", FechaRegistro = DateTime.UtcNow.Date, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Paciente { TipoDocumento = "CC", Documento = "88764321", Nombres = "Mariana", Apellidos = "Esparza", FechaNacimiento = new DateTime(1985, 11, 30), Genero = "F", Correo = "mariana@ejemplo.com", FechaRegistro = DateTime.UtcNow.Date, Estado = "activo" },
+            new SmileTrack_MVC.Models.Entities.Paciente { TipoDocumento = "CC", Documento = "11098452", Nombres = "Sebastián", Apellidos = "Correa", FechaNacimiento = new DateTime(2002, 2, 14), Genero = "M", Correo = "sebastian@ejemplo.com", FechaRegistro = DateTime.UtcNow.Date, Estado = "activo" }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    // ─── Seed de Profesionales Reales ────────────────────────────
+    var fakeProfesionales = await db.Profesionales.Where(p => p.Nombres == "Doctor" && p.Apellidos == "Prueba").ToListAsync();
+    if (fakeProfesionales.Any())
+    {
+        db.Profesionales.RemoveRange(fakeProfesionales);
+        await db.SaveChangesAsync();
+    }
+
+    if (!await db.Profesionales.AnyAsync())
+    {
+        var profRoleUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "doc@smiletrack.co");
+        var espGen = await db.Especialidades.FirstOrDefaultAsync(e => e.Nombre == "Odontología General");
+        var espOrt = await db.Especialidades.FirstOrDefaultAsync(e => e.Nombre == "Ortodoncia");
+
+        var p1 = new SmileTrack_MVC.Models.Entities.Profesional { IdUsuario = profRoleUser?.IdUsuario ?? 1, Nombres = "Ricardo", Apellidos = "Méndez", RegistroMedico = "RM-001", Categoria = "Odontólogo General", Telefono = "3100000001", Estado = "activo", FechaIngreso = DateTime.UtcNow.Date };
+        var p2 = new SmileTrack_MVC.Models.Entities.Profesional { IdUsuario = profRoleUser?.IdUsuario ?? 1, Nombres = "Elena", Apellidos = "Sotelo", RegistroMedico = "RM-002", Categoria = "Ortodoncista", Telefono = "3100000002", Estado = "activo", FechaIngreso = DateTime.UtcNow.Date };
+        var p3 = new SmileTrack_MVC.Models.Entities.Profesional { IdUsuario = profRoleUser?.IdUsuario ?? 1, Nombres = "Carlos", Apellidos = "Ruiz", RegistroMedico = "RM-003", Categoria = "Endodoncista", Telefono = "3100000003", Estado = "activo", FechaIngreso = DateTime.UtcNow.Date };
+
+        db.Profesionales.AddRange(p1, p2, p3);
+        await db.SaveChangesAsync();
+
+        if (espGen != null) db.ProfesionalEspecialidades.Add(new SmileTrack_MVC.Models.Entities.Profesional_Especialidad { IdProfesional = p1.IdProfesional, IdEspecialidad = espGen.IdEspecialidad, Principal = true });
+        if (espOrt != null) db.ProfesionalEspecialidades.Add(new SmileTrack_MVC.Models.Entities.Profesional_Especialidad { IdProfesional = p2.IdProfesional, IdEspecialidad = espOrt.IdEspecialidad, Principal = true });
+        await db.SaveChangesAsync();
     }
 
 }
