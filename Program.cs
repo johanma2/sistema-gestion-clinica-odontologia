@@ -9,7 +9,7 @@ builder.Services.AddControllersWithViews();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    connectionString = "Server=(localdb)\\MSSQLLocalDB;Database=SmileTrackDB;Trusted_Connection=True;TrustServerCertificate=True;";
+    connectionString = "Server=familia\\SMILETRACK,52383;Database=SmileTrackDB;Trusted_Connection=True;TrustServerCertificate=True;";
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -66,8 +66,15 @@ app.MapControllerRoute(
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
 
+    try
+    {
+        await db.Database.EnsureCreatedAsync();
+    }
+    catch
+    {
+        await db.Database.EnsureCreatedAsync();
+    }
 
     if (!await db.Roles.AnyAsync())
     {
@@ -218,6 +225,41 @@ using (var scope = app.Services.CreateScope())
 
         if (espGen != null) db.ProfesionalEspecialidades.Add(new SmileTrack_MVC.Models.Entities.Profesional_Especialidad { IdProfesional = p1.IdProfesional, IdEspecialidad = espGen.IdEspecialidad, Principal = true });
         if (espOrt != null) db.ProfesionalEspecialidades.Add(new SmileTrack_MVC.Models.Entities.Profesional_Especialidad { IdProfesional = p2.IdProfesional, IdEspecialidad = espOrt.IdEspecialidad, Principal = true });
+        await db.SaveChangesAsync();
+    }
+
+    // ─── Seed de Consultorios ─────────────────────────────────────
+    if (!await db.Consultorios.AnyAsync())
+    {
+        db.Consultorios.AddRange(
+            new SmileTrack_MVC.Models.Entities.Consultorio
+            {
+                Nombre = "Box 01 - General",
+                Ubicacion = "Planta 1 - Ala Sur",
+                Tipo = "Consulta General",
+                NombreEstado = "Disponible",
+                Capacidad = 1,
+                Estado = "disponible"
+            },
+            new SmileTrack_MVC.Models.Entities.Consultorio
+            {
+                Nombre = "Box 02 - Ortodoncia",
+                Ubicacion = "Planta 1 - Ala Norte",
+                Tipo = "Ortodoncia",
+                NombreEstado = "Disponible",
+                Capacidad = 1,
+                Estado = "disponible"
+            },
+            new SmileTrack_MVC.Models.Entities.Consultorio
+            {
+                Nombre = "Box 03 - Cirugía",
+                Ubicacion = "Planta 2 - Ala Central",
+                Tipo = "Cirugía y Procedimientos",
+                NombreEstado = "Disponible",
+                Capacidad = 1,
+                Estado = "disponible"
+            }
+        );
         await db.SaveChangesAsync();
     }
 

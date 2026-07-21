@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<Especialidad> Especialidades => Set<Especialidad>();
     public DbSet<Profesional_Especialidad> ProfesionalEspecialidades => Set<Profesional_Especialidad>();
     public DbSet<Servicio> Servicios => Set<Servicio>();
+    public DbSet<Consultorio> Consultorios => Set<Consultorio>();
+    public DbSet<EstadoCita> EstadosCita => Set<EstadoCita>();
     public DbSet<Cita> Citas => Set<Cita>();
     public DbSet<HistoriaClinica> HistoriasClinicas => Set<HistoriaClinica>();
 
@@ -140,6 +142,28 @@ public class AppDbContext : DbContext
             entity.Property(s => s.Descripcion).HasColumnName("descripcion");
             entity.Property(s => s.Precio).HasColumnName("precio").HasPrecision(12, 2);
             entity.Property(s => s.Estado).HasColumnName("estado");
+        });
+
+        modelBuilder.Entity<Consultorio>(entity =>
+        {
+            entity.ToTable("Consultorio");
+            entity.HasKey(c => c.IdConsultorio);
+            entity.Property(c => c.IdConsultorio).HasColumnName("id_consultorio");
+            entity.Property(c => c.Nombre).HasColumnName("nombre");
+            entity.Property(c => c.Ubicacion).HasColumnName("ubicacion");
+            entity.Property(c => c.Tipo).HasColumnName("tipo");
+            entity.Property(c => c.NombreEstado).HasColumnName("nombre_estado");
+            entity.Property(c => c.Capacidad).HasColumnName("capacidad");
+            entity.Property(c => c.Estado).HasColumnName("estado");
+        });
+
+        modelBuilder.Entity<EstadoCita>(entity =>
+        {
+            entity.ToTable("Estado_Cita");
+            entity.HasKey(e => e.IdEstado);
+            entity.Property(e => e.IdEstado).HasColumnName("id_estado");
+            entity.Property(e => e.NombreEstado).HasColumnName("nombre_estado");
+            entity.Property(e => e.Descripcion).HasColumnName("descripcion");
         });
 
         modelBuilder.Entity<Cita>(entity =>

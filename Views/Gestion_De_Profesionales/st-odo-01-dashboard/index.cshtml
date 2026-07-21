@@ -1,4 +1,4 @@
-﻿@{ Layout = null; }
+@{ Layout = null; }
 
 ﻿<!DOCTYPE html>
 <html lang="es">
@@ -7,6 +7,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Dashboard General de SmileTrack - Sistema de Gestión Dental" />
+  <meta name="robots" content="noindex, nofollow" />
   <title>SmileTrack — Dashboard General</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -65,24 +66,20 @@
     <!-- Stats Grid -->
     <section class="stats-grid" aria-label="Métricas principales">
       <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="statPacientes" data-target="142" aria-live="polite">0</span>
-        <span class="stat-label">Pacientes activos</span>
-        <span class="stat-vs up" aria-live="polite">↑ 12</span>
+        <span class="stat-number" id="statPacientes" data-target="@(ViewData["OdoPacientesActivos"] ?? 0)" aria-live="polite">0</span>
+        <span class="stat-label">Pacientes del mes</span>
       </div>
       <div class="stat-card" data-color="green">
-        <span class="stat-number" id="statCitas" data-target="24" aria-live="polite">0</span>
+        <span class="stat-number" id="statCitas" data-target="@(ViewData["OdoCitasHoy"] ?? 0)" aria-live="polite">0</span>
         <span class="stat-label">Citas hoy</span>
-        <span class="stat-vs up" aria-live="polite">↑ 4</span>
       </div>
       <div class="stat-card" data-color="orange">
-        <span class="stat-number" id="statProfesionales" data-target="8" aria-live="polite">0</span>
-        <span class="stat-label">Profesionales activos</span>
-        <span class="stat-vs" style="visibility:hidden" aria-hidden="true">↑ 0</span>
+        <span class="stat-number" id="statProfesionales" data-target="@(ViewData["OdoCitasAtendidas"] ?? 0)" aria-live="polite">0</span>
+        <span class="stat-label">Citas atendidas</span>
       </div>
       <div class="stat-card" data-color="purple">
-        <span class="stat-number" id="statIngresos" aria-live="polite">$4.2M</span>
+        <span class="stat-number" id="statIngresos" aria-live="polite">$@(Convert.ToDecimal(ViewData["OdoIngresosMes"] ?? 0).ToString("N0"))</span>
         <span class="stat-label">Ingresos del mes</span>
-        <span class="stat-vs up" aria-live="polite">↑ 13.5%</span>
       </div>
     </section>
 
@@ -124,47 +121,48 @@
           <p class="chart-summary" aria-live="polite">↑ 13.5% vs mes anterior</p>
         </section>
 
-        <!-- Tabla de profesionales top -->
+        <!-- Últimos pacientes atendidos -->
         <section class="card" aria-labelledby="topProfTitle">
-          <h2 class="card-title" id="topProfTitle">Top profesionales del mes</h2>
+          <h2 class="card-title" id="topProfTitle">Últimos pacientes atendidos</h2>
           <div class="table-wrap">
-            <table class="table-base" aria-label="Tabla de profesionales más productivos">
+            <table class="table-base" aria-label="Tabla de últimos pacientes atendidos">
               <thead>
                 <tr>
-                  <th scope="col">Profesional</th>
-                  <th scope="col" style="text-align:center">Espec.</th>
-                  <th scope="col" style="text-align:center">Citas</th>
-                  <th scope="col" style="text-align:right">Ingresos</th>
+                  <th scope="col">Paciente</th>
+                  <th scope="col" style="text-align:center">Servicio</th>
+                  <th scope="col" style="text-align:right">Fecha</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <div class="td-avatar avatar-blue" aria-hidden="true">CM</div>
-                    <span class="td-name">Dr. Carlos Méndez</span>
-                  </td>
-                  <td style="text-align:center"><span class="badge-spec">Gral.</span></td>
-                  <td style="text-align:center" class="td-strong">42</td>
-                  <td style="text-align:right" class="td-success">$1.8M</td>
-                </tr>
-                <tr>
-                  <td>
-                    <div class="td-avatar avatar-green" aria-hidden="true">LG</div>
-                    <span class="td-name">Dra. Laura Gómez</span>
-                  </td>
-                  <td style="text-align:center"><span class="badge-spec">Ortod.</span></td>
-                  <td style="text-align:center" class="td-strong">38</td>
-                  <td style="text-align:right" class="td-success">$1.4M</td>
-                </tr>
-                <tr>
-                  <td>
-                    <div class="td-avatar avatar-purple" aria-hidden="true">AT</div>
-                    <span class="td-name">Dr. Andrés Torres</span>
-                  </td>
-                  <td style="text-align:center"><span class="badge-spec">Cirugía</span></td>
-                  <td style="text-align:center" class="td-strong">35</td>
-                  <td style="text-align:right" class="td-success">$1.3M</td>
-                </tr>
+                @{
+                  var avatarColors = new[] { "#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444" };
+                  var ultimosPacientes = ViewData["OdoUltimosPacientes"] as List<SmileTrack_MVC.Models.Entities.Cita> ?? new();
+                  if (ultimosPacientes.Any())
+                  {
+                    int colorIdx = 0;
+                    foreach (var cita in ultimosPacientes)
+                    {
+                      var nombrePaciente = $"{cita.Paciente?.Nombres} {cita.Paciente?.Apellidos}".Trim();
+                      var initials = string.Concat(nombrePaciente.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
+                      var color = avatarColors[colorIdx % avatarColors.Length];
+                      colorIdx++;
+                      <tr>
+                        <td style="display:flex; align-items:center; gap:10px;">
+                          <div class="td-avatar" style="background:@color; color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; flex-shrink:0;">@initials</div>
+                          <span class="td-name">@nombrePaciente</span>
+                        </td>
+                        <td style="text-align:center"><span class="badge-spec">@(cita.Servicio?.Nombre ?? "Consulta")</span></td>
+                        <td style="text-align:right; font-size:.85rem; color:var(--text-muted);">@cita.FechaHora.ToString("dd MMM")</td>
+                      </tr>
+                    }
+                  }
+                  else
+                  {
+                    <tr>
+                      <td colspan="3" style="text-align:center; color:var(--text-muted); padding:16px;">No hay pacientes atendidos este mes.</td>
+                    </tr>
+                  }
+                }
               </tbody>
             </table>
           </div>
@@ -174,75 +172,77 @@
 
       <!-- Columna derecha: Estado e invoices -->
       <div class="content-right">
+        @{
+            var totalCitas = (int)(ViewData["OdoTotalCitasMes"] ?? 0);
+            var pctAtendidas = totalCitas > 0 ? (int)Math.Round((double)(int)(ViewData["OdoCitasAtendidas"] ?? 0) / totalCitas * 100) : 0;
+            var pctProgramadas = totalCitas > 0 ? (int)Math.Round((double)(int)(ViewData["OdoCitasProgramadas"] ?? 0) / totalCitas * 100) : 0;
+            var pctCanceladas = totalCitas > 0 ? (int)Math.Round((double)(int)(ViewData["OdoCitasCanceladas"] ?? 0) / totalCitas * 100) : 0;
+            var pctNoAsistio = totalCitas > 0 ? (int)Math.Round((double)(int)(ViewData["OdoCitasNoAsistio"] ?? 0) / totalCitas * 100) : 0;
+        }
 
         <!-- Estado de citas -->
         <section class="card" aria-labelledby="statusTitle">
-          <h2 class="card-title" id="statusTitle">Citas del mes por estado</h2>
+          <h2 class="card-title" id="statusTitle">Tus citas del mes</h2>
           <div class="status-chart" id="statusChart" role="img" aria-label="Gráfico de estado de citas">
             <div class="status-row">
               <span class="status-label">Atendidas</span>
               <div class="status-bar-bg">
-                <div class="status-bar-fill green" data-width="80" style="width:0" role="progressbar" aria-valuenow="80"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Atendidas: 186 citas, 80%"></div>
+                <div class="status-bar-fill green" data-width="@pctAtendidas" style="width:0" role="progressbar" aria-valuenow="@pctAtendidas"
+                  aria-valuemin="0" aria-valuemax="100" aria-label="Atendidas: @(ViewData["OdoCitasAtendidas"] ?? 0) citas, @pctAtendidas%"></div>
               </div>
-              <span class="status-val">186</span>
+              <span class="status-val">@(ViewData["OdoCitasAtendidas"] ?? 0)</span>
             </div>
             <div class="status-row">
-              <span class="status-label">Agendadas</span>
+              <span class="status-label">Programadas</span>
               <div class="status-bar-bg">
-                <div class="status-bar-fill blue" data-width="35" style="width:0" role="progressbar" aria-valuenow="35"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Agendadas: 67 citas, 35%"></div>
+                <div class="status-bar-fill blue" data-width="@pctProgramadas" style="width:0" role="progressbar" aria-valuenow="@pctProgramadas"
+                  aria-valuemin="0" aria-valuemax="100" aria-label="Programadas: @(ViewData["OdoCitasProgramadas"] ?? 0) citas, @pctProgramadas%"></div>
               </div>
-              <span class="status-val">67</span>
+              <span class="status-val">@(ViewData["OdoCitasProgramadas"] ?? 0)</span>
             </div>
             <div class="status-row">
               <span class="status-label">Canceladas</span>
               <div class="status-bar-bg">
-                <div class="status-bar-fill red" data-width="15" style="width:0" role="progressbar" aria-valuenow="15"
-                  aria-valuemin="0" aria-valuemax="100" aria-label="Canceladas: 29 citas, 15%"></div>
+                <div class="status-bar-fill red" data-width="@pctCanceladas" style="width:0" role="progressbar" aria-valuenow="@pctCanceladas"
+                  aria-valuemin="0" aria-valuemax="100" aria-label="Canceladas: @(ViewData["OdoCitasCanceladas"] ?? 0) citas, @pctCanceladas%"></div>
               </div>
-              <span class="status-val">29</span>
+              <span class="status-val">@(ViewData["OdoCitasCanceladas"] ?? 0)</span>
             </div>
             <div class="status-row">
               <span class="status-label">No asistió</span>
               <div class="status-bar-bg">
-                <div class="status-bar-fill orange" data-width="10" style="width:0" role="progressbar"
-                  aria-valuenow="10" aria-valuemin="0" aria-valuemax="100" aria-label="No asistió: 14 citas, 10%"></div>
+                <div class="status-bar-fill orange" data-width="@pctNoAsistio" style="width:0" role="progressbar"
+                  aria-valuenow="@pctNoAsistio" aria-valuemin="0" aria-valuemax="100" aria-label="No asistió: @(ViewData["OdoCitasNoAsistio"] ?? 0) citas, @pctNoAsistio%"></div>
               </div>
-              <span class="status-val">14</span>
+              <span class="status-val">@(ViewData["OdoCitasNoAsistio"] ?? 0)</span>
             </div>
           </div>
         </section>
 
-        <!-- Facturas pendientes -->
+        <!-- Próximas citas -->
         <section class="card" aria-labelledby="invoicesTitle">
-          <h2 class="card-title" id="invoicesTitle">Facturas pendientes de cobro</h2>
+          <h2 class="card-title" id="invoicesTitle">Próximas citas de hoy</h2>
           <div class="invoices-list" role="list">
-            <div class="invoice-item warning" role="listitem">
-              <div>
-                <p class="invoice-code">FAC-2026-0015</p>
-                <p class="invoice-desc"><time datetime="2026-03-24">Vence hoy</time> · María López</p>
-              </div>
-              <p class="invoice-amount">$120.000</p>
-            </div>
-            <div class="invoice-item danger" role="listitem">
-              <div>
-                <p class="invoice-code">FAC-2026-0012</p>
-                <p class="invoice-desc"><time datetime="2026-03-21">Vencida</time> · Carlos Ruiz</p>
-              </div>
-              <p class="invoice-amount">$450.000</p>
-            </div>
-            <div class="invoice-item muted" role="listitem">
-              <div>
-                <p class="invoice-code">FAC-2026-0018</p>
-                <p class="invoice-desc"><time datetime="2026-03-31">Vence en 7 días</time> · Pedro García</p>
-              </div>
-              <p class="invoice-amount">$75.000</p>
-            </div>
-          </div>
-          <div class="invoices-total" aria-live="polite">
-            <span>Total pendiente:</span>
-            <strong>$645.000</strong>
+            @{
+                var proximasCitas = ViewData["OdoProximasCitas"] as List<SmileTrack_MVC.Models.Entities.Cita> ?? new();
+                if (proximasCitas.Any())
+                {
+                    foreach (var cita in proximasCitas)
+                    {
+                        <div class="invoice-item" role="listitem">
+                          <div>
+                            <p class="invoice-code">@(cita.HoraInicio?.ToString(@"hh\:mm") ?? "00:00")</p>
+                            <p class="invoice-desc">Paciente: @(cita.Paciente?.Nombres ?? "N/A") @(cita.Paciente?.Apellidos ?? "")</p>
+                          </div>
+                          <p class="invoice-amount" style="font-size: 0.9rem; font-weight: 500;">@(cita.Servicio?.Nombre ?? "Consulta")</p>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p style="padding: 16px; color: var(--text-muted); font-size: 0.9rem;">No tienes más citas programadas para hoy.</p>
+                }
+            }
           </div>
         </section>
 

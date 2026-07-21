@@ -14,7 +14,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Gestiona y supervisa el historial completo de citas en SmileTrack." />
-  <title>SmileTrack — Gestión de Citas</title>
+  <title>SmileTrack � Gesti�n de Citas</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
@@ -28,43 +28,43 @@
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <aside class="sidebar" id="sidebar" aria-label="Navegaci�n principal">
     <div class="sidebar-logo">
       <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
     </div>
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-    <div class="sidebar-user">
-      <div class="user-avatar" aria-hidden="true">AD</div>
+      <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Substring(0, 2).ToUpperInvariant() ?? "U")</div>
       <div class="user-info">
-        <span class="user-role">Administrador</span>
-        <span class="user-email">admin@smiletrack.co</span>
+        <span class="user-role">@User.Identity?.Name</span>
+        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
       </div>
     </div>
   </aside>
 
 
 
-  <!-- ═════ HAMBURGER (móvil) ═════ -->
-  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+  <!--  HAMBURGER (m�vil) -->
+  <button class="hamburger" id="hamburger" aria-label="Abrir men�" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
   </button>
   <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <!-- ═════ MAIN ═════ -->
+  <!-- MAIN -->
   <main class="main" id="main-content">
 
     <!-- Header -->
     <header class="page-header">
       <div class="header-left">
-        <nav class="breadcrumb" aria-label="Ruta de navegación">
-          <span>Administración</span>
-          <span class="bc-sep" aria-hidden="true">→</span>
-          <span class="bc-active">Gestión de Citas</span>
+        <nav class="breadcrumb" aria-label="Ruta de navegaci�n">
+          <span>Administraci�n</span>
+          <span class="bc-sep" aria-hidden="true">?</span>
+          <span class="bc-active">Gesti�n de Citas</span>
         </nav>
-        <h1 class="page-title">Gestión Integral de Citas</h1>
-        <p class="page-subtitle">Supervisión y control</p>
+        <h1 class="page-title">Gesti�n Integral de Citas</h1>
+        <p class="page-subtitle">Supervisi�n y control</p>
       </div>
       <button class="btn-primary" id="btnNewCita" aria-label="Programar nueva cita" onclick="document.getElementById('modalCita').classList.add('open');">
         + Nueva Cita
@@ -81,7 +81,7 @@
       <div class="stat-card" data-color="green">
         <span class="stat-number" id="statScheduled" data-target="48" aria-live="polite">0</span>
         <span class="stat-label">Programadas</span>
-        <span class="stat-sub">↑ +12 vs semana pasada</span>
+        <span class="stat-sub">? +12 vs semana pasada</span>
       </div>
       <div class="stat-card" data-color="red">
         <span class="stat-number" id="statCancelled" data-target="12" aria-live="polite">0</span>
@@ -91,11 +91,11 @@
       <div class="stat-card" data-color="orange">
         <span class="stat-number" id="statAttended" data-target="224" aria-live="polite">0</span>
         <span class="stat-label">Atendidas</span>
-        <span class="stat-sub">↑ 79% asistencia</span>
+        <span class="stat-sub">? 79% asistencia</span>
       </div>
     </section>
 
-    <!-- El formulario en línea fue removido y convertido en Modal -->
+    <!-- El formulario en l�nea fue removido y convertido en Modal -->
 
     <section class="table-section" aria-labelledby="tableTitle">
       <h2 class="visually-hidden" id="tableTitle">Lista de citas</h2>
@@ -107,70 +107,78 @@
         <button class="tab-btn" data-tab="cancelled" role="tab" aria-selected="false"
           aria-controls="citasBody">Cancelaciones</button>
         <button class="tab-btn" data-tab="no-show" role="tab" aria-selected="false" aria-controls="citasBody">No
-          asistió</button>
+          asisti�</button>
       </div>
 
       <!-- Filtros -->
-      <form method="get" class="table-filters">
-        <div class="search-wrap">
-          <span class="search-icon" aria-hidden="true">🔍</span>
-          <input type="search" id="searchAppointments" name="search" class="search-input" placeholder="Buscar paciente..."
-            aria-label="Buscar paciente" value="@ViewData["SearchFilter"]">
-        </div>
-        <select id="filterStatus" name="estado" class="filter-select" aria-label="Filtrar por estado">
-          <option value="">Todos los estados</option>
-          @if (ViewData["EstadoFilter"]?.ToString() == "programada")
-          {
-            <option value="programada" selected>Programada</option>
-          }
-          else
-          {
-            <option value="programada">Programada</option>
-          }
-          @if (ViewData["EstadoFilter"]?.ToString() == "confirmada")
-          {
-            <option value="confirmada" selected>Confirmada</option>
-          }
-          else
-          {
-            <option value="confirmada">Confirmada</option>
-          }
-          @if (ViewData["EstadoFilter"]?.ToString() == "atendida")
-          {
-            <option value="atendida" selected>Atendida</option>
-          }
-          else
-          {
-            <option value="atendida">Atendida</option>
-          }
-          @if (ViewData["EstadoFilter"]?.ToString() == "cancelada")
-          {
-            <option value="cancelada" selected>Cancelada</option>
-          }
-          else
-          {
-            <option value="cancelada">Cancelada</option>
-          }
-        </select>
-        <select id="filterProfessional" name="profesional" class="filter-select" aria-label="Filtrar por profesional">
-          <option value="">Cualquier profesional</option>
-          @foreach (var profesional in profesionalesFilterOptions)
-          {
-            if (ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString())
-            {
-              <option value="@profesional.IdProfesional" selected>@profesional.NombreProfesional</option>
-            }
-            else
-            {
-              <option value="@profesional.IdProfesional">@profesional.NombreProfesional</option>
-            }
-          }
-        </select>
-        <input type="date" id="filterDate" name="fecha" class="filter-date" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]">
-        <input type="hidden" name="page" value="1" />
-        <button class="btn-primary" type="submit">Aplicar filtros</button>
-        <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">Limpiar</a>
-      </form>
+      <section class="filters-section" aria-label="Filtros de búsqueda">
+        <form method="get" class="filters-row">
+          <div class="search-wrap">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input type="search" id="searchAppointments" name="search" class="search-input" placeholder="Buscar paciente..."
+              aria-label="Buscar paciente" value="@ViewData["SearchFilter"]">
+          </div>
+          <div class="filter-wrap">
+            <select id="filterStatus" name="estado" class="status-select" aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              @if (ViewData["EstadoFilter"]?.ToString() == "programada")
+              {
+                <option value="programada" selected>Programada</option>
+              }
+              else
+              {
+                <option value="programada">Programada</option>
+              }
+              @if (ViewData["EstadoFilter"]?.ToString() == "confirmada")
+              {
+                <option value="confirmada" selected>Confirmada</option>
+              }
+              else
+              {
+                <option value="confirmada">Confirmada</option>
+              }
+              @if (ViewData["EstadoFilter"]?.ToString() == "atendida")
+              {
+                <option value="atendida" selected>Atendida</option>
+              }
+              else
+              {
+                <option value="atendida">Atendida</option>
+              }
+              @if (ViewData["EstadoFilter"]?.ToString() == "cancelada")
+              {
+                <option value="cancelada" selected>Cancelada</option>
+              }
+              else
+              {
+                <option value="cancelada">Cancelada</option>
+              }
+            </select>
+          </div>
+          <div class="filter-wrap">
+            <select id="filterProfessional" name="profesional" class="status-select" aria-label="Filtrar por profesional">
+              <option value="">Cualquier profesional</option>
+              @foreach (var profesional in profesionalesFilterOptions)
+              {
+                if (ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString())
+                {
+                  <option value="@profesional.IdProfesional" selected>@profesional.NombreProfesional</option>
+                }
+                else
+                {
+                  <option value="@profesional.IdProfesional">@profesional.NombreProfesional</option>
+                }
+              }
+            </select>
+          </div>
+          <div class="filter-wrap">
+            <input type="date" id="filterDate" name="fecha" class="status-select" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]">
+          </div>
+          <input type="hidden" name="page" value="1" />
+          <button class="btn-primary" type="submit">Aplicar</button>
+          <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">Limpiar</a>
+        </form>
+      </section>
 
       <!-- Cabecera de tabla accesible -->
       <div class="table-header" role="row">
@@ -188,8 +196,8 @@
         @foreach (var cita in citas)
         {
           <div class="table-row" role="row">
-            <div class="table-col col-fecha" role="cell">@cita.FechaHora.ToString("dd/MM/yyyy")</div>
-            <div class="table-col col-hora" role="cell">@cita.FechaHora.ToString("HH:mm")</div>
+            <div class="table-col col-fecha" role="cell">@cita.Fecha.ToString("dd/MM/yyyy")</div>
+            <div class="table-col col-hora" role="cell">@(cita.HoraInicio?.ToString("hh\\:mm") ?? "—")</div>
           @{
             var pacNombre = cita.Paciente?.NombresCompleto ?? "?";
             var pacInitials = string.Concat(pacNombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
@@ -198,6 +206,7 @@
             var profNombre = cita.Profesional?.NombreProfesional ?? string.Empty;
             var profInitials = string.IsNullOrEmpty(profNombre) ? "—" : string.Concat(profNombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
             var profColor = string.IsNullOrEmpty(profNombre) ? "#94a3b8" : pacColors[Math.Abs(profNombre.GetHashCode()) % pacColors.Length];
+            var especialidadPrincipal = cita.Profesional?.Especialidades?.FirstOrDefault(pe => pe.Principal)?.Especialidad?.Nombre ?? cita.Profesional?.Especialidades?.FirstOrDefault()?.Especialidad?.Nombre ?? "General";
           }
             <div class="table-col col-paciente" role="cell">
               <div class="patient-info">
@@ -208,18 +217,44 @@
             <div class="table-col col-profesional" role="cell">
               <div class="patient-info">
                 <div class="patient-avatar" style="background:@profColor; opacity:@(string.IsNullOrEmpty(profNombre) ? "0.4" : "1");">@profInitials</div>
-                <span class="patient-name">@(string.IsNullOrEmpty(profNombre) ? "Sin asignar" : profNombre)</span>
+                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                  <span class="patient-name">@(string.IsNullOrEmpty(profNombre) ? "Sin asignar" : profNombre)</span>
+                  @if (!string.IsNullOrEmpty(profNombre)) {
+                    <span class="badge-spec @((especialidadPrincipal).ToLowerInvariant())" style="font-size: 0.65rem; padding: 2px 6px; margin-top: 2px;">@especialidadPrincipal</span>
+                  }
+                </div>
               </div>
             </div>
-            <div class="table-col col-servicio" role="cell">@cita.Servicio?.Nombre</div>
-            <div class="table-col col-estado text-center" role="cell"><span class="status-badge @((cita.Estado ?? string.Empty).ToLowerInvariant())">@cita.Estado</span></div>
+            <div class="table-col col-servicio" role="cell">@cita.MotivoConsulta</div>
+            <div class="table-col col-estado text-center" role="cell">
+              <form method="post" action="/gestion-de-citas/guardar-cita" class="form-estado-inline" style="display:inline-block; margin:0;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="IdCita" value="@cita.IdCita" />
+                <input type="hidden" name="IdPaciente" value="@cita.IdPaciente" />
+                <input type="hidden" name="FechaHora" value="@cita.FechaHora.ToString("yyyy-MM-ddTHH:mm:ss")" />
+                <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+                <select name="Estado" class="status-badge status-select-inline @((cita.Estado ?? string.Empty).ToLowerInvariant())" onchange="this.form.submit()" aria-label="Cambiar estado de la cita">
+                  @foreach (var estado in new[] { "Programada", "Confirmada", "Atendida", "Cancelada" })
+                  {
+                    if (string.Equals(cita.Estado, estado, StringComparison.OrdinalIgnoreCase))
+                    {
+                      <option value="@estado.ToLower()" selected>@estado</option>
+                    }
+                    else
+                    {
+                      <option value="@estado.ToLower()">@estado</option>
+                    }
+                  }
+                </select>
+              </form>
+            </div>
             <div class="table-col col-acciones text-right" role="cell">
-              <a class="action-btn" href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })">✏️</a>
+              <a class="action-btn" href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" title="Editar">✏️</a>
               <form method="post" action="/gestion-de-citas/eliminar-cita" style="display:inline;">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="IdCita" value="@cita.IdCita" />
                 <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-                <button class="action-btn btn-delete" type="submit" onclick="return confirm('¿Eliminar esta cita?');">❌</button>
+                <button class="action-btn btn-delete" type="submit" onclick="return confirm('¿Eliminar esta cita?');" title="Eliminar">❌</button>
               </form>
             </div>
           </div>
@@ -263,9 +298,9 @@
         <p class="banner-text">
           @{
             var totalCitas = citas.Count;
-            var atendidas = citas.Count(c => c.Estado == "atendida");
-            var canceladas = citas.Count(c => c.Estado == "cancelada");
-            var programadas = citas.Count(c => c.Estado == "programada");
+            var atendidas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Atendida", StringComparison.OrdinalIgnoreCase));
+            var canceladas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Cancelada", StringComparison.OrdinalIgnoreCase));
+            var programadas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Agendada", StringComparison.OrdinalIgnoreCase));
           }
           Total en vista: <strong>@totalCitas</strong> citas —
           <span style="color:#22c55e">✅ @atendidas atendidas</span> —
@@ -384,6 +419,32 @@
     .form-input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--font); font-size: 0.85rem; transition: border-color 0.2s; }
     .form-input:focus { border-color: var(--primary); outline: none; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+    
+    /* Inline Status Select (Badge) */
+    select.status-select-inline {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: transparent;
+      border: none;
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      text-align: center;
+      text-transform: capitalize;
+    }
+    select.status-select-inline:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    select.status-select-inline option {
+      background-color: #fff;
+      color: #333;
+    }
   </style>
 
   <!-- Modal: Crear/Editar Cita -->
@@ -425,37 +486,49 @@
 
           <div class="form-group">
             <label class="form-label">Servicio</label>
-            <select name="IdServicio" class="form-input">
-              <option value="">Seleccione servicio</option>
-              @foreach (var servicio in servicios)
+            <select name="IdConsultorio" class="form-input">
+              <option value="">Seleccione consultorio</option>
+              @foreach (var consultorio in (ViewData["Consultorios"] as List<SmileTrack_MVC.Models.Entities.Consultorio> ?? new()))
               {
                 var editingCita = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"];
-                var selected = editingCita?.IdServicio == servicio.IdServicio ? "selected" : "";
-                <option value="@servicio.IdServicio" selected="@(selected)">@servicio.Nombre</option>
+                var selected = editingCita?.IdConsultorio == consultorio.IdConsultorio ? "selected" : "";
+                <option value="@consultorio.IdConsultorio" selected="@(selected)">@consultorio.Nombre</option>
               }
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Fecha y Hora *</label>
-            <input type="datetime-local" name="FechaHora" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.FechaHora.ToString("yyyy-MM-ddTHH:mm") ?? DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-ddTHH:mm"))" required />
+            <label class="form-label">Fecha *</label>
+            <input type="date" name="Fecha" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.Fecha.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" required />
           </div>
 
           <div class="form-group" style="grid-column: 1 / -1;">
+            <label class="form-label">Hora Inicio</label>
+            <input type="time" name="HoraInicio" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.HoraInicio?.ToString("hh\\:mm") ?? "09:00")" />
+
+            <label class="form-label">Hora Fin</label>
+            <input type="time" name="HoraFin" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.HoraFin?.ToString("hh\\:mm") ?? "09:30")" />
+
             <label class="form-label">Estado *</label>
-            <select name="Estado" class="form-input">
+            <select name="IdEstado" class="form-input">
               @{ var editingCitaEstado = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"]; }
-              <option value="programada" selected="@(editingCitaEstado?.Estado == "programada")">Programada</option>
-              <option value="confirmada" selected="@(editingCitaEstado?.Estado == "confirmada")">Confirmada</option>
-              <option value="atendida" selected="@(editingCitaEstado?.Estado == "atendida")">Atendida</option>
-              <option value="cancelada" selected="@(editingCitaEstado?.Estado == "cancelada")">Cancelada</option>
-              <option value="no asistió" selected="@(editingCitaEstado?.Estado == "no asistió")">No Asistió</option>
+              @foreach (var estado in (ViewData["EstadosCita"] as List<SmileTrack_MVC.Models.Entities.EstadoCita> ?? new()))
+              {
+                var selected = editingCitaEstado?.IdEstado == estado.IdEstado ? "selected" : "";
+                <option value="@estado.IdEstado" selected="@(selected)">@estado.NombreEstado</option>
+              }
             </select>
           </div>
 
           <div class="form-group" style="grid-column: 1 / -1;">
-            <label class="form-label">Notas</label>
-            <textarea name="Notas" class="form-input" rows="2" placeholder="Observaciones de la cita...">@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.Notas)</textarea>
+            <label class="form-label">Motivo consulta</label>
+            <textarea name="MotivoConsulta" class="form-input" rows="2" placeholder="Motivo principal de la cita...">@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.MotivoConsulta)</textarea>
+
+            <label class="form-label">Notas previas</label>
+            <textarea name="NotasPrevias" class="form-input" rows="2" placeholder="Observaciones de la cita...">@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.NotasPrevias)</textarea>
+
+            <label class="form-label">Tipo de cita</label>
+            <input type="text" name="TipoCita" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.TipoCita ?? "Consulta")" />
           </div>
         </div>
 
@@ -541,3 +614,5 @@
 </body>
 
 </html>
+
+

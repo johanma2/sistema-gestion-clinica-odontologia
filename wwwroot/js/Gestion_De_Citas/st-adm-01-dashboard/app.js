@@ -1,12 +1,15 @@
 /**
  * SMILETRACK — DASHBOARD ADMINISTRADOR (app.js)
- * API-ready + Accesibilidad + Performance optimizada
+ * Accesibilidad + Performance optimizada
  */
 
 // ═══════════════════════════════════════════════════════════════════
-//  CONFIGURACIÓN API
+//  CONFIGURACIÓN GLOBALES
 // ═══════════════════════════════════════════════════════════════════
-const API_BASE = '/api';
+const API_BASE = (window.APP_CONFIG && window.APP_CONFIG.ApiBase) ? window.APP_CONFIG.ApiBase : '/api';
+const activeAnimations = new Set();
+const toastQueue = [];
+let isToastShowing = false;
 
 // ═══════════════════════════════════════════════════════════════════
 //  UTILIDADES GLOBALES
@@ -15,77 +18,80 @@ const API_BASE = '/api';
 // Obtiene elemento del DOM con manejo seguro de null
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
-  if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
+  if (!el) console.warn(`[SmileTrack][UI] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes
-const debounce = (fn, delay) => {
+// Reduce llamadas a función en eventos frecuentes (con maxWait)
+const debounce = (fn, delay, maxWait = null) => {
   let timeoutId;
+  let lastInvokeTime = 0;
   return (...args) => {
+    const now = Date.now();
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), delay);
+    if (maxWait && lastInvokeTime && (now - lastInvokeTime >= maxWait)) {
+      lastInvokeTime = now;
+      fn.apply(this, args);
+    } else {
+      if (!lastInvokeTime) lastInvokeTime = now;
+      timeoutId = setTimeout(() => {
+        lastInvokeTime = 0;
+        fn.apply(this, args);
+      }, delay);
+    }
   };
 };
 
-// Muestra notificación temporal con auto-cierre
+// Muestra notificación con cola y limpieza correcta
 const showToast = (message, type = 'success') => {
+  toastQueue.push({ message, type });
+  processToastQueue();
+};
+
+const processToastQueue = () => {
+  if (isToastShowing || toastQueue.length === 0) return;
+
   const toast = safeGetElement('toast');
   if (!toast) return;
 
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
+  isToastShowing = true;
+  const current = toastQueue.shift();
+
+  toast.textContent = current.message;
+  toast.className = `toast ${current.type === 'error' ? 'error' : current.type === 'warning' ? 'warning' : ''} show`;
 
   if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
+  toast._timeoutId = setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      isToastShowing = false;
+      processToastQueue();
+    }, 300); // Wait for transition
+  }, 3000);
+};
+
+// Tracking de animaciones para limpieza
+const trackedRAF = (callback) => {
+  let id;
+  const wrapper = (timestamp) => {
+    callback(timestamp);
+    activeAnimations.delete(id);
+  };
+  id = requestAnimationFrame(wrapper);
+  activeAnimations.add(id);
+  return id;
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  DATOS DE EJEMPLO (Fallback si API falla)
-// ═══════════════════════════════════════════════════════════════════
-const SAMPLE_METRICS = {
-  pacientes: 142,
-  citas: 24,
-  profesionales: 8,
-  ingresos: '$4.2M',
-  ingresosRaw: 4200000,
-  vsPacientes: '↑ 12',
-  vsCitas: '↑ 4',
-  vsIngresos: '↑ 13.5%',
-};
-
-const SAMPLE_REVENUE = [
-  { mes: 'Enero', valor: 3100000, max: 5000000, width: 65 },
-  { mes: 'Febrero', valor: 3700000, max: 5000000, width: 75 },
-  { mes: 'Marzo', valor: 4200000, max: 5000000, width: 85 },
-];
-
-const SAMPLE_STATUS = [
-  { label: 'Atendidas', count: 186, width: 80, color: 'green' },
-  { label: 'Agendadas', count: 67, width: 35, color: 'blue' },
-  { label: 'Canceladas', count: 29, width: 15, color: 'red' },
-  { label: 'No asistió', count: 14, width: 10, color: 'orange' },
-];
-
-const SAMPLE_TOP_PROS = [
-  { nombre: 'Dr. Carlos Méndez', inicial: 'CM', espec: 'Gral.', citas: 42, ingresos: '$1.8M', color: 'blue' },
-  { nombre: 'Dra. Laura Gómez', inicial: 'LG', espec: 'Ortod.', citas: 38, ingresos: '$1.4M', color: 'green' },
-  { nombre: 'Dr. Andrés Torres', inicial: 'AT', espec: 'Cirugía', citas: 35, ingresos: '$1.3M', color: 'purple' },
-];
-
-const SAMPLE_INVOICES = [
-  { code: 'FAC-2026-0015', desc: 'Vence hoy · María López', amount: '$120.000', type: 'warning', date: '2026-03-24' },
-  { code: 'FAC-2026-0012', desc: 'Vencida · Carlos Ruiz', amount: '$450.000', type: 'danger', date: '2026-03-21' },
-  { code: 'FAC-2026-0018', desc: 'Vence en 7 días · Pedro García', amount: '$75.000', type: 'muted', date: '2026-03-31' },
-];
-
-// ═══════════════════════════════════════════════════════════════════
-//  FUNCIONES DE RENDERIZADO
+//  FUNCIONES DE ANIMACIÓN (DOM ESTÁTICO)
 // ═══════════════════════════════════════════════════════════════════
 
 // Anima contador numérico
-const animateCounter = (el, target) => {
+const animateCounter = (el, targetStr) => {
   if (!el) return;
+  const target = parseInt(targetStr, 10);
+  if (isNaN(target) || target <= 0) return;
+
   let cur = 0;
   const step = Math.max(1, Math.ceil(target / 30));
   const t = setInterval(() => {
@@ -95,209 +101,41 @@ const animateCounter = (el, target) => {
   }, 30);
 };
 
-// Renderiza métricas principales
-const renderMetrics = (data) => {
-  animateCounter(safeGetElement('statPacientes'), data.pacientes);
-  animateCounter(safeGetElement('statCitas'), data.citas);
-  animateCounter(safeGetElement('statProfesionales'), data.profesionales);
-  
-  const ingresosEl = safeGetElement('statIngresos');
-  if (ingresosEl) ingresosEl.textContent = data.ingresos;
-  
-  // Actualizar comparativas
-  const updateVs = (id, text) => {
-    const el = safeGetElement(id);
-    if (el) el.textContent = text;
-  };
-  updateVs('vsPacientes', data.vsPacientes);
-  updateVs('vsCitas', data.vsCitas);
-  updateVs('vsIngresos', data.vsIngresos);
-};
+const initNativeAnimations = () => {
+  // Animar números de stats
+  document.querySelectorAll('.stat-number[data-target]').forEach(el => {
+    animateCounter(el, el.dataset.target);
+  });
 
-// Renderiza gráfico de ingresos con animación
-const renderRevenueChart = (data) => {
-  const container = safeGetElement('revenueChart');
-  if (!container) return;
-  
-  container.innerHTML = data.map(item => {
-    const formatted = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumSignificantDigits: 2 }).format(item.valor);
-    return `
-      <div class="chart-row">
-        <span class="chart-label">${item.mes}</span>
-        <div class="chart-bar-bg">
-          <div class="chart-bar-fill ${item.valor >= 4000000 ? 'green' : 'blue'}" 
-               data-width="${item.width}" 
-               style="width:0" 
-               role="progressbar" 
-               aria-valuenow="${item.width}" 
-               aria-valuemin="0" 
-               aria-valuemax="100"
-               aria-label="${item.mes}: ${formatted}, ${item.width}% del máximo">
-          </div>
-        </div>
-        <span class="chart-val">${formatted.replace('$', '').replace('.000', 'M')}</span>
-      </div>
-    `;
-  }).join('');
-  
-  // Animar barras con requestAnimationFrame para mejor performance
-  requestAnimationFrame(() => {
-    container.querySelectorAll('.chart-bar-fill').forEach(bar => {
+  // Animar barras de estado y progreso generadas por Razor
+  trackedRAF(() => {
+    document.querySelectorAll('[data-width]').forEach(bar => {
       bar.style.width = bar.dataset.width + '%';
     });
   });
 };
 
-// Renderiza gráfico de estado de citas
-const renderStatusChart = (data) => {
-  const container = safeGetElement('statusChart');
-  if (!container) return;
-  
-  container.innerHTML = data.map(item => `
-    <div class="status-row">
-      <span class="status-label">${item.label}</span>
-      <div class="status-bar-bg">
-        <div class="status-bar-fill ${item.color}" 
-             data-width="${item.width}" 
-             style="width:0"
-             role="progressbar"
-             aria-valuenow="${item.width}"
-             aria-valuemin="0"
-             aria-valuemax="100"
-             aria-label="${item.label}: ${item.count} citas, ${item.width}%">
-        </div>
-      </div>
-      <span class="status-val">${item.count}</span>
-    </div>
-  `).join('');
-  
-  // Animar barras
-  requestAnimationFrame(() => {
-    container.querySelectorAll('.status-bar-fill').forEach(bar => {
-      bar.style.width = bar.dataset.width + '%';
-    });
-  });
-};
-
-// Renderiza tabla de profesionales top
-const renderTopProfessionals = (data) => {
-  const tbody = document.querySelector('.table-base tbody');
-  if (!tbody) return;
-  
-  tbody.innerHTML = data.map(pro => `
-    <tr>
-      <td>
-        <div class="td-avatar avatar-${pro.color}" aria-hidden="true">${pro.inicial}</div>
-        <span class="td-name">${pro.nombre}</span>
-      </td>
-      <td style="text-align:center"><span class="badge-spec">${pro.espec}</span></td>
-      <td style="text-align:center" class="td-strong">${pro.citas}</td>
-      <td style="text-align:right" class="td-success">${pro.ingresos}</td>
-    </tr>
-  `).join('');
-};
-
-// Renderiza lista de facturas pendientes
-const renderInvoices = (data) => {
-  const list = document.querySelector('.invoices-list');
-  if (!list) return;
-  
-  list.innerHTML = data.map(inv => `
-    <div class="invoice-item ${inv.type}" role="listitem">
-      <div>
-        <p class="invoice-code">${inv.code}</p>
-        <p class="invoice-desc"><time datetime="${inv.date}">${inv.desc.split('·')[0].trim()}</time> · ${inv.desc.split('·')[1]?.trim() || ''}</p>
-      </div>
-      <p class="invoice-amount">${inv.amount}</p>
-    </div>
-  `).join('');
-};
-
 // ═══════════════════════════════════════════════════════════════════
-//  API CALLS (Listas para conectar al backend C#)
+//  API CALLS 
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene métricas del dashboard
-async function fetchMetrics() {
-  try {
-    // En producción: fetch real a API
-    // const res = await fetch(`${API_BASE}/admin/metrics`);
-    // if (!res.ok) throw new Error('API error');
-    // return await res.json();
-    
-    // Simulación con fallback
-    return SAMPLE_METRICS;
-  } catch (error) {
-    console.warn('Fallback a datos locales:', error);
-    return SAMPLE_METRICS;
-  }
-}
-
-// Obtiene datos de ingresos mensuales
-async function fetchRevenue() {
-  try {
-    // En producción: fetch real a API
-    return SAMPLE_REVENUE;
-  } catch (error) {
-    console.warn('Fallback a datos locales:', error);
-    return SAMPLE_REVENUE;
-  }
-}
-
-// Obtiene estado de citas
-async function fetchStatus() {
-  try {
-    return SAMPLE_STATUS;
-  } catch (error) {
-    console.warn('Fallback a datos locales:', error);
-    return SAMPLE_STATUS;
-  }
-}
-
-// Obtiene profesionales top
-async function fetchTopProfessionals() {
-  try {
-    return SAMPLE_TOP_PROS;
-  } catch (error) {
-    console.warn('Fallback a datos locales:', error);
-    return SAMPLE_TOP_PROS;
-  }
-}
-
-// Obtiene facturas pendientes
-async function fetchInvoices() {
-  try {
-    return SAMPLE_INVOICES;
-  } catch (error) {
-    console.warn('Fallback a datos locales:', error);
-    return SAMPLE_INVOICES;
-  }
-}
-
-// Exporta reporte (simulado)
+// Exporta reporte
 async function exportReport() {
   try {
-    // En producción: POST real a API
-    // const res = await fetch(`${API_BASE}/admin/export`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ format: 'pdf', date: new Date().toISOString() }),
-    // });
-    // if (!res.ok) throw new Error('Export failed');
-    // return await res.blob();
-    
-    // Simulación
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    // TODO: [2026-07-20] Integrar API real de exportación
+    await new Promise((resolve, reject) => setTimeout(resolve, 2000));
     return true;
   } catch (error) {
-    console.warn('Error exportando:', error);
-    return false;
+    console.error('[SmileTrack][API] Error exportando reporte:', error);
+    throw error;
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════
 //  INICIALIZACIÓN DE COMPONENTES
 // ═══════════════════════════════════════════════════════════════════
+
+const cleanupHandlers = [];
 
 // Inicializa sidebar móvil con gestión de foco y ARIA
 const initSidebar = () => {
@@ -312,7 +150,7 @@ const initSidebar = () => {
     overlay.classList.toggle('open', show);
     hamburger.setAttribute('aria-expanded', show);
     overlay.setAttribute('aria-hidden', !show);
-    
+
     if (show) {
       const firstLink = sidebar.querySelector('.nav-item');
       if (firstLink) firstLink.focus();
@@ -321,23 +159,34 @@ const initSidebar = () => {
     }
   };
 
-  hamburger.addEventListener('click', () => toggleMenu(true));
-  overlay.addEventListener('click', () => toggleMenu(false));
-
-  // ✅ Navegación: cerrar menú en móvil, SIN bloquear enlaces
-  sidebar.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-      if (window.innerWidth <= 680) {
-        toggleMenu(false);
-      }
-    });
-  });
-
-  document.addEventListener('keydown', (e) => {
+  const handleHamburgerClick = () => toggleMenu(true);
+  const handleOverlayClick = () => toggleMenu(false);
+  const handleKeyDown = (e) => {
     if (e.key === 'Escape' && sidebar.classList.contains('open')) {
       e.preventDefault();
       toggleMenu(false);
     }
+  };
+
+  hamburger.addEventListener('click', handleHamburgerClick);
+  overlay.addEventListener('click', handleOverlayClick);
+  document.addEventListener('keydown', handleKeyDown);
+
+  // Registro para limpieza
+  cleanupHandlers.push(() => {
+    hamburger.removeEventListener('click', handleHamburgerClick);
+    overlay.removeEventListener('click', handleOverlayClick);
+    document.removeEventListener('keydown', handleKeyDown);
+  });
+
+  // Navegación en móvil
+  const navItems = sidebar.querySelectorAll('.nav-item');
+  const handleNavClick = () => {
+    if (window.innerWidth <= 680) toggleMenu(false);
+  };
+  navItems.forEach(item => item.addEventListener('click', handleNavClick));
+  cleanupHandlers.push(() => {
+    navItems.forEach(item => item.removeEventListener('click', handleNavClick));
   });
 };
 
@@ -345,39 +194,35 @@ const initSidebar = () => {
 const initExport = () => {
   const btn = safeGetElement('btnExport');
   const progressBar = safeGetElement('topProgressBar');
-  
+
   if (!btn || !progressBar) return;
-  
-  btn.addEventListener('click', async () => {
+
+  const handleExport = async () => {
     if (btn.disabled) return;
-    
+
     btn.disabled = true;
     btn.innerHTML = '⏳ Generando...';
-    
-    // Animar barra de progreso
+
     progressBar.style.transition = 'width 2.5s cubic-bezier(.4,0,.2,1)';
     progressBar.style.width = '100%';
-    
+
     try {
-      const success = await exportReport();
-      
-      if (success) {
-        showToast('✅ Reporte generado y descargado (PDF + Excel)');
-      } else {
-        showToast('❌ Error al generar reporte', 'error');
-      }
+      await exportReport();
+      showToast('✅ Reporte generado exitosamente');
     } catch (error) {
-      console.warn('Error en exportación:', error);
-      showToast('❌ Error de conexión', 'error');
+      showToast('❌ Error al generar reporte', 'error');
     } finally {
-      // Restaurar botón
       setTimeout(() => {
         btn.disabled = false;
         btn.innerHTML = '📊 Exportar reporte';
-        progressBar.style.width = '75%';
+        const originalWidth = progressBar.closest('.progress-row').getAttribute('aria-valuenow');
+        progressBar.style.width = (originalWidth || '75') + '%';
       }, 500);
     }
-  });
+  };
+
+  btn.addEventListener('click', handleExport);
+  cleanupHandlers.push(() => btn.removeEventListener('click', handleExport));
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -385,34 +230,23 @@ const initExport = () => {
 // ═══════════════════════════════════════════════════════════════════
 
 const init = async () => {
-  // Inicializar componentes de UI
-  initSidebar();
-  initExport();
-  
-  // Cargar datos en paralelo
-  const [metrics, revenue, status, topPros, invoices] = await Promise.all([
-    fetchMetrics(),
-    fetchRevenue(),
-    fetchStatus(),
-    fetchTopProfessionals(),
-    fetchInvoices(),
-  ]);
-  
-  // Renderizar componentes
-  renderMetrics(metrics);
-  renderRevenueChart(revenue);
-  renderStatusChart(status);
-  renderTopProfessionals(topPros);
-  renderInvoices(invoices);
-  
-  // Toast de bienvenida (después de cargar datos)
-  setTimeout(() => {
-    showToast('✅ Conexión establecida con SmileTrack');
-  }, 800);
-  
+  try {
+    initSidebar();
+    initExport();
+    initNativeAnimations();
+
+    setTimeout(() => {
+      showToast('✅ Panel administrativo cargado');
+    }, 500);
+  } catch (error) {
+    console.error('[SmileTrack][Init] Falla crítica durante la inicialización:', error);
+  }
+
   // Limpieza al unload para evitar memory leaks
   window.addEventListener('beforeunload', () => {
-    // Remover listeners en implementación SPA real
+    activeAnimations.forEach(id => cancelAnimationFrame(id));
+    activeAnimations.clear();
+    cleanupHandlers.forEach(fn => fn());
   });
 };
 

@@ -58,10 +58,15 @@
   </nav>
 
   <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">PR</div>
+    @{
+      var _pName     = User.Identity?.Name ?? "Profesional";
+      var _pEmail    = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "profesional@smiletrack.co";
+      var _pInitials = string.Concat(_pName.Split(' ', System.StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
+    }
+    <div class="user-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(_pInitials) ? "PR" : _pInitials)</div>
     <div class="user-info">
-      <span class="user-role">Profesional</span>
-      <span class="user-email">profesional@smiletrack.co</span>
+      <span class="user-role">@_pName</span>
+      <span class="user-email">@_pEmail</span>
     </div>
   </div>
 </aside>

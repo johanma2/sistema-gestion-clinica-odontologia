@@ -10,9 +10,8 @@ namespace SmileTrack_MVC.Models.Entities
         [Column("id_profesional")]
         public int IdProfesional { get; set; }
 
-        [Required]
         [Column("id_usuario")]
-        public int IdUsuario { get; set; }
+        public int? IdUsuario { get; set; }
 
         [Required]
         [Column("nombres")]

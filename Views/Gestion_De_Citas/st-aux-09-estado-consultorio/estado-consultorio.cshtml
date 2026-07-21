@@ -45,13 +45,13 @@
     <div class="nav-separator" aria-hidden="true"></div>
     <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
   </nav>
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AU</div>
-    <div class="user-info">
-      <span class="user-role">Auxiliar</span>
-      <span class="user-email">auxiliar@smiletrack.co</span>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Substring(0, 2).ToUpperInvariant() ?? "U")</div>
+      <div class="user-info">
+        <span class="user-role">@User.Identity?.Name</span>
+        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
+      </div>
     </div>
-  </div>
 </aside>
 
 
@@ -336,3 +336,5 @@
 </body>
 
 </html>
+
+

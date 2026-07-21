@@ -8,6 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
     content="Consulta reportes clínicos, indicadores de pacientes y rendimiento médico en SmileTrack." />
+  <meta name="robots" content="noindex, nofollow" />
   <title>SmileTrack — Reportes Clínicos</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -28,10 +29,15 @@
     </div>
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
     <div class="sidebar-user">
-      <div class="user-avatar" aria-hidden="true">AD</div>
+      @{
+        var sidebarName     = User.Identity?.Name ?? "Administrador";
+        var sidebarEmail    = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin@smiletrack.co";
+        var sidebarInitials = string.Concat(sidebarName.Split(' ', System.StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
+      }
+      <div class="user-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(sidebarInitials) ? "AD" : sidebarInitials)</div>
       <div class="user-info">
-        <span class="user-role">Administrador</span>
-        <span class="user-email">admin@smiletrack.co</span>
+        <span class="user-role">@sidebarName</span>
+        <span class="user-email">@sidebarEmail</span>
       </div>
     </div>
   </aside>
@@ -163,7 +169,11 @@
         }
         else
         {
-          <div class="empty-state" role="status">No se encontraron pacientes con los criterios de búsqueda.</div>
+          <div class="empty-state" role="status" aria-live="polite">
+            <div class="empty-state-icon">🩺</div>
+            <div class="empty-state-title">Sin resultados</div>
+            <div class="empty-state-subtitle">No hay reportes que coincidan con los filtros seleccionados.</div>
+          </div>
         }
       </div>
 

@@ -1,10 +1,19 @@
-@{ Layout = null;
+@{
+  // Extraer datos del ViewBag con fallback para evitar null reference en caso de error del Controller
   var especialidades = ViewData["Especialidades"] as List<SmileTrack_MVC.Models.Entities.Especialidad> ?? new();
-  var usuarios = ViewData["Usuarios"] as List<SmileTrack_MVC.Models.Entities.Usuario> ?? new();
-  var profesionales = ViewData["Profesionales"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
-  var pageResult = ViewData["ProfesionalesPage"] as SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.Entities.Profesional>;
+  var usuarios       = ViewData["Usuarios"]       as List<SmileTrack_MVC.Models.Entities.Usuario>      ?? new();
+  var profesionales  = ViewData["Profesionales"]  as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
+  var pageResult     = ViewData["ProfesionalesPage"] as SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.Entities.Profesional>;
   var editingProfesional = ViewData["EditingProfesional"] as SmileTrack_MVC.Models.Entities.Profesional;
+
+  // Stats globales: vienen del Controller como COUNT() sobre toda la BD (no de la página actual).
+  // WHY: si hay 80 profesionales y se muestran 10 por página, los stats deben decir 80, no 10.
+  var statTotal      = (int)(ViewData["StatTotal"]      ?? 0);
+  var statActivos    = (int)(ViewData["StatActivos"]    ?? 0);
+  var statVacaciones = (int)(ViewData["StatVacaciones"] ?? 0);
+  var statInactivos  = (int)(ViewData["StatInactivos"]  ?? 0);
 }
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -13,6 +22,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Gestión de odontólogos y especialistas de la clínica SmileTrack" />
+  <meta name="robots" content="noindex, nofollow" />
   <title>SmileTrack — Gestión de Profesionales</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -33,10 +43,15 @@
     </div>
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
     <div class="sidebar-user">
-      <div class="user-avatar" aria-hidden="true">AD</div>
+      @{
+        var userName = User.Identity?.Name ?? "Administrador";
+        var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin@smiletrack.co";
+        var userInitials = string.Concat(userName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
+      }
+      <div class="user-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(userInitials) ? "AD" : userInitials)</div>
       <div class="user-info">
-        <span class="user-role">Administrador</span>
-        <span class="user-email">admin@smiletrack.co</span>
+        <span class="user-role">@userName</span>
+        <span class="user-email">@userEmail</span>
       </div>
     </div>
   </aside>
@@ -69,33 +84,33 @@
       </button>
     </header>
 
-    <!-- Stats Grid -->
+    <!--
+      Stats Grid: los data-target reciben valores reales de BD (COUNT global, sin filtros).
+      WHY: el JS lee data-target y anima el contador de 0 al valor real al cargar la página.
+           Los valores NO dependen de la página actual ni de filtros activos — siempre son el total real.
+    -->
     <section class="stats-grid" aria-label="Estadísticas de profesionales">
-      @{
-        var totalProf = profesionales.Count;
-        var profActivos = profesionales.Count(p => p.Estado == "activo");
-        var profVacaciones = profesionales.Count(p => p.Estado == "vacaciones");
-        var profInactivos = profesionales.Count(p => p.Estado == "inactivo");
-      }
       <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="metricTotal" data-target="@totalProf" aria-live="polite">0</span>
+        <span class="stat-number" id="metricTotal" data-target="@statTotal" aria-live="polite">0</span>
         <span class="stat-label">Total Profesionales</span>
       </div>
       <div class="stat-card" data-color="green">
-        <span class="stat-number" id="metricActives" data-target="@profActivos" aria-live="polite">0</span>
+        <span class="stat-number" id="metricActives" data-target="@statActivos" aria-live="polite">0</span>
         <span class="stat-label">Activos</span>
       </div>
       <div class="stat-card" data-color="orange">
-        <span class="stat-number" id="metricVacations" data-target="@profVacaciones" aria-live="polite">0</span>
+        <span class="stat-number" id="metricVacations" data-target="@statVacaciones" aria-live="polite">0</span>
         <span class="stat-label">En vacaciones</span>
       </div>
       <div class="stat-card" data-color="red">
-        <span class="stat-number" id="metricInactives" data-target="@profInactivos" aria-live="polite">0</span>
+        <span class="stat-number" id="metricInactives" data-target="@statInactivos" aria-live="polite">0</span>
         <span class="stat-label">Inactivos</span>
       </div>
     </section>
 
-    <!-- Filtros -->
+
+    <!-- Filtros: cada submit hace GET real al Controller — los parámetros van como query string -->
+    <!-- WHY: GET en lugar de POST permite compartir URLs con filtros aplicados (bookmarkeable) -->
     <section class="filters-section" aria-label="Filtros de búsqueda">
       <form method="get" class="filters-row">
         <div class="search-wrap">
@@ -144,13 +159,16 @@
             }
           </select>
         </div>
+        <!-- Resetear page=1 al filtrar: evita quedarse en una página que ya no existe tras filtrar -->
         <input type="hidden" name="page" value="1" />
         <button class="btn-primary" type="submit">Aplicar</button>
+        <!-- Limpiar: enlace simple al GET sin params — más limpio que resetear el form con JS -->
         <a class="btn-secondary" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales")">Limpiar</a>
       </form>
     </section>
 
-    <!-- modal -->
+    <!-- Tabla de profesionales: renderizada server-side por Razor (SSR) -->
+    <!-- WHY: SSR garantiza que el contenido esté disponible inmediatamente sin esperar JS -->
     <section class="table-card" aria-labelledby="professionalsTitle">
       <h2 class="visually-hidden" id="professionalsTitle">Lista de profesionales</h2>
       <div class="table-wrap">
@@ -166,6 +184,34 @@
             </tr>
           </thead>
           <tbody id="professionalsTbody" aria-live="polite">
+            @if (!profesionales.Any())
+            {
+              @* 
+                CASO LÍMITE: Lista vacía.
+                Puede ocurrir porque:
+                a) No hay profesionales registrados en BD todavía.
+                b) Los filtros aplicados (búsqueda, especialidad, estado) no coincidieron con nada.
+                Mostramos un mensaje amigable en lugar de una tabla en blanco que confunde al usuario.
+              *@
+              var hayFiltros = !string.IsNullOrWhiteSpace(ViewData["SearchFilter"]?.ToString())
+                            || !string.IsNullOrWhiteSpace(ViewData["EspecialidadFilter"]?.ToString())
+                            || !string.IsNullOrWhiteSpace(ViewData["EstadoFilter"]?.ToString());
+              <tr>
+                <td colspan="6" style="text-align:center; padding:48px 24px; color:var(--text-muted);">
+                  <div style="font-size:2rem; margin-bottom:8px;">🩺</div>
+                  @if (hayFiltros)
+                  {
+                    <strong>Sin resultados</strong>
+                    <br /><span style="font-size:0.875rem;">Ningún profesional coincide con los filtros aplicados. <a href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales")">Limpiar filtros</a></span>
+                  }
+                  else
+                  {
+                    <strong>Aún no hay profesionales registrados</strong>
+                    <br /><span style="font-size:0.875rem;">Haz clic en "Nuevo Profesional" para agregar el primero.</span>
+                  }
+                </td>
+              </tr>
+            }
             @foreach (var profesional in profesionales)
             {
               var especialidadPrincipal = profesional.Especialidades.FirstOrDefault(pe => pe.Principal)?.Especialidad?.Nombre ?? profesional.Especialidades.FirstOrDefault()?.Especialidad?.Nombre;
@@ -174,9 +220,8 @@
                   @{
                     var name = $"{profesional.Nombres} {profesional.Apellidos}".Trim();
                     var initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
-                    var color = (profesional.IdProfesional % 5) switch { 0 => "#3b82f6", 1 => "#10b981", 2 => "#f59e0b", 3 => "#ef4444", _ => "#8b5cf6" };
                   }
-                  <div class="p-avatar" style="background-color: @color;">@initials</div>
+                  <div class="p-avatar p-avatar--color-@(profesional.IdProfesional % 5)">@initials</div>
                   <span class="p-name">@name</span>
                 </td>
                 <td><span class="badge-spec @((especialidadPrincipal ?? string.Empty).ToLowerInvariant())">@especialidadPrincipal</span></td>
@@ -185,8 +230,10 @@
                 <td><span class="badge-status badge-@((profesional.Estado ?? string.Empty).ToLowerInvariant())">@profesional.Estado</span></td>
                 <td>
                   <div class="actions-cell">
+                    <!-- Editar: GET con editId para que el Controller cargue el profesional en ViewData -->
                     <a class="btn-icon edit" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { editId = profesional.IdProfesional })">✏️</a>
-                    <form method="post" asp-action="EliminarProfesional" asp-controller="GestionProfesionales" style="display:inline;">
+                    <!-- Eliminar: POST con AntiForgery token — protección CSRF obligatoria en mutaciones -->
+                    <form method="post" action="/gestion-de-profesionales/eliminar-profesional" style="display:inline;">
                       @Html.AntiForgeryToken()
                       <input type="hidden" name="IdProfesional" value="@profesional.IdProfesional" />
                       <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
@@ -200,7 +247,8 @@
         </table>
       </div>
 
-      <!-- Paginación -->
+      <!-- Paginación server-side: los links llevan page, pageSize y filtros actuales como query string -->
+      <!-- WHY: cada click es un GET real al Controller — no se cargan todos los registros en memoria -->
       <div class="pagination" role="navigation" aria-label="Paginación de profesionales">
         @{ }
       <span id="paginationInfo" aria-live="polite">Mostrando <strong>@(pageResult?.Items.Count ?? 0)</strong> de <strong>@(pageResult?.TotalCount ?? 0)</strong> profesionales</span>
@@ -232,18 +280,25 @@
 
   </main>
 
-  <!-- Modal: Crear/Editar Profesional -->
+  <!-- Modal Crear/Editar Profesional -->
+  <!--
+    inert attribute: bloquea focus y teclado dentro del modal cuando está cerrado (WCAG 2.1).
+    WHY: sin inert, Tab llegaría a los inputs aunque el modal sea invisible — falla de accesibilidad.
+    aria-hidden="true" oculta el modal de lectores de pantalla cuando está cerrado.
+  -->
   <div class="modal-overlay" id="modalForm" role="dialog" aria-modal="true" aria-labelledby="modalFormTitle"
     aria-hidden="true" inert>
     <div class="modal">
       <button class="modal-close" id="modalFormClose" aria-label="Cerrar ventana">×</button>
       <h2 class="modal-title" id="modalFormTitle">Nuevo Profesional</h2>
-      <form id="formProfessional" method="post" asp-action="GuardarProfesional" asp-controller="GestionProfesionales" novalidate>
+      <!-- novalidate: desactiva validación HTML nativa para controlar el flujo desde JS -->
+      <!-- WHY: la validación nativa del browser no muestra mensajes custom ni toast -->
+      <form id="formProfessional" method="post" action="/gestion-de-profesionales/guardar-profesional" novalidate>
         @Html.AntiForgeryToken()
+        <!-- ReturnUrl: para que el redirect post-guardado vuelva a esta misma URL con sus filtros -->
         <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
         <input type="hidden" name="IdProfesional" id="formIdProfesional" value="@(editingProfesional?.IdProfesional ?? 0)" />
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;">
-          <div class="form-group">
+        <div class="form-group">
             <label class="form-label" for="formNombres">Nombres *</label>
             <input type="text" id="formNombres" name="Nombres" class="form-input" required placeholder="Ej. Carlos" value="@(editingProfesional?.Nombres)">
           </div>
@@ -269,8 +324,8 @@
               <option value="">Sin especialidad</option>
               @foreach (var especialidad in especialidades)
               {
-                var espSelected = editingProfesional?.Especialidades.Any(pe => pe.IdEspecialidad == especialidad.IdEspecialidad) == true ? "selected" : "";
-                <option value="@especialidad.IdEspecialidad" selected="@(espSelected)">@especialidad.Nombre</option>
+                var espSelected = editingProfesional?.Especialidades.Any(pe => pe.IdEspecialidad == especialidad.IdEspecialidad) == true ? "selected" : null;
+                <option value="@especialidad.IdEspecialidad" selected="@espSelected">@especialidad.Nombre</option>
               }
             </select>
           </div>
@@ -280,17 +335,17 @@
               <option value="0">Sin usuario</option>
               @foreach (var usuario in usuarios)
               {
-                var usrSelected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : "";
-                <option value="@usuario.IdUsuario" selected="@(usrSelected)">@usuario.Nombre @usuario.Apellidos</option>
+                var usrSelected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : null;
+                <option value="@usuario.IdUsuario" selected="@usrSelected">@usuario.Nombre @usuario.Apellidos</option>
               }
             </select>
           </div>
           <div class="form-group">
             <label class="form-label" for="formStatus">Estado *</label>
             <select id="formStatus" name="Estado" class="form-input" required>
-              <option value="activo" selected="@(editingProfesional?.Estado == "activo")">Activo</option>
-              <option value="vacaciones" selected="@(editingProfesional?.Estado == "vacaciones")">Vacaciones</option>
-              <option value="inactivo" selected="@(editingProfesional?.Estado == "inactivo")">Inactivo</option>
+              <option value="activo" selected="@(editingProfesional?.Estado == "activo" ? "selected" : null)">Activo</option>
+              <option value="vacaciones" selected="@(editingProfesional?.Estado == "vacaciones" ? "selected" : null)">Vacaciones</option>
+              <option value="inactivo" selected="@(editingProfesional?.Estado == "inactivo" ? "selected" : null)">Inactivo</option>
             </select>
           </div>
         </div>
@@ -353,6 +408,23 @@
 
   <!-- Toast -->
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Errores de validación server-side (TempData) -->
+  @if (TempData["ErrorValidacion"] != null)
+  {
+    <script>
+      // Se ejecuta cuando el servidor rechazó el formulario por campos inválidos.
+      // TempData solo vive UN request — se consume aquí y desaparece.
+      document.addEventListener('DOMContentLoaded', () => {
+        const toast = document.getElementById('toast');
+        if (toast) {
+          toast.textContent = '⚠️ @TempData["ErrorValidacion"]';
+          toast.className = 'toast warning show';
+          setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+      });
+    </script>
+  }
 
   <!-- Estilos para screen readers -->
   <style>

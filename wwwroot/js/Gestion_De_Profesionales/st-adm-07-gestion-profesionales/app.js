@@ -1,25 +1,32 @@
 /**
- * SMILETRACK — GESTIÓN PROFESIONALES (profesionales.js)
- * API-ready + Accesibilidad + Persistencia fallback
+ * SMILETRACK — GESTIÓN PROFESIONALES
+ *
+ * NOTA: Este archivo contiene lógica de fallback.
+ * La renderización principal es server-side (Razor),
+ * el JS solo maneja: modales, sidebar móvil y animaciones de contadores.
  */
 
-// ═══════════════════════════════════════════════════════════════════
-//  CONFIGURACIÓN API
-// ═══════════════════════════════════════════════════════════════════
+// Base URL para futuras migraciones a API REST (actualmente no se usa en producción)
 const API_BASE = '/gestion-de-profesionales';
 
 // ═══════════════════════════════════════════════════════════════════
 //  UTILIDADES GLOBALES
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene elemento del DOM con manejo seguro de null
+/**
+ * Obtiene elemento del DOM con logging de errores.
+ * WHY: Evita null reference errors silenciosos que rompen la UX sin mensaje claro.
+ */
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes
+/**
+ * Debounce para búsqueda en tiempo real.
+ * WHY: Evita disparar el submit del form a cada tecla mientras el usuario escribe.
+ */
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -28,7 +35,10 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre
+/**
+ * Muestra notificación toast con auto-cierre.
+ * WHY: Feedback visual sin bloquear la interfaz (mejor UX que alert() que paraliza todo).
+ */
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -41,8 +51,9 @@ const showToast = (message, type = 'success') => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  DATOS DE EJEMPLO (ya no se necesitan para el flujo real)
+//  MAPEO DE COLORES (solo UI, no afecta lógica de negocio)
 // ═══════════════════════════════════════════════════════════════════
+// WHY: Centralizar el mapeo aquí evita repetirlo en Razor y en JS.
 const SPEC_COLORS = {
   'Odontología General': 'general',
   'Ortodoncia': 'ortodoncia',
@@ -54,24 +65,34 @@ const SPEC_COLORS = {
   'Rehabilitación Oral': 'rehab',
 };
 
+// Variables de estado solo para el modo fallback client-side
 let professionals = [];
 let searchQuery = '';
-
-const shouldUseServerRenderedTable = () => {
-  const tbody = safeGetElement('professionalsTbody');
-  return !!(tbody && tbody.children.length > 0);
-};
 let selectedSpecialty = '';
 let selectedStatus = '';
 let currentPage = 1;
 const itemsPerPage = 5;
 let editingId = null;
 
+/**
+ * Detecta si la tabla ya viene renderizada desde el servidor (SSR).
+ * WHY: Permite que el mismo archivo JS funcione en modo Razor/SSR (producción)
+ *      y en modo client-side puro (fallback/demo), sin duplicar código.
+ */
+const shouldUseServerRenderedTable = () => {
+  const tbody = safeGetElement('professionalsTbody');
+  // Si el tbody tiene filas renderizadas por Razor, usamos SSR y saltamos el JS de tabla
+  return !!(tbody && tbody.children.length > 0);
+};
+
 // ═══════════════════════════════════════════════════════════════════
 //  FUNCIONES DE RENDERIZADO
 // ═══════════════════════════════════════════════════════════════════
 
-// Anima contador numérico
+/**
+ * Anima contador numérico de 0 al valor objetivo.
+ * WHY: Mejora visual al cargar estadísticas — indica que el número es dinámico (efecto "wow").
+ */
 const animateCounter = (el, target) => {
   if (!el) return;
   let cur = 0;
@@ -83,18 +104,28 @@ const animateCounter = (el, target) => {
   }, 30);
 };
 
-// Obtiene clase CSS para badge de especialidad
+/**
+ * Obtiene clase CSS para badge de especialidad.
+ * TODO: Mover a constante centralizada para evitar duplicación con el CSS.
+ */
 const getSpecBadgeClass = (specialty) => {
   return SPEC_COLORS[specialty] || 'general';
 };
 
-// Obtiene clase CSS para badge de estado
+/**
+ * Obtiene clase CSS para badge de estado.
+ * WHY: Centraliza el mapeo para no hardcodear strings en múltiples lugares del template.
+ */
 const getStatusBadgeClass = (status) => {
   const map = { 'Activo': 'activo', 'Vacaciones': 'vacaciones', 'Inactivo': 'inactivo' };
   return map[status] || 'inactivo';
 };
 
-// Obtiene color de avatar por especialidad
+/**
+ * Obtiene color de avatar por especialidad.
+ * WHY: Colores deterministas (siempre el mismo por especialidad) mejoran
+ *      el reconocimiento visual rápido al escanear la tabla.
+ */
 const getAvatarColor = (specialty) => {
   const colors = {
     'general': 'var(--spec-general)',
@@ -109,7 +140,11 @@ const getAvatarColor = (specialty) => {
   return colors[getSpecBadgeClass(specialty)] || 'var(--spec-general)';
 };
 
-// Renderiza tabla de profesionales con accesibilidad
+/**
+ * Renderiza tabla de profesionales (solo para modo fallback client-side).
+ * NOTE: Esta función NO se ejecuta si hay SSR — ver shouldUseServerRenderedTable().
+ *       En producción la tabla viene de Razor; esta función es backup por si el servidor falla.
+ */
 const renderTable = () => {
   const tbody = safeGetElement('professionalsTbody');
   if (!tbody || shouldUseServerRenderedTable()) return;
@@ -169,7 +204,10 @@ const renderTable = () => {
   updatePagination(filtered.length, paginated.length);
 };
 
-// Actualiza contadores de estadísticas
+/**
+ * Actualiza contadores de estadísticas (solo modo fallback client-side).
+ * WHY: Solo se ejecuta si no hay SSR para evitar duplicar lógica que ya hizo el servidor.
+ */
 const updateStats = () => {
   if (shouldUseServerRenderedTable()) return;
   const total = professionals.length;
@@ -183,7 +221,10 @@ const updateStats = () => {
   animateCounter(safeGetElement('metricInactives'), inactives);
 };
 
-// Actualiza botones de paginación
+/**
+ * Actualiza botones de paginación (solo modo fallback client-side).
+ * WHY: Solo se ejecuta si no hay SSR; en producción la paginación viene renderizada de Razor.
+ */
 const updatePagination = (total, count) => {
   if (shouldUseServerRenderedTable()) return;
   const info = safeGetElement('paginationInfo');
@@ -268,51 +309,54 @@ window.viewProfessional = (id) => {
   }
 };
 
-// Editar profesional
+/**
+ * Edita profesional en modo SSR: navega vía GET con editId.
+ * WHY: En SSR el array professionals[] siempre está vacío (la tabla la renderizó Razor).
+ *      Buscar en el array y llenar el modal a mano NUNCA funcionaría.
+ *      La edición correcta es un GET al Controller que carga el profesional desde BD
+ *      y lo pasa en ViewData["EditingProfesional"] para pre-rellenar el modal en el servidor.
+ */
 window.editProfessional = (id) => {
+  if (shouldUseServerRenderedTable()) {
+    // SSR: navegar al mismo URL con editId → el Controller pre-rellena el modal desde BD
+    window.location.href = `${window.location.pathname}?editId=${id}`;
+    return;
+  }
+  // Fallback client-side (no activo en producción)
   const p = professionals.find(prof => prof.id === id);
   if (!p) return;
-  
   editingId = id;
-  
-  // Actualizar formulario
-  const formName = safeGetElement('formName');
-  const formSpecialty = safeGetElement('formSpecialty');
-  const formRegistry = safeGetElement('formRegistry');
-  const formPhone = safeGetElement('formPhone');
-  const formStatus = safeGetElement('formStatus');
-  const modalTitle = safeGetElement('modalFormTitle');
-  
-  if (formName) formName.value = p.name;
-  if (formSpecialty) formSpecialty.value = p.specialty;
-  if (formRegistry) formRegistry.value = p.registry;
-  if (formPhone) formPhone.value = p.phone;
-  if (formStatus) formStatus.value = p.status;
-  if (modalTitle) modalTitle.textContent = 'Editar Profesional';
-  
-  // Abrir modal
-  const modal = safeGetElement('modalForm');
-  if (modal) {
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
-    modal.removeAttribute('inert');
-    if (formName) formName.focus();
-    document.body.style.overflow = 'hidden';
-  }
+  const formNombres = safeGetElement('formNombres');
+  const formStatus  = safeGetElement('formStatus');
+  const modalTitle  = safeGetElement('modalFormTitle');
+  if (formNombres)  formNombres.value = p.name;
+  if (formStatus)   formStatus.value  = p.status;
+  if (modalTitle)   modalTitle.textContent = 'Editar Profesional';
+  openFormModal();
 };
 
-// Alternar estado de profesional
+/**
+ * Alterna estado de profesional vía redirect al endpoint de baja lógica.
+ * WHY: Cambiar el estado solo en el array de memoria NO persiste a la BD.
+ *      En SSR se redirige al servidor para que haga el cambio real.
+ *      El endpoint EliminarProfesional ahora hace baja lógica (Estado = "inactivo"),
+ *      pero para ciclar estados necesitaríamos un endpoint dedicado.
+ *      Por ahora, se notifica al usuario que debe usar el formulario de edición.
+ */
 window.toggleStatus = (id) => {
+  if (shouldUseServerRenderedTable()) {
+    // En SSR no hay forma de cambiar el estado sin un POST al servidor;
+    // redirigir a edición del profesional para que el admin cambie el estado.
+    window.location.href = `${window.location.pathname}?editId=${id}`;
+    return;
+  }
+  // Fallback client-side
   const p = professionals.find(prof => prof.id === id);
   if (!p) return;
-  
-  // Ciclo: Activo → Vacaciones → Inactivo → Activo
   const states = ['Activo', 'Vacaciones', 'Inactivo'];
   const currentIndex = states.indexOf(p.status);
   p.status = states[(currentIndex + 1) % states.length];
-  
   showToast(`✅ ${p.name}: estado cambiado a "${p.status}"`);
-  
   updateStats();
   renderTable();
 };
@@ -321,29 +365,42 @@ window.toggleStatus = (id) => {
 //  MODALES
 // ═══════════════════════════════════════════════════════════════════
 
-// Abre modal de formulario
+// Rastrear el elemento que abrió el modal para devolver el foco al cerrarlo (WCAG 2.4.3)
+let lastModalOpener = null;
+
+/**
+ * Abre modal de formulario y registra quién lo abrió.
+ * WHY: WCAG 2.4.3 — al cerrar un modal el foco debe regresar al elemento
+ *      que lo disparó. Sin esto el foco queda al principio del documento.
+ */
 const openFormModal = () => {
+  // Registrar el botón que abre el modal para devolverle el foco al cerrar
+  lastModalOpener = document.activeElement;
+
   editingId = null;
-  
-  // Resetear formulario
+
   const form = safeGetElement('formProfessional');
   if (form) form.reset();
-  
+
   const modalTitle = safeGetElement('modalFormTitle');
   if (modalTitle) modalTitle.textContent = 'Nuevo Profesional';
-  
+
   const modal = safeGetElement('modalForm');
   if (modal) {
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     modal.removeAttribute('inert');
-    const firstInput = modal.querySelector('input');
+    const firstInput = modal.querySelector('input:not([type="hidden"])');
     if (firstInput) firstInput.focus();
     document.body.style.overflow = 'hidden';
   }
 };
 
-// Cierra modal de formulario
+/**
+ * Cierra modal de formulario y devuelve el foco al elemento que lo abrió.
+ * WHY: WCAG 2.4.3 — el foco debe regresar al botón que disparó el modal
+ *      ("+ Nuevo Profesional" o el botón editar ✏️ de la fila correspondiente).
+ */
 const closeFormModal = () => {
   const modal = safeGetElement('modalForm');
   if (modal) {
@@ -353,9 +410,17 @@ const closeFormModal = () => {
     document.body.style.overflow = '';
   }
   editingId = null;
+  // Devolver el foco al elemento que abrió el modal (si sigue en el DOM)
+  if (lastModalOpener && typeof lastModalOpener.focus === 'function') {
+    lastModalOpener.focus();
+  }
+  lastModalOpener = null;
 };
 
-// Cierra modal de detalle
+/**
+ * Cierra modal de detalle y devuelve el foco al elemento que lo abrió.
+ * WHY: Mismo principio WCAG 2.4.3 que closeFormModal.
+ */
 const closeDetailModal = () => {
   const modal = safeGetElement('modalDetail');
   if (modal) {
@@ -364,6 +429,10 @@ const closeDetailModal = () => {
     modal.setAttribute('inert', '');
     document.body.style.overflow = '';
   }
+  if (lastModalOpener && typeof lastModalOpener.focus === 'function') {
+    lastModalOpener.focus();
+  }
+  lastModalOpener = null;
 };
 
 // Crea o actualiza profesional — submit nativo para que el antiforgery token viaje correctamente
@@ -373,21 +442,39 @@ const saveProfessional = (e) => {
   const apellidos = safeGetElement('formApellidos')?.value.trim() || '';
   const registroMedico = safeGetElement('formRegistroMedico')?.value.trim() || '';
 
+  // ── VALIDACIÓN CLIENTE ──────────────────────────────────────────────────────
+  // Si los campos obligatorios están vacíos, mostramos el toast y BLOQUEAMOS el envío.
+  // e.preventDefault() solo se llama aquí — nunca después de pasar la validación.
   if (!nombres || !apellidos || !registroMedico) {
     e.preventDefault();
     showToast('⚠️ Completa nombres, apellidos y registro médico', 'warning');
     return;
   }
 
-  // Dejar que el formulario se envíe de forma nativa (POST real al servidor)
-  // El antiforgery token ya está en el <input hidden> del form, no hace falta fetch
+  // ── PROTECCIÓN DOBLE CLIC ───────────────────────────────────────────────────
+  // Una vez que la validación pasó, deshabilitamos el botón submit INMEDIATAMENTE.
+  // Esto evita que el usuario haga clic dos veces y cree dos registros duplicados en BD.
+  // No necesitamos volver a habilitarlo porque tras el POST el servidor redirige
+  // a la misma página (recarga completa) y el botón renace en su estado original.
+  const submitBtn = form.querySelector('[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Guardando...';
+  }
+
+  // Dejar que el formulario se envíe de forma nativa (POST real al servidor).
+  // El antiforgery token ya está en el <input hidden> del form, no hace falta fetch.
 };
+
 
 // ═══════════════════════════════════════════════════════════════════
 //  FILTROS Y BÚSQUEDA
 // ═══════════════════════════════════════════════════════════════════
 
-// Actualiza selector de especialidades
+/**
+ * Actualiza selector de especialidades desde datos en memoria.
+ * WHY: Solo se usa en modo fallback; en producción las opciones vienen del servidor.
+ */
 const populateSpecialties = () => {
   const select = safeGetElement('filterSpecialty');
   if (!select) return;
@@ -401,7 +488,10 @@ const populateSpecialties = () => {
   if (currentValue) select.value = currentValue;
 };
 
-// Aplica filtros de búsqueda
+/**
+ * Aplica filtros de búsqueda sobre datos en memoria.
+ * WHY: Solo actúa en modo fallback; en producción los filtros son server-side via GET.
+ */
 const applyFilters = () => {
   searchQuery = safeGetElement('searchInput')?.value.toLowerCase() || '';
   selectedSpecialty = safeGetElement('filterSpecialty')?.value || '';
@@ -415,7 +505,11 @@ const applyFilters = () => {
 //  API CALLS (Listas para conectar al backend C#)
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene lista de profesionales desde el servidor renderizado
+/**
+ * Obtiene lista de profesionales desde el servidor.
+ * TODO: Implementar fetch real cuando el backend tenga endpoint API REST.
+ *       Por ahora retorna [] porque la tabla ya viene renderizada en Razor (SSR).
+ */
 async function fetchProfessionals() {
   return [];
 }
@@ -424,7 +518,11 @@ async function fetchProfessionals() {
 //  INICIALIZACIÓN DE COMPONENTES
 // ═══════════════════════════════════════════════════════════════════
 
-// Inicializa sidebar móvil con gestión de foco y ARIA
+/**
+ * Inicializa sidebar móvil con gestión de foco y ARIA.
+ * WHY: Mejora accesibilidad — sin esto, el sidebar abierto en móvil no tiene gestión de foco
+ *      y un usuario de lector de pantalla no sabe que el menú está abierto.
+ */
 const initSidebar = () => {
   const hamburger = safeGetElement('hamburger');
   const sidebar = safeGetElement('sidebar');
@@ -466,19 +564,50 @@ const initSidebar = () => {
   });
 };
 
-// Inicializa filtros de búsqueda
+/**
+ * Inicializa filtros de búsqueda en modo fallback (client-side).
+ * WHY: Solo actúa si no hay SSR; en producción los filtros se envían como GET al servidor.
+ */
 const initFilters = () => {
   if (shouldUseServerRenderedTable()) return;
-  const searchInput = safeGetElement('searchInput');
+  const searchInput    = safeGetElement('searchInput');
   const filterSpecialty = safeGetElement('filterSpecialty');
-  const filterStatus = safeGetElement('filterStatus');
-  
+  const filterStatus   = safeGetElement('filterStatus');
+
   searchInput?.addEventListener('input', debounce(applyFilters, 250));
   filterSpecialty?.addEventListener('change', applyFilters);
   filterStatus?.addEventListener('change', applyFilters);
 };
 
-// Inicializa modales
+/**
+ * Conecta el buscador de texto al submit del formulario GET de filtros en modo SSR.
+ * WHY: En SSR applyFilters() opera sobre un array vacío y no hace nada.
+ *      La búsqueda real debe llegar al Controller vía GET (?search=...) para que
+ *      EF Core filtre en SQL Server.
+ *      Esta función SOLO actúa cuando hay SSR y hay un form GET en la página.
+ */
+const initSearchDebounce = () => {
+  if (!shouldUseServerRenderedTable()) return; // Solo en SSR
+
+  const searchInput = safeGetElement('searchInput');
+  if (!searchInput) return;
+
+  // El formulario GET de filtros está en la sección .filters-section
+  const filterForm = searchInput.closest('form') ?? document.querySelector('.filters-section form');
+  if (!filterForm) return;
+
+  // Debounce: esperar 400ms después de que el usuario deje de escribir antes de enviar
+  // WHY: evitar disparar un request a cada tecla pulsada
+  searchInput.addEventListener('input', debounce(() => {
+    filterForm.submit();
+  }, 400));
+};
+
+/**
+ * Inicializa modales: eventos de apertura, cierre y teclado.
+ * WHY: Centraliza toda la configuración de modales para que initSidebar/initFilters
+ *      no necesiten conocer los detalles del modal (separación de responsabilidades).
+ */
 const initModals = () => {
   const btnNew = safeGetElement('btnNewProfessional');
   const modalFormClose = safeGetElement('modalFormClose');
@@ -527,23 +656,67 @@ const initModals = () => {
 //  FUNCIÓN PRINCIPAL DE INICIALIZACIÓN
 // ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Anima los contadores de la sección Stats cuando la tabla viene de SSR.
+ * WHY: updateStats() se saltea con SSR (correctamente), pero los data-target
+ *      del HTML de Razor contienen los valores reales del servidor. Esta función
+ *      los lee y activa la animación 0 → N para que los cards no queden en 0.
+ *
+ * Flujo:
+ *   Razor escribe  <span data-target="42">0</span>
+ *   Esta fn lee    data-target = 42
+ *   animateCounter anima el span de 0 a 42
+ */
+const initServerStats = () => {
+  const statEls = [
+    safeGetElement('metricTotal'),
+    safeGetElement('metricActives'),
+    safeGetElement('metricVacations'),
+    safeGetElement('metricInactives'),
+  ];
+
+  statEls.forEach(el => {
+    if (!el) return;
+    const target = parseInt(el.getAttribute('data-target') ?? '0', 10);
+    // Solo animar si el target es válido y mayor que 0
+    if (!isNaN(target) && target > 0) {
+      animateCounter(el, target);
+    } else {
+      // Si el target es 0, mostrar 0 directamente sin animar
+      el.textContent = '0';
+    }
+  });
+};
+
+/**
+ * Inicializa todos los componentes al cargar la página.
+ * WHY: Punto de entrada único — facilita el debugging y el orden de inicialización.
+ *
+ * Orden de ejecución:
+ *   1. initSidebar   — sidebar móvil y teclado
+ *   2. initFilters   — filtros fallback (se saltea si hay SSR)
+ *   3. initModals    — modales CRUD
+ *   4. initServerStats — anima contadores desde data-target de Razor
+ *   5. fetchProfessionals + renderTable — solo activos en modo fallback
+ */
 const init = async () => {
-  // Inicializar componentes de UI
   initSidebar();
   initFilters();
   initModals();
-  
-  // Cargar datos iniciales
+  initSearchDebounce(); // Debounce del buscador → GET real al servidor en modo SSR
+
+  // Animar contadores del Stats Grid con los valores que Razor ya escribió en data-target.
+  // WHY: esto funciona en SSR y en fallback — siempre hay data-target en el HTML.
+  initServerStats();
+
+  // Modo fallback: cargar datos y renderizar tabla desde JS
+  // (en SSR estos pasos producen un array vacío y la tabla ya tiene filas, así que no hacen nada)
   professionals = await fetchProfessionals();
-  
-  // Actualizar selector de especialidades
   populateSpecialties();
-  
-  // Renderizar tabla y estadísticas
-  updateStats();
-  renderTable();
-  
-  // Limpieza al unload para evitar memory leaks
+  updateStats();   // no-op en SSR (return temprano), anima en fallback
+  renderTable();   // no-op en SSR, renderiza en fallback
+
+  // Limpieza al unload para evitar memory leaks en implementaciones SPA
   window.addEventListener('beforeunload', () => {
     // Remover listeners en implementación SPA real
   });

@@ -33,7 +33,82 @@ public class GestionCitasController : Controller
     {
         await CargarDatosCitas(editId, "/gestion-de-citas/st-adm-08-agenda");
         await CargarDatosAgenda();
+        
+        // Carga para Selects en el Modal de Agenda
+        ViewBag.Pacientes = await _context.Pacientes
+            .Where(p => p.Estado == "activo")
+            .OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres)
+            .Select(p => new { p.IdPaciente, DisplayName = $"{p.Apellidos}, {p.Nombres}" })
+            .ToListAsync();
+            
+        ViewBag.Profesionales = await _context.Profesionales
+            .Include(p => p.Usuario)
+            .Where(p => p.Estado == "activo")
+            .Select(p => new
+            {
+                p.IdProfesional,
+                DisplayName = (p.Nombres + " " + p.Apellidos).Trim() != string.Empty
+                    ? (p.Nombres + " " + p.Apellidos).Trim()
+                    : (p.Usuario != null ? (p.Usuario.Nombre + " " + p.Usuario.Apellidos).Trim() : "Sin Nombre")
+            })
+            .OrderBy(p => p.DisplayName)
+            .ToListAsync();
+            
+        ViewBag.Consultorios = await _context.Consultorios
+            .Where(c => c.Estado == "disponible" || c.Estado == "activo")
+            .Select(c => new { c.IdConsultorio, c.Nombre })
+            .OrderBy(c => c.Nombre)
+            .ToListAsync();
+            
+        ViewBag.Servicios = await _context.Servicios
+            .Where(s => s.Estado == "activo")
+            .Select(s => new { s.IdServicio, s.Nombre })
+            .ToListAsync();
+            
+        ViewData["WeekStart"] = new DateTime(2026, 7, 20).ToString("yyyy-MM-dd");
+
         return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Administrador,Recepcionista")]
+    [Route("api/citas/agenda")]
+    public async Task<IActionResult> CrearCitaDesdeAgenda([FromBody] CitaAgendaDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+            return BadRequest(new { message = "Datos inválidos", errors });
+        }
+
+        var hayConflicto = await _context.Citas
+            .AnyAsync(c => c.FechaHora.Date == dto.Fecha.Date
+                && c.IdProfesional == dto.IdProfesional
+                && c.HoraInicio < dto.HoraFin
+                && c.HoraFin > dto.HoraInicio
+                && c.Estado != "Cancelada");
+
+        if (hayConflicto)
+            return BadRequest(new { message = "El profesional ya tiene una cita en este horario." });
+
+        var nuevaCita = new Cita
+        {
+            IdPaciente = dto.IdPaciente,
+            IdProfesional = dto.IdProfesional,
+            IdConsultorio = dto.IdConsultorio,
+            IdServicio = dto.IdServicio,
+            FechaHora = dto.Fecha.Date.Add(dto.HoraInicio),
+            HoraInicio = dto.HoraInicio,
+            HoraFin = dto.HoraFin,
+            Estado = dto.Estado,
+            Notas = dto.Notas,
+            MotivoConsulta = "Consulta generada desde Agenda"
+        };
+
+        _context.Citas.Add(nuevaCita);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Cita agendada exitosamente", id = nuevaCita.IdCita });
     }
 
     [HttpGet]
@@ -173,37 +248,56 @@ public class GestionCitasController : Controller
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/guardar-cita")]
-    public async Task<IActionResult> GuardarCita([FromForm] int? IdCita, [FromForm] int IdPaciente, [FromForm] int? IdProfesional, [FromForm] int? IdServicio, [FromForm] DateTime FechaHora, [FromForm] string Estado, [FromForm] string? Notas, [FromForm] string? ReturnUrl)
+    public async Task<IActionResult> GuardarCita([FromForm] CitaViewModel model)
     {
-        if (IdCita.HasValue && IdCita.Value > 0)
+        var returnUrlSafe = string.IsNullOrWhiteSpace(model.ReturnUrl) ? "/gestion-de-citas/st-adm-09-citas" : model.ReturnUrl;
+
+        if (!ModelState.IsValid)
         {
-            var cita = await _context.Citas.FindAsync(IdCita.Value);
-            if (cita != null)
-            {
-                cita.IdPaciente = IdPaciente;
-                cita.IdProfesional = IdProfesional;
-                cita.IdServicio = IdServicio;
-                cita.FechaHora = FechaHora;
-                cita.Estado = string.IsNullOrWhiteSpace(Estado) ? "programada" : Estado;
-                cita.Notas = Notas;
-                _context.Citas.Update(cita);
-            }
-        }
-        else
-        {
-            _context.Citas.Add(new Cita
-            {
-                IdPaciente = IdPaciente,
-                IdProfesional = IdProfesional,
-                IdServicio = IdServicio,
-                FechaHora = FechaHora,
-                Estado = string.IsNullOrWhiteSpace(Estado) ? "programada" : Estado,
-                Notas = Notas
-            });
+            var firstError = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage;
+            TempData["ErrorValidacion"] = firstError ?? "Datos inválidos en el formulario.";
+            return Redirect(returnUrlSafe);
         }
 
-        await _context.SaveChangesAsync();
-        return Redirect(string.IsNullOrWhiteSpace(ReturnUrl) ? "/gestion-de-citas/st-adm-09-citas" : ReturnUrl);
+        try
+        {
+            if (model.IdCita.HasValue && model.IdCita.Value > 0)
+            {
+                var cita = await _context.Citas.FindAsync(model.IdCita.Value);
+                if (cita != null)
+                {
+                    cita.IdPaciente = model.IdPaciente;
+                    cita.IdProfesional = model.IdProfesional;
+                    cita.IdServicio = model.IdServicio;
+                    cita.FechaHora = model.FechaHora;
+                    cita.Estado = model.Estado ?? "programada";
+                    cita.Notas = string.IsNullOrWhiteSpace(model.Notas) ? null : model.Notas;
+
+                    _context.Citas.Update(cita);
+                }
+            }
+            else
+            {
+                _context.Citas.Add(new Cita
+                {
+                    IdPaciente = model.IdPaciente,
+                    IdProfesional = model.IdProfesional,
+                    IdServicio = model.IdServicio,
+                    FechaHora = model.FechaHora,
+                    Estado = model.Estado ?? "programada",
+                    Notas = string.IsNullOrWhiteSpace(model.Notas) ? null : model.Notas
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["MensajeExito"] = "La cita se ha guardado correctamente.";
+        }
+        catch (DbUpdateException)
+        {
+            TempData["ErrorValidacion"] = "Ocurrió un error al guardar los cambios en la base de datos (posible conflicto de datos).";
+        }
+
+        return Redirect(returnUrlSafe);
     }
 
     [HttpPost]
@@ -212,14 +306,25 @@ public class GestionCitasController : Controller
     [Route("gestion-de-citas/eliminar-cita")]
     public async Task<IActionResult> EliminarCita([FromForm] int IdCita, [FromForm] string? ReturnUrl)
     {
-        var cita = await _context.Citas.FindAsync(IdCita);
-        if (cita != null)
+        var returnUrlSafe = string.IsNullOrWhiteSpace(ReturnUrl) ? "/gestion-de-citas/st-adm-09-citas" : ReturnUrl;
+        
+        try
         {
-            _context.Citas.Remove(cita);
-            await _context.SaveChangesAsync();
+            var cita = await _context.Citas.FindAsync(IdCita);
+            if (cita != null)
+            {
+                cita.Estado = "cancelada";
+                _context.Citas.Update(cita);
+                await _context.SaveChangesAsync();
+                TempData["MensajeExito"] = "La cita fue cancelada exitosamente.";
+            }
+        }
+        catch (DbUpdateException)
+        {
+            TempData["ErrorValidacion"] = "Ocurrió un error al intentar cancelar la cita.";
         }
 
-        return Redirect(string.IsNullOrWhiteSpace(ReturnUrl) ? "/gestion-de-citas/st-adm-09-citas" : ReturnUrl);
+        return Redirect(returnUrlSafe);
     }
 
     /// <summary>
@@ -238,9 +343,8 @@ public class GestionCitasController : Controller
                 .Include(c => c.Paciente)
                 .Include(c => c.Profesional)
                 .ThenInclude(p => p!.Usuario)
-                .Include(c => c.Servicio)
                 .Where(c => c.FechaHora.Date == fecha.Date)
-                .OrderBy(c => c.FechaHora)
+                .OrderBy(c => c.FechaHora).ThenBy(c => c.FechaHora.TimeOfDay)
                 .ToListAsync();
 
             agendaDias.Add(new global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel
@@ -253,16 +357,16 @@ public class GestionCitasController : Controller
                 Citas = citasDia.Select(cita => new global::SmileTrack_MVC.Models.ViewModels.AgendaCitaViewModel
                 {
                     Id = cita.IdCita,
-                    Hora = cita.FechaHora.ToString("HH:mm"),
+                    Hora = cita.HoraInicio?.ToString("hh\\:mm") ?? "—",
                     Paciente = $"{cita.Paciente?.Nombres} {cita.Paciente?.Apellidos}".Trim(),
-                    Servicio = cita.Servicio?.Nombre ?? "Consulta",
-                    Consultorio = cita.Profesional != null ? "Box general" : "Sin asignar",
-                    Estado = cita.Estado,
-                    ClaseEstado = cita.Estado switch
+                    Servicio = cita.MotivoConsulta ?? "Consulta",
+                    Consultorio = cita.Consultorio?.Nombre ?? "Sin asignar",
+                    Estado = cita.EstadoCita?.NombreEstado ?? "Sin estado",
+                    ClaseEstado = (cita.EstadoCita?.NombreEstado ?? "").ToLowerInvariant() switch
                     {
                         "atendida" => "attended",
                         "cancelada" => "cancelled",
-                        "programada" => "confirmed",
+                        "agendada" => "confirmed",
                         _ => "confirmed"
                     }
                 }).ToList()
@@ -285,8 +389,10 @@ public class GestionCitasController : Controller
         var citasQuery = _context.Citas
             .Include(c => c.Paciente)
             .Include(c => c.Profesional)
-            .ThenInclude(p => p!.Usuario)
-            .Include(c => c.Servicio)
+                .ThenInclude(p => p!.Usuario)
+            .Include(c => c.Profesional)
+                .ThenInclude(p => p!.Especialidades)
+                    .ThenInclude(pe => pe.Especialidad)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(pagination.Search))
@@ -301,7 +407,7 @@ public class GestionCitasController : Controller
         if (!string.IsNullOrWhiteSpace(pagination.Estado))
         {
             var estado = pagination.Estado.Trim().ToLower();
-            citasQuery = citasQuery.Where(c => c.Estado != null && c.Estado.ToLower() == estado);
+            citasQuery = citasQuery.Where(c => c.Estado.ToLower() == estado);
         }
 
         if (int.TryParse(pagination.Profesional, out var idProfesional))
@@ -314,7 +420,7 @@ public class GestionCitasController : Controller
             citasQuery = citasQuery.Where(c => c.FechaHora.Date == fecha.Date);
         }
 
-        citasQuery = citasQuery.OrderByDescending(c => c.FechaHora);
+        citasQuery = citasQuery.OrderByDescending(c => c.FechaHora).ThenByDescending(c => c.FechaHora.TimeOfDay);
 
         var paged = await citasQuery.ToPagedResultAsync(page, pageSize);
 
@@ -325,13 +431,15 @@ public class GestionCitasController : Controller
         ViewData["EstadoFilter"] = pagination.Estado ?? string.Empty;
         ViewData["ProfesionalFilter"] = pagination.Profesional ?? string.Empty;
         ViewData["FechaFilter"] = pagination.Fecha ?? string.Empty;
-        ViewData["Pacientes"] = await _context.Pacientes.OrderBy(p => p.Nombres).ThenBy(p => p.Apellidos).ToListAsync();
-        ViewData["Profesionales"] = await _context.Profesionales.Include(p => p.Usuario).OrderBy(p => p.Usuario != null ? p.Usuario.Nombre : "").ToListAsync();
-        ViewData["ProfesionalesFilterOptions"] = await _context.Profesionales.Include(p => p.Usuario).OrderBy(p => p.Usuario != null ? p.Usuario.Nombre : "").ToListAsync();
+        ViewData["Pacientes"] = await _context.Pacientes.Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres).ToListAsync();
+        ViewData["Profesionales"] = await _context.Profesionales.Include(p => p.Usuario).Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ToListAsync();
+        ViewData["ProfesionalesFilterOptions"] = await _context.Profesionales.Include(p => p.Usuario).Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ToListAsync();
+        ViewData["Consultorios"] = await _context.Consultorios.Where(c => c.Estado == "disponible" || c.Estado == "activo").OrderBy(c => c.Nombre).ToListAsync();
+        ViewData["EstadosCita"] = await _context.EstadosCita.OrderBy(e => e.NombreEstado).ToListAsync();
         ViewData["Servicios"] = await _context.Servicios.Where(s => s.Estado == "activo").OrderBy(s => s.Nombre).ToListAsync();
         ViewData["ReturnUrl"] = returnUrl;
 
-        if (editId.HasValue && editId.Value > 0)
+        if (editId > 0)
         {
             ViewData["EditingCita"] = await _context.Citas.FindAsync(editId.Value);
         }
@@ -354,17 +462,24 @@ public class GestionCitasController : Controller
         ViewData["CitasHoy"] = await _context.Citas.CountAsync(c => c.FechaHora.Date == hoy);
         ViewData["ProfesionalesActivos"] = await _context.Profesionales.CountAsync();
 
-        ViewData["IngresosDelMes"] = 0m;
-        ViewData["FacturasPendientes"] = new List<(string Codigo, string Descripcion, decimal Monto)>();
-
         var citasDelMes = await _context.Citas
+            .Include(c => c.Servicio)
             .Where(c => c.FechaHora >= inicioMes && c.FechaHora < finMes)
             .ToListAsync();
 
-        int atendidas = citasDelMes.Count(c => string.Equals(c.Estado, "atendida", StringComparison.OrdinalIgnoreCase));
-        int confirmadas = citasDelMes.Count(c => string.Equals(c.Estado, "confirmada", StringComparison.OrdinalIgnoreCase));
-        int programadas = citasDelMes.Count(c => string.Equals(c.Estado, "programada", StringComparison.OrdinalIgnoreCase));
-        int canceladas = citasDelMes.Count(c => string.Equals(c.Estado, "cancelada", StringComparison.OrdinalIgnoreCase));
+        var ingresos = citasDelMes.Where(c => string.Equals(c.Estado, "Atendida", StringComparison.OrdinalIgnoreCase)).Sum(c => c.Servicio?.Precio ?? 50000m);
+        ViewData["IngresosDelMes"] = ingresos;
+        ViewData["FacturasPendientes"] = new List<(string Codigo, string Descripcion, decimal Monto)>();
+
+        int daysInMonth = DateTime.DaysInMonth(hoy.Year, hoy.Month);
+        int totalCapacity = daysInMonth * 40; // Assuming 40 slots/day capacity
+        int totalCitas = citasDelMes.Count;
+        ViewData["PctOcupacion"] = totalCapacity > 0 ? (int)Math.Min(100, (double)totalCitas / totalCapacity * 100) : 0;
+
+        int atendidas = citasDelMes.Count(c => string.Equals(c.Estado, "Atendida", StringComparison.OrdinalIgnoreCase));
+        int confirmadas = citasDelMes.Count(c => string.Equals(c.Estado, "Confirmada", StringComparison.OrdinalIgnoreCase));
+        int programadas = citasDelMes.Count(c => string.Equals(c.Estado, "Agendada", StringComparison.OrdinalIgnoreCase));
+        int canceladas = citasDelMes.Count(c => string.Equals(c.Estado, "Cancelada", StringComparison.OrdinalIgnoreCase));
         int maxEstado = new[] { atendidas, confirmadas, programadas, canceladas }.DefaultIfEmpty(0).Max();
 
         ViewData["CitasAtendidas"] = atendidas;
@@ -377,14 +492,14 @@ public class GestionCitasController : Controller
         ViewData["PctCanceladas"] = maxEstado > 0 ? canceladas * 100 / maxEstado : 0;
 
         var topIds = await _context.Citas
-            .Where(c => c.FechaHora >= inicioMes && c.FechaHora < finMes && c.IdProfesional != null)
+            .Where(c => c.FechaHora >= inicioMes && c.FechaHora < finMes && c.IdProfesional != null && c.IdProfesional != 0)
             .GroupBy(c => c.IdProfesional)
             .Select(g => new { IdProfesional = g.Key, Total = g.Count() })
             .OrderByDescending(g => g.Total)
             .Take(3)
             .ToListAsync();
 
-        var idsList = topIds.Select(t => t.IdProfesional).Where(t => t.HasValue).Select(t => t!.Value).ToList();
+        var idsList = topIds.Select(t => t.IdProfesional).ToList();
         var profesionales = await _context.Profesionales
             .Include(p => p.Usuario)
             .Where(p => idsList.Contains(p.IdProfesional))

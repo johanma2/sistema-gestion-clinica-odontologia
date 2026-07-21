@@ -375,7 +375,7 @@ img { max-width: 100%; height: auto; display: block; }
   border-radius: var(--radius);
   padding: 24px 20px;
   width: 100%;
-  max-width: 550px; /* Accommodates 2 columns */
+  max-width: 420px; /* Reduced width */
   max-height: 85vh; /* Prevent overflowing screen height */
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,.25);
@@ -572,3 +572,47 @@ img { max-width: 100%; height: auto; display: block; }
 }
 /* Pequeña indentación visual para diferenciar sub-menú */
 .nav-group-items .nav-item { padding-left: 24px; }
+
+/* ═══ MEJORAS DE PRESENTACIÓN Y COMPONENTES NUEVOS ═══ */
+
+/* Clases de avatar deterministas en lugar de estilos inline */
+.p-avatar--color-0 { background-color: #3b82f6; } /* Azul */
+.p-avatar--color-1 { background-color: #10b981; } /* Verde */
+.p-avatar--color-2 { background-color: #f59e0b; } /* Naranja */
+.p-avatar--color-3 { background-color: #ef4444; } /* Rojo */
+.p-avatar--color-4 { background-color: #8b5cf6; } /* Púrpura */
+
+/* Estilo para el estado vacío (empty-state) de la tabla */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px !important;
+  color: var(--text-muted);
+}
+.empty-state-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+.empty-state-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.empty-state-subtitle {
+  font-size: 0.875rem;
+}
+
+/* Animación sutil de entrada para las filas de la tabla */
+@keyframes fadeInRow {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.table-base tbody tr {
+  animation: fadeInRow 0.35s ease forwards;
+}

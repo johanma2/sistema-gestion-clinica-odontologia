@@ -26,17 +26,17 @@
       <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
     </div>
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-    <div class="sidebar-user">
-      <div class="user-avatar" aria-hidden="true">AD</div>
+                <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Length >= 2 ? User.Identity.Name.Substring(0, 2).ToUpperInvariant() : (User.Identity?.Name?.ToUpperInvariant() ?? "U"))</div>
       <div class="user-info">
-        <span class="user-role">Administrador</span>
-        <span class="user-email">admin@smiletrack.co</span>
+        <span class="user-role">@User.Identity?.Name</span>
+        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
       </div>
     </div>
   </aside>
 
 
-  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <!--  HAMBURGER (móvil)  -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
@@ -44,7 +44,7 @@
   </button>
   <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <!-- ═════ MAIN ═════ -->
+  <!-- MAIN -->
   <main class="main" id="main-content">
 
     <!-- Header -->
@@ -65,11 +65,11 @@
       <div class="controls-left">
         <div class="week-nav" role="navigation" aria-label="Navegación semanal">
           <button class="btn-week" id="btnPrev" aria-label="Semana anterior">
-            <span aria-hidden="true">◀</span>
+            <span aria-hidden="true"> < </span>
           </button>
           <span class="week-label" id="weekLabel" aria-live="polite">@semanaLabel</span>
           <button class="btn-week" id="btnNext" aria-label="Próxima semana">
-            <span aria-hidden="true">▶</span>
+            <span aria-hidden="true"> > </span>
           </button>
         </div>
         <button class="btn-primary" id="btnToday" aria-label="Ir a la semana actual">
@@ -81,7 +81,7 @@
           <label for="filterProfessional" class="filter-label">Profesional</label>
           <select id="filterProfessional" class="status-select" aria-label="Filtrar por profesional">
             <option value="">Todos los profesionales</option>
-            <option value="1">Dr. Javier Méndez</option>
+            <option value="1">Dr. Javier Mendez</option>
             <option value="2">Dra. Lucía Torres</option>
             <option value="3">Dr. Roberto Sanz</option>
           </select>
@@ -96,8 +96,8 @@
           </select>
         </div>
         <div class="filter-actions">
-          <button class="btn-icon" id="btnFilter" aria-label="Aplicar filtros">🔍</button>
-          <button class="btn-icon" id="btnDownload" aria-label="Descargar agenda">📥</button>
+          <button class="btn-icon" id="btnFilter" aria-label="Aplicar filtros"></button>
+          <button class="btn-icon" id="btnDownload" aria-label="Descargar agenda"></button>
         </div>
       </div>
     </section>
@@ -106,7 +106,7 @@
     <section class="calendar-section" aria-labelledby="calendarTitle">
       <h2 class="visually-hidden" id="calendarTitle">Calendario semanal de citas</h2>
 
-      <!-- Cabecera de días -->
+      <!-- Cabecera de dÃ­as -->
       <div class="calendar-header" role="row">
         <div class="calendar-day-header" role="columnheader">
           <span class="day-name">Lun</span>
@@ -140,7 +140,7 @@
       </div>
 
       <!-- Cuerpo del calendario -->
-      <div class="calendar-body" role="grid" aria-label="Citas por día">
+      <div class="calendar-body" role="grid" aria-label="Citas por dí­a">
         @foreach (var dia in agendaDias)
         {
           <div class="calendar-day @(dia.EsHoy ? "current" : string.Empty) @(dia.Cerrado ? "closed" : string.Empty)" role="row" aria-labelledby="day-@dia.Fecha.ToString("yyyyMMdd")">
@@ -148,7 +148,7 @@
             @if (dia.Cerrado)
             {
               <div class="day-closed">
-                <span aria-hidden="true">🏥</span>
+                <span aria-hidden="true"></span>
                 <span>CERRADO</span>
               </div>
             }
@@ -159,13 +159,13 @@
                 <div class="appointment @cita.ClaseEstado" tabindex="0" role="button" aria-label="Cita @cita.Estado: @cita.Paciente, @cita.Hora, @cita.Servicio, @cita.Consultorio">
                   <time datetime="@dia.Fecha.ToString("yyyy-MM-dd")T@cita.Hora:00" class="appt-time">@cita.Hora</time>
                   <span class="appt-patient">@cita.Paciente</span>
-                  <span class="appt-detail">@cita.Servicio · @cita.Consultorio</span>
+                  <span class="appt-detail">@cita.Servicio Â· @cita.Consultorio</span>
                 </div>
               }
               @if (!dia.Citas.Any())
               {
                 <div class="appointment available" tabindex="0" role="button" aria-label="Sin citas registradas para @dia.Fecha.ToString("dd/MM")">
-                  <time datetime="@dia.Fecha.ToString("yyyy-MM-dd")" class="appt-time">—</time>
+                  <time datetime="@dia.Fecha.ToString("yyyy-MM-dd")" class="appt-time"></time>
                   <span class="appt-patient">Sin citas</span>
                 </div>
               }
@@ -204,14 +204,119 @@
   <div class="modal-overlay" id="modalAppointment" role="dialog" aria-modal="true" aria-labelledby="modalApptTitle"
     aria-hidden="true" inert>
     <div class="modal">
-      <button class="modal-close" id="modalApptClose" aria-label="Cerrar ventana">×</button>
+      <button class="modal-close" id="modalApptClose" aria-label="Cerrar ventana">Ã—</button>
       <h2 class="modal-title" id="modalApptTitle">Detalle de Cita</h2>
       <div class="modal-content" id="modalApptContent">
         <!-- Contenido inyectado por JS -->
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="modalApptCancel">Cerrar</button>
-        <button type="button" class="btn-primary" id="modalApptEdit">✏️ Editar</button>
+        <button type="button" class="btn-primary" id="modalApptEdit">Editar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear nueva cita -->
+  <div class="modal-overlay" id="modalNewAppointment" role="dialog" aria-modal="true" aria-labelledby="modalNewApptTitle"
+    aria-hidden="true" inert>
+    <div class="modal modal-lg">
+      <button class="modal-close" id="modalNewApptClose" aria-label="Cerrar ventana">×</button>
+      <h2 class="modal-title" id="modalNewApptTitle">Agendar Nueva Cita</h2>
+      <div class="modal-content">
+        <form id="formNewAppointment">
+          @Html.AntiForgeryToken()
+          <div class="form-grid">
+            <!-- Fecha -->
+            <div class="form-group">
+              <label for="newApptDate">Fecha</label>
+              <input type="date" id="newApptDate" name="Fecha" required aria-required="true" />
+            </div>
+            <!-- Estado -->
+            <div class="form-group">
+              <label for="newApptStatus">Estado</label>
+              <select id="newApptStatus" name="Estado" required aria-required="true">
+                <option value="Agendada" selected>Agendada</option>
+                <option value="Confirmada">Confirmada</option>
+              </select>
+            </div>
+            <!-- Hora Inicio -->
+            <div class="form-group">
+              <label for="newApptStartTime">Hora Inicio</label>
+              <input type="time" id="newApptStartTime" name="HoraInicio" required aria-required="true" />
+            </div>
+            <!-- Hora Fin -->
+            <div class="form-group">
+              <label for="newApptEndTime">Hora Fin</label>
+              <input type="time" id="newApptEndTime" name="HoraFin" required aria-required="true" />
+            </div>
+            
+            <!-- Paciente -->
+            <div class="form-group full-width">
+              <label for="newApptPatient">Paciente</label>
+              <select id="newApptPatient" name="IdPaciente" required aria-required="true" data-placeholder="Buscar paciente...">
+                <option value="">Seleccione paciente...</option>
+                @if (ViewBag.Pacientes != null)
+                {
+                  foreach (var p in ViewBag.Pacientes)
+                  {
+                    <option value="@p.IdPaciente">@p.DisplayName</option>
+                  }
+                }
+              </select>
+            </div>
+            <!-- Profesional -->
+            <div class="form-group">
+              <label for="newApptProfessional">Profesional</label>
+              <select id="newApptProfessional" name="IdProfesional" required aria-required="true">
+                <option value="">Seleccione profesional</option>
+                @if (ViewBag.Profesionales != null)
+                {
+                  foreach (var p in ViewBag.Profesionales)
+                  {
+                    <option value="@p.IdProfesional">@p.DisplayName</option>
+                  }
+                }
+              </select>
+            </div>
+            <!-- Consultorio -->
+            <div class="form-group">
+              <label for="newApptOffice">Consultorio</label>
+              <select id="newApptOffice" name="IdConsultorio" required aria-required="true">
+                <option value="">Seleccione consultorio</option>
+                @if (ViewBag.Consultorios != null)
+                {
+                  foreach (var c in ViewBag.Consultorios)
+                  {
+                    <option value="@c.IdConsultorio">@c.Nombre</option>
+                  }
+                }
+              </select>
+            </div>
+            <!-- Servicio -->
+            <div class="form-group full-width">
+              <label for="newApptService">Servicio (Motivo de Consulta)</label>
+              <select id="newApptService" name="IdServicio" required aria-required="true">
+                <option value="">Seleccione servicio</option>
+                @if (ViewBag.Servicios != null)
+                {
+                  foreach (var s in ViewBag.Servicios)
+                  {
+                    <option value="@s.IdServicio">@s.Nombre</option>
+                  }
+                }
+              </select>
+            </div>
+            <!-- Notas -->
+            <div class="form-group full-width">
+              <label for="newApptNotes">Observaciones</label>
+              <textarea id="newApptNotes" name="Notas" rows="2" placeholder="Detalles adicionales..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" id="modalNewApptCancel">Cancelar</button>
+            <button type="submit" class="btn-primary" id="modalNewApptSave">Guardar Cita</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -224,15 +329,15 @@
   <!-- Mobile bottom nav -->
   <nav class="mobile-nav" aria-label="Navegación móvil">
     <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Dashboard</span>
     </a>
     <a href="#" class="mobile-nav-item active" aria-current="page">
-      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Agenda</span>
     </a>
     <a href="/gestion-de-citas/st-adm-09-citas" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Citas</span>
     </a>
   </nav>
@@ -282,7 +387,12 @@
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
 
-
+  <script>
+    window.APP_CONFIG = {
+      ApiBase: '/api',
+      WeekStart: '@(ViewData["WeekStart"] ?? DateTime.Now.ToString("yyyy-MM-dd"))'
+    };
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-08-agenda/agendageneral.js")"></script>
 
 <script>
@@ -319,3 +429,5 @@
 </body>
 
 </html>
+
+

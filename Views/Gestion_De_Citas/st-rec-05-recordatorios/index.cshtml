@@ -25,13 +25,13 @@
     <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
   </div>
   @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">RE</div>
-    <div class="user-info">
-      <span class="user-role">Recepción</span>
-      <span class="user-email">recepcion@smiletrack.co</span>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Substring(0, 2).ToUpperInvariant() ?? "U")</div>
+      <div class="user-info">
+        <span class="user-role">@User.Identity?.Name</span>
+        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
+      </div>
     </div>
-  </div>
 </aside>
 
   <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
@@ -312,3 +312,5 @@
 </body>
 
 </html>
+
+

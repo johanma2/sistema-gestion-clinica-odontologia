@@ -405,8 +405,28 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .modal-content { margin-bottom: 20px; }
 .modal-footer {
-  display: flex; justify-content: flex-end; gap: 10px;
+  display: flex; justify-content: flex-end; gap: 10px; padding-top: 10px;
 }
+
+/* Modal Form Styles */
+.form-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full-width { grid-column: span 2; }
+.form-group label {
+  font-size: .8rem; font-weight: 600; color: var(--text);
+}
+.form-group input, .form-group select, .form-group textarea {
+  padding: 10px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); font-family: var(--font);
+  font-size: .9rem; color: var(--text); background: var(--white);
+  transition: border-color var(--tr);
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--input-focus-ring);
+}
+.form-group textarea { resize: vertical; }
 
 /* ═══ FAB ═══ */
 .fab {
@@ -488,6 +508,8 @@ img { max-width: 100%; height: auto; display: block; }
   .calendar-day:nth-child(n+3) { display: none; }
   .mobile-nav { display: flex; }
   .toast { right: 14px; left: 14px; max-width: none; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full-width { grid-column: span 1; }
 }
 @media (max-width: 480px) {
   .page-title { font-size: 1.2rem; }

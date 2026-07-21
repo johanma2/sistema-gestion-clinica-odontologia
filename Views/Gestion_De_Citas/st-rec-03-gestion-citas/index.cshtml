@@ -29,13 +29,13 @@
     <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
   </div>
   @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">RE</div>
-    <div class="user-info">
-      <span class="user-role">Recepción</span>
-      <span class="user-email">recepcion@smiletrack.co</span>
+    <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Substring(0, 2).ToUpperInvariant() ?? "U")</div>
+      <div class="user-info">
+        <span class="user-role">@User.Identity?.Name</span>
+        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
+      </div>
     </div>
-  </div>
 </aside>
 
   <!-- ═════ HAMBURGER (móvil) ═════ -->
@@ -177,13 +177,13 @@
             @foreach (var cita in citas)
             {
               <tr>
-                <td>@cita.FechaHora.ToString("dd/MM/yyyy")</td>
-                <td>@cita.FechaHora.ToString("HH:mm")</td>
+                <td>@cita.Fecha.ToString("dd/MM/yyyy")</td>
+                <td>@(cita.HoraInicio?.ToString("hh\\:mm") ?? "—")</td>
                 <td>@cita.Paciente?.NombresCompleto</td>
                 <td>@cita.Profesional?.NombreProfesional</td>
-                <td>@cita.Servicio?.Nombre</td>
-                <td>—</td>
-                <td>@cita.Estado</td>
+                <td>@cita.MotivoConsulta</td>
+                <td>@(cita.Consultorio?.Nombre ?? "—")</td>
+                <td>@(cita.EstadoCita?.NombreEstado ?? "Sin estado")</td>
                 <td>
                   <a class="action-btn" href="@Url.Action("Strec03GestionCitas", "GestionCitas", new { editId = cita.IdCita })">✏️</a>
                 </td>
@@ -497,3 +497,5 @@
 </body>
 
 </html>
+
+

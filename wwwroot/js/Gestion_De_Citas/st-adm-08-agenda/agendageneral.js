@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SMILETRACK — AGENDA GENERAL (agenda.js)
  * API-ready + Accesibilidad + Persistencia fallback
  */
@@ -59,7 +59,7 @@ const SAMPLE_APPOINTMENTS = [
 ];
 
 let appointments = [...SAMPLE_APPOINTMENTS];
-let currentWeekStart = new Date('2026-05-19');
+let currentWeekStart = (window.APP_CONFIG && window.APP_CONFIG.WeekStart) ? new Date(window.APP_CONFIG.WeekStart + 'T00:00:00') : new Date('2026-05-19T00:00:00');
 
 // ═══════════════════════════════════════════════════════════════════
 //  FUNCIONES DE RENDERIZADO
@@ -137,10 +137,10 @@ const renderCalendar = (weekStart) => {
         div.setAttribute('aria-label', buildApptLabel(appt));
         div.dataset.appointment = JSON.stringify(appt);
         
-        const time = appt.available || appt.reserved ? '—' : appt.time;
+        const time = appt.time || '';
         const patient = appt.available ? 'Espacio Disponible' : appt.reserved ? 'Urgencia - Reservado' : appt.patient;
-        const detail = appt.service && appt.office ? `${appt.service} · ${appt.office}` : '';
-        const status = appt.status === 'attended' ? 'Asistida' : appt.status === 'confirmed' ? 'Confirmada' : appt.status === 'cancelled' ? 'CANCELADA' : '';
+        const detail = (appt.available || appt.reserved) ? '' : (appt.service && appt.office ? `${appt.service} · ${appt.office}` : '');
+        const status = (appt.available || appt.reserved) ? '' : (appt.status === 'attended' ? 'Asistida' : appt.status === 'confirmed' ? 'Confirmada' : appt.status === 'cancelled' ? 'CANCELADA' : '');
         
         div.innerHTML = `
           <time datetime="${appt.date}T${appt.time || ''}:00" class="appt-time">${time}</time>
@@ -167,7 +167,8 @@ const renderCalendar = (weekStart) => {
   weekEnd.setDate(weekStart.getDate() + 6);
   const weekLabel = safeGetElement('weekLabel');
   if (weekLabel) {
-    weekLabel.textContent = `${weekStart.getDate()}-${weekEnd.getDate()} mayo 2026`;
+    const fmt = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' });
+    weekLabel.textContent = `${weekStart.getDate()}-${weekEnd.getDate()} ${fmt.format(weekStart)}`;
   }
 };
 
@@ -206,8 +207,8 @@ const openAppointmentModal = (appt) => {
     if (editBtn) {
       editBtn.textContent = '📅 Agendar cita';
       editBtn.onclick = () => {
-        showToast('📅 Abriendo formulario de nueva cita');
         closeAppointmentModal();
+        openNewAppointmentModal(appt.date, appt.time);
       };
     }
   } else if (appt.reserved) {
@@ -263,6 +264,49 @@ const closeAppointmentModal = () => {
   }
 };
 
+// Abre modal de nueva cita
+const openNewAppointmentModal = (dateStr = '', timeStr = '') => {
+  const modal = safeGetElement('modalNewAppointment');
+  if (!modal) return;
+  
+  // Pre-llenar campos si vienen en el contexto
+  if (dateStr) {
+    const dateInput = safeGetElement('newApptDate');
+    if (dateInput) dateInput.value = dateStr;
+  }
+  if (timeStr) {
+    const startTimeInput = safeGetElement('newApptStartTime');
+    if (startTimeInput) startTimeInput.value = timeStr;
+    // Sugerir +30 min para HoraFin
+    const endTimeInput = safeGetElement('newApptEndTime');
+    if (endTimeInput) {
+      const [h, m] = timeStr.split(':').map(Number);
+      const endM = m + 30;
+      const endH = h + Math.floor(endM / 60);
+      endTimeInput.value = `${String(endH).padStart(2, '0')}:${String(endM % 60).padStart(2, '0')}`;
+    }
+  } else {
+    safeGetElement('formNewAppointment')?.reset();
+  }
+  
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  modal.removeAttribute('inert');
+  document.body.style.overflow = 'hidden';
+  safeGetElement('newApptPatient')?.focus();
+};
+
+// Cierra modal de nueva cita
+const closeNewAppointmentModal = () => {
+  const modal = safeGetElement('modalNewAppointment');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('inert', '');
+    document.body.style.overflow = '';
+  }
+};
+
 // ═══════════════════════════════════════════════════════════════════
 //  NAVEGACIÓN SEMANAL
 // ═══════════════════════════════════════════════════════════════════
@@ -289,7 +333,8 @@ const nextWeek = () => {
 
 // Navega a semana actual
 const goToToday = () => {
-  currentWeekStart = getWeekStart(new Date());
+  const todayBase = (window.APP_CONFIG && window.APP_CONFIG.WeekStart) ? new Date(window.APP_CONFIG.WeekStart + 'T00:00:00') : new Date();
+  currentWeekStart = getWeekStart(todayBase);
   renderCalendar(currentWeekStart);
   showToast('📅 Mostrando semana actual');
 };
@@ -336,20 +381,21 @@ async function fetchAgenda(weekStart, filters = {}) {
 // Crea cita en API
 async function createAppointmentAPI(data) {
   try {
-    // En producción: POST real a API
-    // const res = await fetch(`${API_BASE}/admin/appointments`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(data),
-    // });
-    // if (!res.ok) throw new Error('Create failed');
-    // return await res.json();
+    const response = await fetch(`${API_BASE}/citas/agenda`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
     
-    // Simulación
-    return { success: true, id: Date.now() };
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al guardar la cita');
+    }
+    
+    return await response.json();
   } catch (error) {
-    console.warn('Error creando cita en API:', error);
-    return null;
+    showToast(`❌ ${error.message}`, 'error');
+    throw error;
   }
 }
 
@@ -460,12 +506,74 @@ const initAppointmentModal = () => {
   });
 };
 
-// Inicializa FAB de nueva cita
+// Inicializa FAB de nueva cita y Modal de Creación
 const initFAB = () => {
   const btnNew = safeGetElement('btnNewAppointment');
   btnNew?.addEventListener('click', () => {
-    showToast('📅 Abriendo formulario de nueva cita');
-    // En producción: abrir modal de creación
+    // Tomar el lunes de la semana actual por defecto
+    const dateStr = currentWeekStart.toISOString().split('T')[0];
+    openNewAppointmentModal(dateStr, '09:00');
+  });
+
+  const modalClose = safeGetElement('modalNewApptClose');
+  const modalCancel = safeGetElement('modalNewApptCancel');
+  const modal = safeGetElement('modalNewAppointment');
+  
+  modalClose?.addEventListener('click', closeNewAppointmentModal);
+  modalCancel?.addEventListener('click', closeNewAppointmentModal);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeNewAppointmentModal();
+  });
+  
+  // Submit handler
+  const form = safeGetElement('formNewAppointment');
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btnSave = safeGetElement('modalNewApptSave');
+    if(btnSave) {
+      btnSave.disabled = true;
+      btnSave.textContent = '⏳ Guardando...';
+    }
+    
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    // Parse types to int where needed
+    data.IdPaciente = parseInt(data.IdPaciente, 10);
+    data.IdProfesional = parseInt(data.IdProfesional, 10);
+    data.IdConsultorio = parseInt(data.IdConsultorio, 10);
+    data.IdServicio = parseInt(data.IdServicio, 10);
+    
+    try {
+      await createAppointmentAPI(data);
+      showToast('✅ Cita agendada exitosamente');
+      closeNewAppointmentModal();
+      
+      // Actualizar local y re-renderizar
+      // Agregamos localmente para feedback rápido
+      const newAppt = {
+        id: Date.now(),
+        date: data.Fecha,
+        time: data.HoraInicio,
+        patient: document.querySelector(`#newApptPatient option:checked`)?.text || 'Paciente',
+        professional: document.querySelector(`#newApptProfessional option:checked`)?.text || 'Profesional',
+        office: document.querySelector(`#newApptOffice option:checked`)?.text || 'Consultorio',
+        service: document.querySelector(`#newApptService option:checked`)?.text || 'Servicio',
+        status: data.Estado === 'Confirmada' ? 'confirmed' : 'available' // Simulado
+      };
+      
+      // Eliminar el espacio "available" a esa hora si existe (sólo local)
+      appointments = appointments.filter(a => !(a.available && a.date === data.Fecha && a.time === data.HoraInicio));
+      appointments.push(newAppt);
+      
+      applyFilters(); // Re-render con filtros
+    } catch (error) {
+      // El toast ya se mostró en createAppointmentAPI, no cerramos el modal
+    } finally {
+      if(btnSave) {
+        btnSave.disabled = false;
+        btnSave.textContent = 'Guardar Cita';
+      }
+    }
   });
 };
 

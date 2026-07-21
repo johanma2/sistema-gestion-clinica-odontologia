@@ -1,6 +1,13 @@
-@{ Layout = null; }
+@{
+  Layout = null;
+  var loggedProfesional = ViewData["LoggedProfesional"] as SmileTrack_MVC.Models.Entities.Profesional;
+  var especialidades = loggedProfesional?.Especialidades?.Select(pe => pe.Especialidad?.Nombre).Where(n => n != null).ToList() ?? new List<string?>();
+  var initials = loggedProfesional != null 
+      ? string.Concat($"{loggedProfesional.Nombres} {loggedProfesional.Apellidos}".Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant()
+      : "CM";
+}
 
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -49,13 +56,24 @@
 
     <!-- Profile Header Card -->
     <section class="profile-header-card" aria-labelledby="profileName">
-      <div class="profile-avatar-large" aria-hidden="true">CM</div>
+      <div class="profile-avatar-large" aria-hidden="true">@initials</div>
       <div class="profile-info">
-        <h2 id="profileName">Dr. Carlos Méndez</h2>
+        <h2 id="profileName">@(loggedProfesional != null ? $"Dr. {loggedProfesional.Nombres} {loggedProfesional.Apellidos}" : "Dr. Carlos Méndez")</h2>
         <div class="profile-tags" role="list">
-          <span class="tag tag-blue" role="listitem">🦷 Odontología General</span>
-          <span class="tag tag-purple" role="listitem">✨ Estética Dental</span>
-          <span class="tag tag-green" role="listitem">✓ RM-2026-001</span>
+          @if (loggedProfesional != null)
+          {
+            foreach (var esp in especialidades)
+            {
+              <span class="tag tag-blue" role="listitem">🦷 @esp</span>
+            }
+            <span class="tag tag-green" role="listitem">✓ @loggedProfesional.RegistroMedico</span>
+          }
+          else
+          {
+            <span class="tag tag-blue" role="listitem">🦷 Odontología General</span>
+            <span class="tag tag-purple" role="listitem">✨ Estética Dental</span>
+            <span class="tag tag-green" role="listitem">✓ RM-2026-001</span>
+          }
         </div>
       </div>
     </section>
@@ -73,21 +91,25 @@
               <div class="info-icon" aria-hidden="true">📞</div>
               <div>
                 <label>Teléfono</label>
-                <div class="info-value">300 123 4567</div>
+                <div class="info-value">@(loggedProfesional?.Telefono ?? "300 123 4567")</div>
               </div>
             </div>
             <div class="info-item">
               <div class="info-icon" aria-hidden="true">✉️</div>
               <div>
                 <label>Correo</label>
-                <div class="info-value">dr.mendez@smiletrack.co</div>
+                <div class="info-value">@(loggedProfesional?.Usuario?.Correo ?? "dr.mendez@smiletrack.co")</div>
               </div>
             </div>
             <div class="info-item">
               <div class="info-icon" aria-hidden="true">📅</div>
               <div>
                 <label>Fecha de ingreso</label>
-                <div class="info-value"><time datetime="2022-03-15">15 Mar 2022</time></div>
+                <div class="info-value">
+                  <time datetime="@(loggedProfesional?.FechaIngreso?.ToString("yyyy-MM-dd") ?? "2022-03-15")">
+                    @(loggedProfesional?.FechaIngreso?.ToString("dd MMM yyyy") ?? "15 Mar 2022")
+                  </time>
+                </div>
               </div>
             </div>
             <div class="info-item">
@@ -95,9 +117,9 @@
               <div>
                 <label>Estado</label>
                 <div class="info-value">
-                  <span class="status-badge active" role="status" aria-label="Estado: Activo">
+                  <span class="status-badge active" role="status" aria-label="Estado: @(loggedProfesional?.Estado ?? "Activo")">
                     <span class="status-dot" aria-hidden="true"></span>
-                    Activo
+                    @(loggedProfesional?.Estado ?? "Activo")
                   </span>
                 </div>
               </div>

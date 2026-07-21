@@ -6,8 +6,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Dashboard General de SmileTrack - Sistema de Gestión Dental" />
-  <title>SmileTrack — Dashboard General</title>
+  <meta name="description" content="Dashboard General administrativo de SmileTrack - Sistema de Gestión de Citas Odontológicas. Indicadores, pacientes y citas." />
+  <title>SmileTrack Dashboard General</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
@@ -26,18 +26,18 @@
     <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
   </div>
   @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AD</div>
-    <div class="user-info">
-      <span class="user-role">Administrador</span>
-      <span class="user-email">admin@smiletrack.co</span>
+              <div class="sidebar-user">
+      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Length >= 2 ? User.Identity.Name.Substring(0, 2).ToUpperInvariant() : (User.Identity?.Name?.ToUpperInvariant() ?? "U"))</div>
+      <div class="user-info">
+        <span class="user-role">@User.Identity?.Name</span>
+        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
+      </div>
     </div>
-  </div>
 </aside>
 
 
 
-  <!-- ═════ HAMBURGER (móvil) ═════ -->
+  <!--  HAMBURGER (móvil)  -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
@@ -45,7 +45,7 @@
   </button>
   <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <!-- ═════ MAIN ═════ -->
+  <!--  MAIN  -->
   <main class="main" id="main-content">
 
     <!-- Header -->
@@ -62,18 +62,23 @@
   <time datetime="@DateTime.Now.ToString("yyyy-MM-dd")" id="headerDate">@DateTime.Now.ToString("dddd d 'de' MMMM yyyy", new System.Globalization.CultureInfo("es-ES"))</time>
 </p>
       </div>
-      <button class="btn-primary" id="btnExport" aria-label="Función en desarrollo" disabled title="Disponible próximamente">
-        📊 Exportar reporte
-      </button>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <button class="btn-secondary" id="btnExport" aria-label="Exportar reporte" title="Generar reporte en formato PDF o Excel">
+          📊 Exportar reporte
+        </button>
+        <a class="btn-primary" href="/gestion-de-citas/st-adm-09-citas?action=new" aria-label="Programar nueva cita">
+          + Nueva Cita
+        </a>
+      </div>
     </header>
 
     <!-- Barra de progreso superior -->
-    <div class="progress-row" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"
-      aria-label="Progreso del sistema: 75%">
+    <div class="progress-row" role="progressbar" aria-valuenow="@(ViewData["PctOcupacion"] is int po ? po : 0)" aria-valuemin="0" aria-valuemax="100"
+      aria-label="Ocupación de la agenda: @(ViewData["PctOcupacion"] is int ppo ? ppo : 0)%">
       <div class="progress-bar-wrap">
-        <div class="progress-bar" id="topProgressBar" style="width:75%"></div>
+        <div class="progress-bar" id="topProgressBar" style="width:@(ViewData["PctOcupacion"] is int poWidth ? poWidth : 0)%"></div>
       </div>
-      <span class="progress-label" aria-live="polite">Sistema operativo</span>
+      <span class="progress-label" aria-live="polite">Ocupación de agenda (@(ViewData["PctOcupacion"] is int ppo2 ? ppo2 : 0)%)</span>
     </div>
 
     <!-- Stats Grid -->
@@ -91,7 +96,7 @@
         <span class="stat-label">Profesionales activos</span>
       </div>
       <div class="stat-card" data-color="purple">
-        <span class="stat-number" id="statIngresos" aria-live="polite">$@(((decimal)ViewData["IngresosDelMes"]!).ToString("N0"))</span>
+        <span class="stat-number" id="statIngresos" aria-live="polite">$@((ViewData["IngresosDelMes"] is decimal ing ? ing : 0m).ToString("N0"))</span>
         <span class="stat-label">Ingresos del mes</span>
         <span class="stat-vs" style="visibility:hidden" aria-hidden="true">— módulo en desarrollo</span>
       </div>
@@ -106,14 +111,14 @@
         <!-- Gráfico de ingresos -->
         <section class="card" aria-labelledby="revenueTitle">
           <h2 class="card-title" id="revenueTitle">Ingresos por mes</h2>
-          <p class="chart-summary">📊 Este panel se activará cuando el módulo de Facturación esté implementado.</p>
+          <p class="chart-summary">Este panel se activará cuando el módulo de Facturación esté implementado.</p>
         </section>
 
         <!-- Tabla de profesionales top -->
         <section class="card" aria-labelledby="topProfTitle">
           <h2 class="card-title" id="topProfTitle">Top profesionales del mes</h2>
           <div class="table-wrap">
-            <table class="table-base" aria-label="Tabla de profesionales más productivos">
+            <table class="table-base" aria-label="Tabla de profesionales mÃ¡s productivos">
               <thead>
                 <tr>
                   <th scope="col">Profesional</th>
@@ -151,7 +156,7 @@
         <!-- Estado de citas -->
         <section class="card" aria-labelledby="statusTitle">
           <h2 class="card-title" id="statusTitle">Citas del mes por estado</h2>
-          <div class="status-chart" id="statusChart" role="img" aria-label="Gráfico de estado de citas">
+          <div class="status-chart" id="statusChart" role="img" aria-label="GrÃ¡fico de estado de citas">
             <div class="status-row">
               <span class="status-label">Atendidas</span>
               <div class="status-bar-bg">
@@ -187,7 +192,7 @@
         <section class="card" aria-labelledby="invoicesTitle">
           <h2 class="card-title" id="invoicesTitle">Facturas pendientes de cobro</h2>
           <div class="invoices-list" role="list">
-            <p class="chart-summary">💳 Disponible cuando el módulo de Facturación esté implementado.</p>
+            <p class="chart-summary">Disponible cuando el módulo de Facturación esté implementado.</p>
           </div>
           <div class="invoices-total" aria-live="polite">
             <span>Total pendiente:</span>
@@ -204,19 +209,19 @@
   <!-- Mobile bottom nav -->
   <nav class="mobile-nav" aria-label="Navegación móvil">
     <a href="#" class="mobile-nav-item active" aria-current="page">
-      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Inicio</span>
     </a>
-    <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item active" aria-current="page">
-      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+    <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item active">
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Dashboard</span>
     </a>
     <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Agenda</span>
     </a>
     <a href="/gestion-de-citas/st-adm-09-citas" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Citas</span>
     </a>
   </nav>
@@ -258,7 +263,7 @@
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
+      <span style="font-size:1rem;"></span>
       <p>© 2025 Smile Track. Todos los derechos reservados.</p>
     </div>
     <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
@@ -267,6 +272,11 @@
   </footer>
 
 
+  <script>
+    window.APP_CONFIG = {
+      ApiBase: '/api' // Aquí podrías inyectar @Url.Content("~/api") si la URL cambia
+    };
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-01-dashboard/app.js")"></script>
 
 <script>
@@ -303,3 +313,5 @@
 </body>
 
 </html>
+
+
