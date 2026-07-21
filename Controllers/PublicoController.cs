@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc;
 
 namespace SmileTrack_MVC.Controllers;
 
@@ -10,7 +9,7 @@ public class PublicoController : Controller
     public IActionResult Homepage() => View("~/Views/Publico/homepage.cshtml");
 
     [Route("shared")]
-    public IActionResult Shared() => View("~/Views/shared/index.cshtml");
+    public IActionResult Shared() => View("~/Views/Shared/index.cshtml");
     [HttpGet]
 [Route("dev/generar-hash")]
 public IActionResult GenerarHash(string pwd = "Admin123!")

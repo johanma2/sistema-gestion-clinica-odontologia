@@ -5,15 +5,17 @@ using SmileTrack_MVC.Models.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 builder.Services.AddControllersWithViews();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    connectionString = "Server=familia\\SMILETRACK,52383;Database=SmileTrackDB;Trusted_Connection=True;TrustServerCertificate=True;";
+    connectionString = "Server=(localdb)\\mssqllocaldb;Database=SmileTrackDB;Trusted_Connection=True;TrustServerCertificate=True;";
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure()));
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -65,16 +67,10 @@ app.MapControllerRoute(
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
     try
     {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.EnsureCreatedAsync();
-    }
-    catch
-    {
-        await db.Database.EnsureCreatedAsync();
-    }
 
     if (!await db.Roles.AnyAsync())
     {
@@ -262,7 +258,12 @@ using (var scope = app.Services.CreateScope())
         );
         await db.SaveChangesAsync();
     }
-
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "No se pudo inicializar la base de datos durante el inicio.");
+    }
 }
 
 app.Run();

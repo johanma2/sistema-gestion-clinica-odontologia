@@ -81,12 +81,14 @@ public class GestionCitasController : Controller
             return BadRequest(new { message = "Datos inválidos", errors });
         }
 
+        var inicioDto = dto.Fecha.Date.Add(dto.HoraInicio);
+        var finDto = dto.Fecha.Date.Add(dto.HoraFin);
+
         var hayConflicto = await _context.Citas
-            .AnyAsync(c => c.FechaHora.Date == dto.Fecha.Date
-                && c.IdProfesional == dto.IdProfesional
-                && c.HoraInicio < dto.HoraFin
-                && c.HoraFin > dto.HoraInicio
-                && c.Estado != "Cancelada");
+            .AnyAsync(c => c.IdProfesional == dto.IdProfesional
+                && c.Estado != "Cancelada"
+                && c.FechaHora < finDto
+                && c.FechaHora.AddMinutes(30) > inicioDto);
 
         if (hayConflicto)
             return BadRequest(new { message = "El profesional ya tiene una cita en este horario." });

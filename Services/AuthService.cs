@@ -7,21 +7,12 @@ using SmileTrack_MVC.Models.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace SmileTrack_MVC.Services
 {
-    public interface IAuthService
-    {
-        Task<AuthResponse> LoginAsync(LoginRequest request);
-        Task<AuthResponse> RegisterAsync(RegisterRequest request);
-        Task<AuthResponse> RecoverPasswordAsync(RecoverPasswordRequest request);
-        Task<AuthResponse> ResetPasswordAsync(ResetPasswordRequest request);
-    }
-
     public class AuthService : IAuthService
     {
         private readonly IConfiguration _configuration;
@@ -196,11 +187,9 @@ namespace SmileTrack_MVC.Services
             var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == request.Correo);
             if (user == null)
             {
-                // Por seguridad, no decimos si el correo existe o no, pero aquí para desarrollo retornamos error amistoso
                 return new AuthResponse { Success = false, Message = "El correo no está registrado en el sistema." };
             }
 
-            // Generar código de 6 dígitos
             var code = new Random().Next(100000, 999999).ToString();
             user.CodigoRecuperacion = code;
             user.FechaExpiracionCodigo = DateTime.UtcNow.AddMinutes(15);
@@ -208,7 +197,6 @@ namespace SmileTrack_MVC.Services
             _context.Usuarios.Update(user);
             await _context.SaveChangesAsync();
 
-            // En un caso real enviarías un correo. Aquí retornamos el código para pruebas de desarrollo
             return new AuthResponse
             {
                 Success = true,
@@ -239,7 +227,6 @@ namespace SmileTrack_MVC.Services
                 return new AuthResponse { Success = false, Message = "El código ha expirado." };
             }
 
-            // Restablecer contraseña
             user.Contrasena = BCrypt.Net.BCrypt.HashPassword(request.NuevaContrasena);
             user.CodigoRecuperacion = null;
             user.FechaExpiracionCodigo = null;

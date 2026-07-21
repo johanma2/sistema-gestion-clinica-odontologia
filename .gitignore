@@ -32,6 +32,7 @@ obj/
 ## Archivos de caché
 *.cache
 *.log
+cookies.txt
 
 ## Archivos de publicación de ASP.NET
 **/[Pp]ublish/
