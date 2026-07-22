@@ -2,7 +2,7 @@
     var currentPath = Context.Request.Path.Value ?? "/";
     Func<string, string> linkClass = href => currentPath.Equals(href, StringComparison.OrdinalIgnoreCase) ? "nav-item active" : "nav-item";
 }
-<nav class="sidebar-nav">
+@{ await Html.RenderPartialAsync("_SidebarAdmin"); }
   <div class="nav-group">
     <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
     <div class="nav-group-items">

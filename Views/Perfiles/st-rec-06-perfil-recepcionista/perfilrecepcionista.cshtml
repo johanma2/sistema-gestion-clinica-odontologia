@@ -24,7 +24,7 @@
   <div class="sidebar-logo">
     <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
   </div>
-  <nav class="sidebar-nav">
+  @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
     <div class="nav-group">
       <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
       <div class="nav-group-items">
