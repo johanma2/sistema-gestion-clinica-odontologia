@@ -36,10 +36,10 @@ public class GestionProfesionalesController : Controller
     [HttpGet]
     [Authorize(Roles = "Administrador,Profesional")]
     [Route("gestion-de-profesionales/st-adm-14-reportes-clinicos")]
-    public async Task<IActionResult> Stadm14ReportesClinicos([FromQuery] int? editId, [FromQuery] string? search = null, [FromQuery] string? profesional = null, [FromQuery] string? mes = null)
+    public async Task<IActionResult> Stadm14ReportesClinicos([FromQuery] int? editId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? profesional = null, [FromQuery] string? mes = null)
     {
         await CargarDatosProfesionales(editId, "/gestion-de-profesionales/st-adm-14-reportes-clinicos");
-        await CargarDatosReportesClinicos(search, profesional, mes);
+        await CargarDatosReportesClinicos(page, pageSize, search, profesional, mes);
         return View("~/Views/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/index.cshtml");
     }
 
@@ -245,7 +245,7 @@ public class GestionProfesionalesController : Controller
     /// <summary>
     /// Prepara los datos de reportes clínicos para la vista administrativa.
     /// </summary>
-    private async Task CargarDatosReportesClinicos(string? search = null, string? profesional = null, string? mes = null)
+    private async Task CargarDatosReportesClinicos(int page, int pageSize, string? search = null, string? profesional = null, string? mes = null)
     {
         var hoy = DateTime.Today;
         var inicioMes = new DateTime(hoy.Year, hoy.Month, 1);
@@ -303,7 +303,14 @@ public class GestionProfesionalesController : Controller
         }
         // ─────────────────────────────────────────────────────────────────────────
 
-        var citas = await citasQuery.OrderByDescending(c => c.FechaHora).ToListAsync();
+        // First, get all unique patients with their latest appointment to group correctly for pagination
+        var pacientesQuery = citasQuery
+            .GroupBy(c => c.IdPaciente)
+            .Select(g => g.OrderByDescending(c => c.FechaHora).First())
+            .OrderByDescending(c => c.FechaHora);
+
+        // Get paged results for the appointments, then project to view models
+        var pagedCitas = await pacientesQuery.ToPagedResultAsync(page, pageSize);
 
         var profesionalesOptions = await _context.Profesionales
             .Where(p => p.Estado == "activo")
@@ -312,35 +319,44 @@ public class GestionProfesionalesController : Controller
             .OrderBy(name => name)
             .ToListAsync();
 
-        var reportes = citas
-            .GroupBy(c => c.IdPaciente)
-            .Select(g =>
-            {
-                var cita = g.First();
-                var nacimiento = cita.Paciente?.FechaNacimiento;
-                var edad = nacimiento.HasValue ? hoy.Year - nacimiento.Value.Year - (hoy < nacimiento.Value.AddYears(hoy.Year - nacimiento.Value.Year) ? 1 : 0) : 0;
-                var proximaCita = g.Where(c => c.Fecha >= hoy).OrderBy(c => c.Fecha).ThenBy(c => c.HoraInicio).FirstOrDefault();
-                var alerta = string.IsNullOrWhiteSpace(cita.NotasPrevias) ? null : "observacion";
+        // Project the paged items to view models
+        var reportes = pagedCitas.Items.Select(cita =>
+        {
+            // Get all appointments for this patient to find next appointment
+            var pacienteCitas = citasQuery.Where(c => c.IdPaciente == cita.IdPaciente).ToList();
+            
+            var nacimiento = cita.Paciente?.FechaNacimiento;
+            var edad = nacimiento.HasValue ? hoy.Year - nacimiento.Value.Year - (hoy < nacimiento.Value.AddYears(hoy.Year - nacimiento.Value.Year) ? 1 : 0) : 0;
+            var proximaCita = pacienteCitas.Where(c => c.Fecha >= hoy).OrderBy(c => c.Fecha).ThenBy(c => c.HoraInicio).FirstOrDefault();
+            var alerta = string.IsNullOrWhiteSpace(cita.NotasPrevias) ? null : "observacion";
 
-                return new global::SmileTrack_MVC.Models.ViewModels.ReporteClinicoViewModel
-                {
-                    Id = cita.IdCita,
-                    NombrePaciente = $"{cita.Paciente?.Nombres} {cita.Paciente?.Apellidos}".Trim(),
-                    Documento = cita.Paciente?.Documento ?? string.Empty,
-                    Edad = edad,
-                    UltimaConsulta = cita.Fecha,
-                    Diagnostico = cita.MotivoConsulta ?? "Consulta general",
-                    ProfesionalNombre = cita.Profesional?.Usuario != null ? $"{cita.Profesional.Usuario.Nombre} {cita.Profesional.Usuario.Apellidos}".Trim() : "Sin profesional",
-                    ProximaCita = proximaCita?.Fecha,
-                    Alerta = alerta,
-                    Avatar = string.Concat((cita.Paciente?.Nombres ?? "P").Take(2).Select(ch => char.ToUpperInvariant(ch))).ToString(),
-                    Color = g.Count() % 2 == 0 ? "green" : "blue"
-                };
-            })
-            .Take(15)
-            .ToList();
+            return new global::SmileTrack_MVC.Models.ViewModels.ReporteClinicoViewModel
+            {
+                Id = cita.IdCita,
+                NombrePaciente = $"{cita.Paciente?.Nombres} {cita.Paciente?.Apellidos}".Trim(),
+                Documento = cita.Paciente?.Documento ?? string.Empty,
+                Edad = edad,
+                UltimaConsulta = cita.Fecha,
+                Diagnostico = cita.MotivoConsulta ?? "Consulta general",
+                ProfesionalNombre = cita.Profesional?.Usuario != null ? $"{cita.Profesional.Usuario.Nombre} {cita.Profesional.Usuario.Apellidos}".Trim() : "Sin profesional",
+                ProximaCita = proximaCita?.Fecha,
+                Alerta = alerta,
+                Avatar = string.Concat((cita.Paciente?.Nombres ?? "P").Take(2).Select(ch => char.ToUpperInvariant(ch))).ToString(),
+                Color = pacienteCitas.Count % 2 == 0 ? "green" : "blue"
+            };
+        }).ToList();
+
+        // Create a PagedResult for the view models
+        var pagedReportes = new SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.ViewModels.ReporteClinicoViewModel>
+        {
+            Page = pagedCitas.Page,
+            PageSize = pagedCitas.PageSize,
+            TotalCount = pagedCitas.TotalCount,
+            Items = reportes
+        };
 
         ViewData["ReportesClinicos"] = reportes;
+        ViewData["ReportesClinicosPage"] = pagedReportes;
         ViewData["ProfesionalesReportes"] = profesionalesOptions;
         ViewData["TotalPacientesReportes"] = await _context.Pacientes.CountAsync();
 

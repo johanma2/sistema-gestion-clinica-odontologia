@@ -14,7 +14,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Gestiona y supervisa el historial completo de citas en SmileTrack." />
-  <title>SmileTrack � Gesti�n de Citas</title>
+  <title>SmileTrack — Gestión de Citas</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
@@ -28,7 +28,7 @@
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <aside class="sidebar" id="sidebar" aria-label="Navegaci�n principal">
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
     <div class="sidebar-logo">
       <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
     </div>
@@ -59,16 +59,14 @@
     <header class="page-header">
       <div class="header-left">
         <nav class="breadcrumb" aria-label="Ruta de navegaci�n">
-          <span>Administraci�n</span>
-          <span class="bc-sep" aria-hidden="true">?</span>
-          <span class="bc-active">Gesti�n de Citas</span>
+          <span>Administración</span>
+          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-active">Gestión de Citas</span>
         </nav>
-        <h1 class="page-title">Gesti�n Integral de Citas</h1>
-        <p class="page-subtitle">Supervisi�n y control</p>
+        <h1 class="page-title">Gestión Integral de Citas</h1>
+        <p class="page-subtitle">Supervisión y control</p>
       </div>
-      <button class="btn-primary" id="btnNewCita" aria-label="Programar nueva cita" onclick="document.getElementById('modalCita').classList.add('open');">
-        + Nueva Cita
-      </button>
+
     </header>
 
     <!-- KPI Cards con aria-live para contadores -->
@@ -172,11 +170,11 @@
             </select>
           </div>
           <div class="filter-wrap">
-            <input type="date" id="filterDate" name="fecha" class="status-select" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]">
+            <input type="date" id="filterDate" name="fecha" class="filter-date" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]">
           </div>
           <input type="hidden" name="page" value="1" />
           <button class="btn-primary" type="submit">Aplicar</button>
-          <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">Limpiar</a>
+          <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">🗑️ Limpiar</a>
         </form>
       </section>
 
@@ -249,12 +247,12 @@
               </form>
             </div>
             <div class="table-col col-acciones text-right" role="cell">
-              <a class="action-btn" href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" title="Editar">✏️</a>
+              <a class="action-btn" href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" title="Editar">✏️ <span class="btn-text">Editar</span></a>
               <form method="post" action="/gestion-de-citas/eliminar-cita" style="display:inline;">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="IdCita" value="@cita.IdCita" />
                 <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-                <button class="action-btn btn-delete" type="submit" onclick="return confirm('¿Eliminar esta cita?');" title="Eliminar">❌</button>
+                <button class="action-btn btn-delete" type="submit" onclick="return confirm('¿Eliminar esta cita?');" title="Eliminar">❌ <span class="btn-text">Eliminar</span></button>
               </form>
             </div>
           </div>

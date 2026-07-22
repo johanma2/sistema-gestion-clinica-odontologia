@@ -365,9 +365,6 @@ window.toggleStatus = (id) => {
 //  MODALES
 // ═══════════════════════════════════════════════════════════════════
 
-// Rastrear el elemento que abrió el modal para devolver el foco al cerrarlo (WCAG 2.4.3)
-let lastModalOpener = null;
-
 /**
  * Abre modal de formulario y registra quién lo abrió.
  * WHY: WCAG 2.4.3 — al cerrar un modal el foco debe regresar al elemento
@@ -608,14 +605,54 @@ const initSearchDebounce = () => {
  * WHY: Centraliza toda la configuración de modales para que initSidebar/initFilters
  *      no necesiten conocer los detalles del modal (separación de responsabilidades).
  */
+// Variables for delete modal
+let lastModalOpener = null;
+
+const openConfirmDeleteModal = (id, name) => {
+  lastModalOpener = document.activeElement;
+  const modal = safeGetElement('modalConfirmDelete');
+  const message = safeGetElement('modalConfirmDeleteMessage');
+  const deleteIdInput = safeGetElement('deleteProfesionalId');
+  
+  if (message) {
+    message.textContent = `¿Estás seguro de eliminar a ${name}? Esta acción no se puede deshacer.`;
+  }
+  if (deleteIdInput) {
+    deleteIdInput.value = id;
+  }
+  if (modal) {
+    modal.classList.add('open');
+    modal.removeAttribute('aria-hidden');
+    modal.removeAttribute('inert');
+    document.body.style.overflow = 'hidden';
+  }
+};
+
+const closeConfirmDeleteModal = () => {
+  const modal = safeGetElement('modalConfirmDelete');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('inert', '');
+    document.body.style.overflow = '';
+  }
+  if (lastModalOpener && typeof lastModalOpener.focus === 'function') {
+    lastModalOpener.focus();
+  }
+  lastModalOpener = null;
+};
+
 const initModals = () => {
   const btnNew = safeGetElement('btnNewProfessional');
   const modalFormClose = safeGetElement('modalFormClose');
   const modalFormCancel = safeGetElement('modalFormCancel');
   const modalDetailClose = safeGetElement('modalDetailClose');
   const modalDetailCloseBtn = safeGetElement('modalDetailCloseBtn');
+  const modalConfirmDeleteClose = safeGetElement('modalConfirmDeleteClose');
+  const modalConfirmDeleteCancel = safeGetElement('modalConfirmDeleteCancel');
   const modalForm = safeGetElement('modalForm');
   const modalDetail = safeGetElement('modalDetail');
+  const modalConfirmDelete = safeGetElement('modalConfirmDelete');
   const form = safeGetElement('formProfessional');
   
   // Abrir modal crear
@@ -626,6 +663,8 @@ const initModals = () => {
   modalFormCancel?.addEventListener('click', closeFormModal);
   modalDetailClose?.addEventListener('click', closeDetailModal);
   modalDetailCloseBtn?.addEventListener('click', closeDetailModal);
+  modalConfirmDeleteClose?.addEventListener('click', closeConfirmDeleteModal);
+  modalConfirmDeleteCancel?.addEventListener('click', closeConfirmDeleteModal);
   
   modalForm?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeFormModal();
@@ -633,9 +672,23 @@ const initModals = () => {
   modalDetail?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeDetailModal();
   });
+  modalConfirmDelete?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeConfirmDeleteModal();
+  });
   
   // Submit del formulario
   form?.addEventListener('submit', saveProfessional);
+  
+  // Delete buttons
+  document.querySelectorAll('.btn-icon.toggle[data-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      const name = btn.getAttribute('data-name');
+      if (id) {
+        openConfirmDeleteModal(id, name);
+      }
+    });
+  });
   
   // Soporte para teclado en modales
   document.addEventListener('keydown', (e) => {
@@ -647,6 +700,10 @@ const initModals = () => {
       if (modalDetail?.classList.contains('open')) {
         e.preventDefault();
         closeDetailModal();
+      }
+      if (modalConfirmDelete?.classList.contains('open')) {
+        e.preventDefault();
+        closeConfirmDeleteModal();
       }
     }
   });
