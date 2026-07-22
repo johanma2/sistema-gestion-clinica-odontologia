@@ -336,6 +336,28 @@ img { max-width: 100%; height: auto; display: block; }
 .btn-icon.edit { color: var(--orange); }
 .btn-icon.toggle { color: var(--danger); }
 
+/* Action buttons with text */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+.btn-text {
+  display: inline;
+}
+
+@media (max-width: 680px) {
+  .btn-text {
+    display: none;
+  }
+  .action-btn {
+    padding: 6px 8px;
+  }
+}
+
 /* ═══ PAGINACIÓN ═══ */
 .pagination {
   display: flex; align-items: center; justify-content: space-between;
@@ -419,7 +441,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .form-input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .modal-footer {
-  display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
+  display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap;
 }
 
 /* Modal detalle */

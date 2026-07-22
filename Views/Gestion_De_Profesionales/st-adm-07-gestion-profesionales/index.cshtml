@@ -229,18 +229,20 @@
                 <td>@profesional.Telefono</td>
                 <td><span class="badge-status badge-@((profesional.Estado ?? string.Empty).ToLowerInvariant())">@profesional.Estado</span></td>
                 <td>
-                  <div class="actions-cell">
-                    <!-- Editar: GET con editId para que el Controller cargue el profesional en ViewData -->
-                    <a class="btn-icon edit" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { editId = profesional.IdProfesional })">✏️</a>
-                    <!-- Eliminar: POST con AntiForgery token — protección CSRF obligatoria en mutaciones -->
-                    <form method="post" action="/gestion-de-profesionales/eliminar-profesional" style="display:inline;">
-                      @Html.AntiForgeryToken()
-                      <input type="hidden" name="IdProfesional" value="@profesional.IdProfesional" />
-                      <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-                      <button class="btn-icon toggle" type="submit" onclick="return confirm('¿Eliminar este profesional?');">❌</button>
-                    </form>
-                  </div>
-                </td>
+          <div class="actions-cell">
+            <!-- Editar: GET con editId para que el Controller cargue el profesional en ViewData -->
+            <a class="btn-icon edit action-btn" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { editId = profesional.IdProfesional })" aria-label="Editar profesional @profesional.Nombres @profesional.Apellidos" role="button">
+              ✏️ <span class="btn-text">Editar</span>
+            </a>
+            <!-- Eliminar: abrir modal de confirmación -->
+            <button class="btn-icon toggle action-btn btn-delete" type="button" 
+                    data-id="@profesional.IdProfesional" 
+                    data-name="@profesional.Nombres @profesional.Apellidos"
+                    aria-label="Eliminar profesional @profesional.Nombres @profesional.Apellidos">
+              ❌ <span class="btn-text">Eliminar</span>
+            </button>
+          </div>
+        </td>
               </tr>
             }
           </tbody>
@@ -251,7 +253,7 @@
       <!-- WHY: cada click es un GET real al Controller — no se cargan todos los registros en memoria -->
       <div class="pagination" role="navigation" aria-label="Paginación de profesionales">
         @{ }
-      <span id="paginationInfo" aria-live="polite">Mostrando <strong>@(pageResult?.Items.Count ?? 0)</strong> de <strong>@(pageResult?.TotalCount ?? 0)</strong> profesionales</span>
+      <span id="paginationInfo" aria-live="polite">Mostrando <strong>@(pageResult?.Items.Count ?? 0)</strong> de <strong>@(pageResult?.TotalCount ?? 0)</strong> profesionales registrados</span>
         <div class="pagination-buttons" id="paginationButtons">
           @if (pageResult != null && pageResult.HasPreviousPage)
           {
@@ -299,55 +301,54 @@
         <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
         <input type="hidden" name="IdProfesional" id="formIdProfesional" value="@(editingProfesional?.IdProfesional ?? 0)" />
         <div class="form-group">
-            <label class="form-label" for="formNombres">Nombres *</label>
-            <input type="text" id="formNombres" name="Nombres" class="form-input" required placeholder="Ej. Carlos" value="@(editingProfesional?.Nombres)">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="formApellidos">Apellidos *</label>
-            <input type="text" id="formApellidos" name="Apellidos" class="form-input" required placeholder="Ej. Méndez Ruiz" value="@(editingProfesional?.Apellidos)">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="formRegistroMedico">Registro Médico *</label>
-            <input type="text" id="formRegistroMedico" name="RegistroMedico" class="form-input" required placeholder="Ej. RM-2026-001" value="@(editingProfesional?.RegistroMedico)">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="formCategoria">Categoría</label>
-            <input type="text" id="formCategoria" name="Categoria" class="form-input" placeholder="Ej. Odontología General" value="@(editingProfesional?.Categoria)">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="formTelefono">Teléfono</label>
-            <input type="tel" id="formTelefono" name="Telefono" class="form-input" placeholder="Ej. 300 123 4567" value="@(editingProfesional?.Telefono)">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="formEspecialidad">Especialidad</label>
-            <select id="formEspecialidad" name="IdEspecialidad" class="form-input">
-              <option value="">Sin especialidad</option>
-              @foreach (var especialidad in especialidades)
-              {
-                var espSelected = editingProfesional?.Especialidades.Any(pe => pe.IdEspecialidad == especialidad.IdEspecialidad) == true ? "selected" : null;
-                <option value="@especialidad.IdEspecialidad" selected="@espSelected">@especialidad.Nombre</option>
-              }
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="formUsuario">Usuario</label>
-            <select id="formUsuario" name="IdUsuario" class="form-input">
-              <option value="0">Sin usuario</option>
-              @foreach (var usuario in usuarios)
-              {
-                var usrSelected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : null;
-                <option value="@usuario.IdUsuario" selected="@usrSelected">@usuario.Nombre @usuario.Apellidos</option>
-              }
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="formStatus">Estado *</label>
-            <select id="formStatus" name="Estado" class="form-input" required>
-              <option value="activo" selected="@(editingProfesional?.Estado == "activo" ? "selected" : null)">Activo</option>
-              <option value="vacaciones" selected="@(editingProfesional?.Estado == "vacaciones" ? "selected" : null)">Vacaciones</option>
-              <option value="inactivo" selected="@(editingProfesional?.Estado == "inactivo" ? "selected" : null)">Inactivo</option>
-            </select>
-          </div>
+          <label class="form-label" for="formNombres">Nombres *</label>
+          <input type="text" id="formNombres" name="Nombres" class="form-input" required placeholder="Ej. Carlos" value="@(editingProfesional?.Nombres)">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formApellidos">Apellidos *</label>
+          <input type="text" id="formApellidos" name="Apellidos" class="form-input" required placeholder="Ej. Méndez Ruiz" value="@(editingProfesional?.Apellidos)">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formRegistroMedico">Registro Médico *</label>
+          <input type="text" id="formRegistroMedico" name="RegistroMedico" class="form-input" required placeholder="Ej. RM-2026-001" value="@(editingProfesional?.RegistroMedico)">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formCategoria">Categoría</label>
+          <input type="text" id="formCategoria" name="Categoria" class="form-input" placeholder="Ej. Odontología General" value="@(editingProfesional?.Categoria)">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formTelefono">Teléfono</label>
+          <input type="tel" id="formTelefono" name="Telefono" class="form-input" placeholder="Ej. 300 123 4567" value="@(editingProfesional?.Telefono)">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formEspecialidad">Especialidad</label>
+          <select id="formEspecialidad" name="IdEspecialidad" class="form-input">
+            <option value="">Sin especialidad</option>
+            @foreach (var especialidad in especialidades)
+            {
+              var espSelected = editingProfesional?.Especialidades.Any(pe => pe.IdEspecialidad == especialidad.IdEspecialidad) == true ? "selected" : null;
+              <option value="@especialidad.IdEspecialidad" selected="@espSelected">@especialidad.Nombre</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formUsuario">Usuario</label>
+          <select id="formUsuario" name="IdUsuario" class="form-input">
+            <option value="0">Sin usuario</option>
+            @foreach (var usuario in usuarios)
+            {
+              var usrSelected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : null;
+              <option value="@usuario.IdUsuario" selected="@usrSelected">@usuario.Nombre @usuario.Apellidos</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="formStatus">Estado *</label>
+          <select id="formStatus" name="Estado" class="form-input" required>
+            <option value="activo" selected="@(editingProfesional?.Estado == "activo" ? "selected" : null)">Activo</option>
+            <option value="vacaciones" selected="@(editingProfesional?.Estado == "vacaciones" ? "selected" : null)">Vacaciones</option>
+            <option value="inactivo" selected="@(editingProfesional?.Estado == "inactivo" ? "selected" : null)">Inactivo</option>
+          </select>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" id="modalFormCancel">Cancelar</button>
@@ -387,6 +388,25 @@
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="modalDetailCloseBtn">Cerrar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmar Eliminación -->
+  <div class="modal-overlay" id="modalConfirmDelete" role="dialog" aria-modal="true" aria-labelledby="modalConfirmDeleteTitle"
+    aria-hidden="true" inert>
+    <div class="modal">
+      <button class="modal-close" id="modalConfirmDeleteClose" aria-label="Cerrar ventana">×</button>
+      <h2 class="modal-title" id="modalConfirmDeleteTitle">Confirmar eliminación</h2>
+      <p id="modalConfirmDeleteMessage" style="margin-bottom: 20px;">¿Estás seguro de eliminar a este profesional? Esta acción no se puede deshacer.</p>
+      <form id="formDeleteProfessional" method="post" action="/gestion-de-profesionales/eliminar-profesional">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="IdProfesional" id="deleteProfesionalId" value="" />
+        <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="modalConfirmDeleteCancel">Cancelar</button>
+          <button type="submit" class="btn-primary" style="background-color: var(--red); border-color: var(--red);">Eliminar</button>
+        </div>
+      </form>
     </div>
   </div>
 
