@@ -48,11 +48,18 @@
       </div>
     </div>
       <div class="nav-group">
-  <div class="nav-group-header" role="button" tabindex="0">Gestión de PQR <span class="nav-arrow" aria-hidden="true">▼</span></div>
-  <div class="nav-group-items">
-    <a href="/gestion-de-pqr/st-pac-04-nueva-pqr" class="@linkClass("/gestion-de-pqr/st-pac-04-nueva-pqr")" data-icon="📝"> Nueva Solicitud </a>
+    <div class="nav-group-header" role="button" tabindex="0">Gestión de PQR <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a href="/gestion-de-pqr/st-pac-04-nueva-pqr" class="@linkClass("/gestion-de-pqr/st-pac-04-nueva-pqr")" data-icon="📝"> Nueva Solicitud </a>
+    </div>
   </div>
-</div>
+  <div class="nav-group">
+    <div class="nav-group-header" role="button" tabindex="0">Gestión de Ayuda <span class="nav-arrow" aria-hidden="true">▼</span></div>
+    <div class="nav-group-items">
+      <a asp-controller="Centro_De_Ayuda" asp-action="Index" class="@linkClass("/Centro_De_Ayuda")" data-icon="❓">Centro de Ayuda</a>
+      <a href="/gestion-de-pqr/st-pac-04-nueva-pqr" class="@linkClass("/gestion-de-pqr/st-pac-04-nueva-pqr")" data-icon="📝">Nueva Solicitud</a>
+    </div>
+  </div>
     <div class="nav-separator" aria-hidden="true"></div>
     <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
   </nav>
