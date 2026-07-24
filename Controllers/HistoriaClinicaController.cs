@@ -6,6 +6,11 @@ namespace SmileTrack_MVC.Controllers;
 public class HistoriaClinicaController : Controller
 {
     [HttpGet]
+    [Authorize(Roles = "Administrador")]
+    [Route("historia-clinica/st-adm-historial")]
+    public IActionResult StadmHistorial() => View("~/Views/Historia_Clinica/st-adm-historial/historial-adm.cshtml");
+
+    [HttpGet]
     [Authorize(Roles = "Auxiliar")]
     [Route("historia-clinica/st-aux-07-control-postoperato")]
     public IActionResult Staux07ControlPostoperato() => View("~/Views/Historia_Clinica/st-aux-07-control-postoperato/control-post.cshtml");
@@ -34,6 +39,11 @@ public class HistoriaClinicaController : Controller
     [Authorize(Roles = "Profesional")]
     [Route("historia-clinica/st-odo-07-seguimiento-tratamiento")]
     public IActionResult Stodo07SeguimientoTratamiento() => View("~/Views/Historia_Clinica/st-odo-07-seguimiento-tratamiento/tratamientos.cshtml");
+
+    [HttpGet]
+    [Authorize(Roles = "Recepcionista")]
+    [Route("historia-clinica/st-rec-historial")]
+    public IActionResult StrecHistorial() => View("~/Views/Historia_Clinica/st-rec-historial/historial-rec.cshtml");
 
     [HttpGet]
     [Authorize(Roles = "Paciente")]
