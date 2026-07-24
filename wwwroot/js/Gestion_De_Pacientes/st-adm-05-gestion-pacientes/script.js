@@ -47,6 +47,9 @@ const animateCounters = () => {
 // ═══════════════════════════════════════════════════════════════════
 
 let searchQuery = '';
+let filterAlergias = '';
+let filterCita = '';
+let filterHistorial = '';
 let currentPage = 1;
 const itemsPerPage = 5;
 
@@ -67,11 +70,27 @@ const getPatients = () => Array.isArray(window.RAZOR_PATIENTS) ? window.RAZOR_PA
 const getFilteredPatients = () => {
   const query = searchQuery.trim().toLowerCase();
   const patients = getPatients();
-  if (!query) return patients;
 
   return patients.filter((patient) => {
-    const haystack = [patient.Name, patient.Doc, patient.Diagnosis, patient.Allergies?.join(' ')].filter(Boolean).join(' ').toLowerCase();
-    return haystack.includes(query);
+    // Búsqueda por texto
+    if (query) {
+      const haystack = [patient.Name, patient.Doc, patient.Diagnosis, patient.Allergies?.join(' ')].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+
+    // Filtro por alergias
+    if (filterAlergias === 'con' && !(Array.isArray(patient.Allergies) && patient.Allergies.length > 0)) return false;
+    if (filterAlergias === 'sin' && (Array.isArray(patient.Allergies) && patient.Allergies.length > 0)) return false;
+
+    // Filtro por próxima cita
+    if (filterCita === 'con' && !patient.NextVisit) return false;
+    if (filterCita === 'sin' && patient.NextVisit) return false;
+
+    // Filtro por historial clínico
+    if (filterHistorial === 'con' && !(Array.isArray(patient.History) && patient.History.length > 0)) return false;
+    if (filterHistorial === 'sin' && (Array.isArray(patient.History) && patient.History.length > 0)) return false;
+
+    return true;
   });
 };
 
@@ -180,6 +199,15 @@ const renderPatients = () => {
 
   // Generar botones de página dinámicamente
   renderPaginationButtons(total);
+
+  // Actualizar contador de resultados del filtro
+  const filterResults = safeGetElement('filterResults');
+  const hasActiveFilters = searchQuery || filterAlergias || filterCita || filterHistorial;
+  if (filterResults) {
+    filterResults.textContent = hasActiveFilters
+      ? `${total} resultado${total !== 1 ? 's' : ''} encontrado${total !== 1 ? 's' : ''}`
+      : '';
+  }
 
   document.querySelectorAll('.btn-view').forEach((btn) => {
     btn.addEventListener('click', (event) => openPatientModal(Number(event.currentTarget.dataset.id), 'detail'));
@@ -340,9 +368,44 @@ const initModal = () => {
   });
 };
 
-const initNewPatient = () => {
-  const btn = safeGetElement('btnNewPatient');
-  btn?.addEventListener('click', () => showToast('⚠️ Funcionalidad de nuevo paciente en desarrollo', 'warning'));
+const initFilters = () => {
+  const applyFilters = () => {
+    currentPage = 1;
+    renderPatients();
+
+    // Indicar visualmente si hay filtros activos
+    const hasActive = filterAlergias || filterCita || filterHistorial;
+    const clearBtn = safeGetElement('btnClearFilters');
+    if (clearBtn) clearBtn.classList.toggle('active', !!hasActive);
+  };
+
+  safeGetElement('filterAlergias')?.addEventListener('change', (e) => {
+    filterAlergias = e.target.value;
+    applyFilters();
+  });
+
+  safeGetElement('filterCita')?.addEventListener('change', (e) => {
+    filterCita = e.target.value;
+    applyFilters();
+  });
+
+  safeGetElement('filterHistorial')?.addEventListener('change', (e) => {
+    filterHistorial = e.target.value;
+    applyFilters();
+  });
+
+  safeGetElement('btnClearFilters')?.addEventListener('click', () => {
+    filterAlergias = '';
+    filterCita = '';
+    filterHistorial = '';
+    const sel1 = safeGetElement('filterAlergias');
+    const sel2 = safeGetElement('filterCita');
+    const sel3 = safeGetElement('filterHistorial');
+    if (sel1) sel1.value = '';
+    if (sel2) sel2.value = '';
+    if (sel3) sel3.value = '';
+    applyFilters();
+  });
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -355,8 +418,8 @@ const init = () => {
   initSearch();
   initPagination();
   initModal();
-  initNewPatient();
-  
+  initFilters();
+
   animateCounters();
   renderPatients();
 };

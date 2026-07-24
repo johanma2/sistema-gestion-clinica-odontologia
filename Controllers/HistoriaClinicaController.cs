@@ -1,10 +1,23 @@
+using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SmileTrack_MVC.Data;
+using SmileTrack_MVC.Models.Entities;
+using SmileTrack_MVC.Models.ViewModels;
 
 namespace SmileTrack_MVC.Controllers;
 
 public class HistoriaClinicaController : Controller
 {
+    private readonly AppDbContext _context;
+
+    public HistoriaClinicaController(AppDbContext context)
+    {
+        _context = context;
+    }
+
     [HttpGet]
     [Authorize(Roles = "Administrador")]
     [Route("historia-clinica/st-adm-historial")]
@@ -23,12 +36,46 @@ public class HistoriaClinicaController : Controller
     [HttpGet]
     [Authorize(Roles = "Profesional")]
     [Route("historia-clinica/st-odo-03-historial")]
-    public IActionResult Stodo03Historial() => View("~/Views/Historia_Clinica/st-odo-03-historial/gestion-historial.cshtml");
+    public async Task<IActionResult> Stodo03Historial([FromQuery] int? pacienteId, [FromQuery] int? historiaId)
+    {
+        var vm = await BuildOdontogramaViewModelAsync(pacienteId, historiaId);
+        return View("~/Views/Historia_Clinica/st-odo-03-historial/gestion-historial.cshtml", vm);
+    }
 
     [HttpGet]
     [Authorize(Roles = "Profesional")]
     [Route("historia-clinica/st-odo-04-odontograma")]
-    public IActionResult Stodo04Odontograma() => View("~/Views/Historia_Clinica/st-odo-04-odontograma/odontograma-digital.cshtml");
+    public async Task<IActionResult> Stodo04Odontograma([FromQuery] int? pacienteId, [FromQuery] int? historiaId)
+    {
+        var vm = await BuildOdontogramaViewModelAsync(pacienteId, historiaId);
+        return View("~/Views/Historia_Clinica/st-odo-04-odontograma/odontograma-digital.cshtml", vm);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Profesional")]
+    [Route("historia-clinica/st-odo-04-odontograma/guardar")]
+    public async Task<IActionResult> GuardarOdontograma([FromBody] OdontogramaGuardarRequest request)
+    {
+        if (request is null)
+        {
+            return Json(new { success = false, message = "No se recibieron datos del odontograma." });
+        }
+
+        var pacienteId = request.PacienteId ?? await ObtenerPacientePredeterminadoAsync();
+        var historia = await _context.HistoriasClinicas.FirstOrDefaultAsync(h => h.IdPaciente == pacienteId && h.Activa)
+            ?? await CrearHistoriaClinicaAsync(pacienteId);
+
+        historia.ObservacionesGenerales = JsonSerializer.Serialize(new
+        {
+            registros = request.Registros,
+            mapeoFDI = request.MapeoFDI,
+            actualizadoEn = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
+
+        return Json(new { success = true, historiaId = historia.IdHistoria, message = "Odontograma guardado correctamente." });
+    }
 
     [HttpGet]
     [Authorize(Roles = "Profesional")]
@@ -49,4 +96,89 @@ public class HistoriaClinicaController : Controller
     [Authorize(Roles = "Paciente")]
     [Route("historia-clinica/st-pac-02-historial")]
     public IActionResult Stpac02Historial() => View("~/Views/Historia_Clinica/st-pac-02-historial/index.cshtml");
+
+    private async Task<OdontogramaViewModel> BuildOdontogramaViewModelAsync(int? pacienteId, int? historiaId)
+    {
+        var paciente = await _context.Pacientes.FirstOrDefaultAsync(p => p.IdPaciente == pacienteId)
+            ?? await _context.Pacientes.OrderBy(p => p.IdPaciente).FirstOrDefaultAsync();
+
+        if (paciente is null)
+        {
+            paciente = new Paciente
+            {
+                TipoDocumento = "CC",
+                Documento = "0000000",
+                Nombres = "Paciente",
+                Apellidos = "Demo",
+                FechaNacimiento = new DateTime(1990, 1, 1),
+                Estado = "activo"
+            };
+
+            _context.Pacientes.Add(paciente);
+            await _context.SaveChangesAsync();
+        }
+
+        var historia = await _context.HistoriasClinicas.FirstOrDefaultAsync(h => h.IdHistoria == historiaId)
+            ?? await _context.HistoriasClinicas.FirstOrDefaultAsync(h => h.IdPaciente == paciente.IdPaciente && h.Activa)
+            ?? await CrearHistoriaClinicaAsync(paciente.IdPaciente);
+
+        var profesionalNombre = User.FindFirst(ClaimTypes.Name)?.Value ?? "Profesional";
+        var profesionalCorreo = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+
+        return new OdontogramaViewModel
+        {
+            PacienteId = paciente.IdPaciente,
+            HistoriaId = historia.IdHistoria,
+            PacienteNombre = paciente.NombresCompleto,
+            CodigoHC = $"HC-{historia.IdHistoria:0000}",
+            FechaNacimiento = paciente.FechaNacimiento.ToString("yyyy-MM-dd"),
+            ProfesionalNombre = profesionalNombre,
+            ProfesionalCorreo = profesionalCorreo,
+            ObservacionesGenerales = historia.ObservacionesGenerales
+        };
+    }
+
+    private async Task<HistoriaClinica> CrearHistoriaClinicaAsync(int pacienteId)
+    {
+        var historiaExistente = await _context.HistoriasClinicas.FirstOrDefaultAsync(h => h.IdPaciente == pacienteId && h.Activa);
+        if (historiaExistente is not null)
+        {
+            return historiaExistente;
+        }
+
+        var historia = new HistoriaClinica
+        {
+            IdPaciente = pacienteId,
+            FechaApertura = DateTime.UtcNow,
+            Activa = true,
+            ObservacionesGenerales = string.Empty
+        };
+
+        _context.HistoriasClinicas.Add(historia);
+        await _context.SaveChangesAsync();
+        return historia;
+    }
+
+    private async Task<int> ObtenerPacientePredeterminadoAsync()
+    {
+        var paciente = await _context.Pacientes.OrderBy(p => p.IdPaciente).FirstOrDefaultAsync();
+        if (paciente is not null)
+        {
+            return paciente.IdPaciente;
+        }
+
+        var nuevoPaciente = new Paciente
+        {
+            TipoDocumento = "CC",
+            Documento = "0000000",
+            Nombres = "Paciente",
+            Apellidos = "Demo",
+            FechaNacimiento = new DateTime(1990, 1, 1),
+            Estado = "activo"
+        };
+
+        _context.Pacientes.Add(nuevoPaciente);
+        await _context.SaveChangesAsync();
+        return nuevoPaciente.IdPaciente;
+    }
 }

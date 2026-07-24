@@ -210,7 +210,12 @@ img { max-width: 100%; height: auto; display: block; }
 /* ═══ FILTROS ═══ */
 .filters-section { margin-bottom: 20px; }
 .filters-row {
-  display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px;
+}
+.filter-wrap { display: flex; flex-direction: column; gap: 4px; }
+.filter-label {
+  font-size: .68rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .04em;
 }
 .search-wrap {
   flex: 1; min-width: 200px;
@@ -236,7 +241,25 @@ img { max-width: 100%; height: auto; display: block; }
   transition: border-color var(--tr);
 }
 .status-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--input-focus-ring); }
-.status-select:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.status-select--sm { padding: 6px 10px; font-size: .78rem; }
+
+.btn-clear {
+  background: none; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 9px 14px;
+  font-family: var(--font); font-size: .78rem; font-weight: 600;
+  color: var(--text-muted); cursor: pointer; align-self: flex-end;
+  transition: background var(--tr), color var(--tr), border-color var(--tr);
+  white-space: nowrap;
+}
+.btn-clear:hover { background: #fee2e2; color: var(--danger); border-color: #fecaca; }
+.btn-clear.active { background: #fee2e2; color: var(--danger); border-color: #fecaca; }
+.btn-clear:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.filters-meta {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 4px 0;
+}
+.filter-results { font-size: .78rem; font-weight: 600; color: var(--primary); }
 
 /* ═══ TABLA ═══ */
 .table-card {
@@ -274,8 +297,6 @@ img { max-width: 100%; height: auto; display: block; }
 /* Fecha consulta */
 .td-fecha { font-size: .82rem; color: var(--text-muted); white-space: nowrap; }
 .td-dash { color: #94a3b8; }
-
-/* Diagnóstico */
 .td-diag { font-size: .82rem; color: var(--text); }
 
 /* Próxima cita */
@@ -296,23 +317,47 @@ img { max-width: 100%; height: auto; display: block; }
 .badge-alta { background: var(--status-alta-bg); color: var(--status-alta-text); }
 .badge-alta::before { background: var(--primary); }
 
-/* Acciones */
-.actions-cell { display: flex; align-items: center; gap: 6px; }
-.btn-icon {
+/* Acciones con texto */
+.actions-cell { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.btn-action {
+  display: inline-flex; align-items: center; gap: 5px;
   background: none; border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm); padding: 5px 8px;
-  cursor: pointer; font-size: 14px;
-  transition: background var(--tr), border-color var(--tr);
-  line-height: 1;
+  border-radius: var(--radius-sm); padding: 6px 12px;
+  cursor: pointer; font-family: var(--font); font-size: .78rem; font-weight: 600;
+  color: var(--text-muted); transition: background var(--tr), color var(--tr), border-color var(--tr);
+  white-space: nowrap; line-height: 1;
 }
-.btn-icon:hover { background: var(--primary-light); border-color: var(--primary); }
-.btn-icon:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.btn-action:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+.btn-historial:hover { background: #f0fdf4; color: #16a34a; border-color: #16a34a; }
+.btn-action:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* Empty state */
 .table-empty {
   padding: 32px; text-align: center;
   font-size: .85rem; color: var(--text-muted);
 }
+
+/* ═══ PAGINACIÓN ═══ */
+.page-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0; font-size: .8rem; color: var(--text-muted);
+  flex-wrap: wrap; gap: 12px; margin-top: 16px;
+}
+.pagination { display: flex; gap: 4px; align-items: center; }
+.page-num-wrap { display: flex; gap: 4px; }
+.pagination-btn {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--white); border: 1.5px solid var(--border);
+  font-size: .8rem; font-weight: 600; color: var(--text);
+  cursor: pointer; transition: background var(--tr), border-color var(--tr);
+}
+.pagination-btn:hover:not(:disabled) { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.pagination-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.pagination-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pagination-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pagination-info { font-size: .82rem; color: var(--text-muted); }
 
 /* ═══ MODAL ═══ */
 .modal-overlay {
@@ -356,6 +401,91 @@ img { max-width: 100%; height: auto; display: block; }
 .modal-key { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); margin-bottom: 3px; }
 .modal-val { font-size: .85rem; font-weight: 600; color: var(--text); }
 .modal-val.danger { color: var(--danger); }
+
+/* Botón historial dentro del modal detalle */
+.modal-actions { margin-top: 18px; text-align: center; }
+.btn-modal-historial {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--primary); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 10px 20px;
+  font-family: var(--font); font-size: .84rem; font-weight: 600;
+  cursor: pointer; transition: background var(--tr);
+}
+.btn-modal-historial:hover { background: #0f3da0; }
+
+/* Modal ancho (historial) */
+.modal--wide { max-width: 660px; }
+
+/* Encabezado paciente en historial */
+.hist-patient-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; background: #f8fafc;
+  border-radius: var(--radius-sm); margin-bottom: 16px; flex-wrap: wrap;
+}
+.hist-patient-name { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--text); }
+.hist-patient-cedula { font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
+.hist-estado { margin-left: auto; flex-shrink: 0; }
+
+/* Grilla de info del historial */
+.hist-info-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;
+}
+.hist-info-item {
+  background: #f8fafc; border-radius: var(--radius-sm);
+  padding: 10px 14px; border: 1px solid var(--border);
+}
+.hist-info-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 4px; }
+.hist-info-val { font-size: .86rem; font-weight: 600; color: var(--text); }
+.hist-info-val.danger { color: var(--danger); }
+.hist-alergias-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.alerg-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+  border-radius: var(--radius-full); padding: 3px 10px;
+  font-size: .72rem; font-weight: 600;
+}
+
+/* Título de timeline */
+.hist-timeline-title {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-size: .9rem; font-weight: 700;
+  color: var(--primary); margin-bottom: 14px;
+}
+.hist-count {
+  margin-left: auto; font-size: .72rem; font-weight: 600;
+  background: var(--primary-light); color: var(--primary);
+  padding: 3px 10px; border-radius: var(--radius-full);
+}
+
+/* Timeline de consultas */
+.hist-timeline { display: flex; flex-direction: column; gap: 12px; }
+.hist-entry {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 14px 16px; background: var(--white);
+  transition: box-shadow var(--tr);
+}
+.hist-entry--latest { border-color: var(--primary); border-left: 3px solid var(--primary); }
+.hist-entry:hover { box-shadow: var(--shadow); }
+.hist-entry-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+}
+.hist-date-wrap { display: flex; align-items: center; gap: 8px; }
+.hist-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--primary); flex-shrink: 0;
+}
+.hist-date { font-size: .78rem; font-weight: 700; color: var(--text); }
+.hist-badge-reciente {
+  background: var(--primary-light); color: var(--primary);
+  border-radius: var(--radius-full); padding: 2px 8px;
+  font-size: .67rem; font-weight: 700;
+}
+.hist-doctor { font-size: .75rem; color: var(--text-muted); }
+.hist-procedimiento { font-weight: 600; font-size: .86rem; color: var(--text); margin-bottom: 6px; }
+.hist-notas { font-size: .8rem; color: var(--text-muted); line-height: 1.5; }
+
+/* Helpers */
+.text-muted { color: var(--text-muted); font-size: .82rem; }
 
 /* ═══ TOAST (unificado) ═══ */
 .toast {

@@ -1,6 +1,6 @@
 @{ Layout = null; }
 
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -13,7 +13,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="@Url.Content("~/css/Historia_Clinica/st-odo-06-pacientes/pacientes.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Historia_Clinica/st-odo-06-pacientes/pacientes.css")" asp-append-version="true" />
 </head>
 
 <body>
@@ -22,7 +22,6 @@
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
   @{ await Html.RenderPartialAsync("_SidebarProfesional"); }
-
 
   <!-- ═════ HAMBURGER (móvil) ═════ -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
@@ -73,11 +72,11 @@
       <div class="filters-row">
         <div class="search-wrap">
           <span class="search-icon" aria-hidden="true">🔍</span>
-          <input type="search" id="searchInput" class="search-input" placeholder="Buscar paciente por nombre..."
-            aria-label="Buscar paciente por nombre o cédula">
+          <input type="search" id="searchInput" class="search-input" placeholder="Buscar por nombre, cédula o servicio..."
+            aria-label="Buscar paciente por nombre, cédula o servicio">
         </div>
         <div class="filter-wrap">
-          <label for="filterEstado" class="visually-hidden">Filtrar por estado</label>
+          <label for="filterEstado" class="filter-label">Estado</label>
           <select id="filterEstado" class="status-select" aria-label="Filtrar pacientes por estado">
             <option value="">Todos los estados</option>
             <option value="activo">Activos</option>
@@ -85,6 +84,38 @@
             <option value="alta">Altas médicas</option>
           </select>
         </div>
+        <div class="filter-wrap">
+          <label for="filterAlergias" class="filter-label">Alergias</label>
+          <select id="filterAlergias" class="status-select" aria-label="Filtrar por alergias">
+            <option value="">Todas</option>
+            <option value="con">Con alergias</option>
+            <option value="sin">Sin alergias</option>
+          </select>
+        </div>
+        <div class="filter-wrap">
+          <label for="filterCita" class="filter-label">Próxima cita</label>
+          <select id="filterCita" class="status-select" aria-label="Filtrar por próxima cita">
+            <option value="">Todas</option>
+            <option value="con">Con cita</option>
+            <option value="sin">Sin cita</option>
+          </select>
+        </div>
+        <div class="filter-wrap">
+          <label for="filterServicio" class="filter-label">Servicio</label>
+          <select id="filterServicio" class="status-select" aria-label="Filtrar por servicio">
+            <option value="">Todos los servicios</option>
+          </select>
+        </div>
+        <button class="btn-clear" id="btnClearFilters" aria-label="Limpiar todos los filtros">✕ Limpiar</button>
+      </div>
+      <div class="filters-meta">
+        <span class="filter-results" id="filterResults"></span>
+        <select id="pageSizeSelect" class="status-select status-select--sm" aria-label="Pacientes por página">
+          <option value="5">5 por página</option>
+          <option value="10" selected>10 por página</option>
+          <option value="15">15 por página</option>
+          <option value="all">Todos</option>
+        </select>
       </div>
     </section>
 
@@ -110,15 +141,37 @@
       </div>
     </section>
 
+    <!-- Paginación -->
+    <footer class="page-footer" id="paginationControls" aria-label="Navegación de páginas">
+      <span class="pagination-info">
+        Mostrando <strong id="pageShowing">0</strong> de <strong id="pageTotal">0</strong> pacientes
+      </span>
+      <nav class="pagination" aria-label="Páginas de resultados">
+        <button class="pagination-btn" id="btnPrev" aria-label="Página anterior" disabled>‹</button>
+        <span id="pageNumBtns" class="page-num-wrap"></span>
+        <button class="pagination-btn" id="btnNext" aria-label="Página siguiente">›</button>
+      </nav>
+    </footer>
+
   </main>
 
-  <!-- Modal de detalle de paciente -->
+  <!-- ═════ MODAL DETALLE ═════ -->
   <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle"
     aria-hidden="true" inert>
     <div class="modal">
       <button class="modal-close" id="modalClose" aria-label="Cerrar ventana de detalle">×</button>
       <h2 class="modal-title" id="modalTitle">Detalle del Paciente</h2>
       <div id="modalContent" role="document"></div>
+    </div>
+  </div>
+
+  <!-- ═════ MODAL HISTORIAL CLÍNICO ═════ -->
+  <div class="modal-overlay" id="modalHistorialOverlay" role="dialog" aria-modal="true" aria-labelledby="modalHistorialTitle"
+    aria-hidden="true" inert>
+    <div class="modal modal--wide">
+      <button class="modal-close" id="modalHistorialClose" aria-label="Cerrar historial clínico">×</button>
+      <h2 class="modal-title" id="modalHistorialTitle">Historial Clínico</h2>
+      <div id="modalHistorialContent" role="document"></div>
     </div>
   </div>
 
@@ -140,8 +193,7 @@
       <span class="mobile-nav-icon" aria-hidden="true">📋</span>
       <span>Historial</span>
     </a>
-    <a href="/gestion-de-profesionales/st-odo-09-perfil-profesional"
-      class="mobile-nav-item">
+    <a href="/gestion-de-profesionales/st-odo-09-perfil-profesional" class="mobile-nav-item">
       <span class="mobile-nav-icon" aria-hidden="true">👤</span>
       <span>Perfil</span>
     </a>
@@ -150,39 +202,7 @@
   <!-- Toast -->
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Estilos para screen readers -->
-  <style>
-    .skip-link {
-      position: absolute;
-      top: -40px;
-      left: 0;
-      background: var(--primary);
-      color: #fff;
-      padding: 8px 16px;
-      z-index: 1000;
-      transition: top var(--tr);
-    }
-
-    .skip-link:focus {
-      top: 0;
-      outline: 2px solid #fff;
-      outline-offset: 2px;
-    }
-
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-  </style>
-
-  <script src="@Url.Content("~/js/Historia_Clinica/st-odo-06-pacientes/pacientes.js")"></script>
+  <script src="@Url.Content("~/js/Historia_Clinica/st-odo-06-pacientes/pacientes.js")" asp-append-version="true"></script>
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">

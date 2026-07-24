@@ -1,956 +1,818 @@
-/**
- * SMILETRACK — ODONTOGRAMA DIGITAL (odontograma.js)
- * Lógica original preservada + Accesibilidad + Persistencia
- * ⚠️ LÓGICA DE DIBUJO CANVAS: SIN MODIFICAR
+ /**
+ * SMILETRACK — ODONTOGRAMA DIGITAL 3D
  */
 
 // ═══════════════════════════════════════════════════════════════════
-//  UTILIDADES GLOBALES
+//  UTILIDADES
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene elemento del DOM con manejo seguro
 const safeGetElement = (id) => {
-  const el = document.getElementById(id);
-  if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
-  return el;
+    const el = document.getElementById(id);
+    if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
+    return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes
-const debounce = (fn, delay) => {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), delay);
-  };
-};
-
-// Muestra notificación temporal con auto-cierre
 const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
+    const toast = safeGetElement('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
+    if (toast._timeoutId) clearTimeout(toast._timeoutId);
+    toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  PERSISTENCIA CON LOCALSTORAGE
+//  CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════════════════
 
-const odoStorage = {
-  key: 'smiletrack_odo_pedro_garcia',
-  
-  // Carga datos desde localStorage o usa datos de ejemplo
-  load: () => {
-    const stored = localStorage.getItem(odoStorage.key);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.warn('Error al cargar odontograma, usando datos de ejemplo');
-      }
-    }
-    // Datos de ejemplo iniciales (estructura compatible con OdontogramaController)
-    return {
-      estados: {
-        17: { estado: 'caries', fechaISO: '2026-03-20' },
-        16: { estado: 'caries', fechaISO: '2026-03-20' },
-        22: { estado: 'sellante', fechaISO: '2026-02-15' },
-        23: { estado: 'sellante', fechaISO: '2026-02-15' },
-        24: { estado: 'sellante', fechaISO: '2026-02-15' },
-        25: { estado: 'restauracion', fechaISO: '2026-01-10' },
-        26: { estado: 'endodoncia', fechaISO: '2025-12-05' },
-        27: { estado: 'corona', fechaISO: '2025-11-20' },
-        28: { estado: 'corona', fechaISO: '2025-11-20' },
-        31: { estado: 'sano', fechaISO: '2026-03-01' },
-        46: { estado: 'extraido', fechaISO: '2025-10-15' },
-        47: { estado: 'restauracion', fechaISO: '2026-02-28' },
-      },
-      historial: {
-        12: [
-          { fecha: '20 Mar 2025', fechaISO: '2025-03-20T10:00:00', estado: 'caries', doctor: 'Dr. Carlos Méndez', obs: 'cara vestibular' },
-        ],
-        25: [
-          { fecha: '02 Nov 2024', fechaISO: '2024-11-02T14:00:00', estado: 'restauracion', doctor: 'Dr. Méndez', obs: '' },
-        ],
-        23: [
-          { fecha: '15 Dic 2024', fechaISO: '2024-12-15T11:00:00', estado: 'endodoncia', doctor: 'Dr. Torres', obs: '' },
-        ],
-      },
-      ultimasMods: [
-        { num: 12, estado: 'Caries', fecha: '20 Mar 2025', fechaISO: '2025-03-20T10:00:00', doctor: 'Dr. Méndez' },
-        { num: 25, estado: 'Restauración', fecha: '02 Nov 2024', fechaISO: '2024-11-02T14:00:00', doctor: 'Dr. Méndez' },
-        { num: 23, estado: 'Endodoncia', fecha: '15 Dic 2024', fechaISO: '2024-12-15T11:00:00', doctor: 'Dr. Torres' },
-      ],
-      nextMod: 3
-    };
-  },
-  
-  // Guarda datos en localStorage
-  save: (data) => {
-    try {
-      localStorage.setItem(odoStorage.key, JSON.stringify(data));
-      return true;
-    } catch (e) {
-      console.error('Error al guardar odontograma:', e);
-      return false;
-    }
-  },
-  
-  // Actualiza estado de un diente
-  updateTooth: (num, estado, doctor = 'Dr. Andrés Torres', obs = '') => {
-    const data = odoStorage.load();
-    const now = new Date();
-    const fechaISO = now.toISOString();
-    const fechaStr = now.toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' });
-    
-    // Actualiza estado actual
-    data.estados[num] = { estado, fechaISO };
-    
-    // Agrega al historial del diente
-    if (!data.historial[num]) data.historial[num] = [];
-    data.historial[num].unshift({ fecha: fechaStr, fechaISO, estado, doctor, obs });
-    
-    // Agrega a últimas modificaciones
-    const label = ESTADOS_CONFIG.find(e => e.key === estado)?.label || estado;
-    data.ultimasMods.unshift({ num, estado: label, fecha: fechaStr, fechaISO, doctor });
-    if (data.ultimasMods.length > 8) data.ultimasMods.pop();
-    data.nextMod = (data.nextMod || 0) + 1;
-    
-    odoStorage.save(data);
-    return { num, estado, fecha: fechaStr };
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════════
-//  ODONTOGRAMA CONTROLLER (ESPEJO DEL BACKEND C# - SIN MODIFICAR LÓGICA)
-// ═══════════════════════════════════════════════════════════════════
-
-class OdontogramaController {
-  constructor() {
-    this._paciente = {
-      id: 1,
-      nombre: 'Pedro García',
-      codigoHC: 'HC-2026-001',
-      fechaNacimiento: '1991-03-15',
-    };
-
-    // Carga estados desde localStorage o usa datos de ejemplo
-    const stored = odoStorage.load();
-    this._estados = stored.estados || {};
-    this._historial = stored.historial || {};
-    this._ultimasMods = stored.ultimasMods || [];
-    this._nextMod = stored.nextMod || this._ultimasMods.length;
-
-    this._tipo = 'adulto';
-    this.selDiente = null;
-  }
-
-  // Getter/Setter para selDiente
-  getSelDiente() { return this.selDiente; }
-  setSelDiente(num) { this.selDiente = num; }
-
-  _calcEdad(iso) {
-    const hoy = new Date(), nac = new Date(iso);
-    let e = hoy.getFullYear() - nac.getFullYear();
-    const m = hoy.getMonth() - nac.getMonth();
-    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) e--;
-    return e;
-  }
-
-  getTipoDenticion() {
-    return this._calcEdad(this._paciente.fechaNacimiento) < 13 ? 'nino' : 'adulto';
-  }
-
-  getEstado(num) {
-    const data = this._estados[num];
-    return data ? data.estado : null;
-  }
-
-  setEstado(num, estado, doctor = 'Dr. Andrés Torres', obs = '') {
-    // Actualiza en localStorage
-    odoStorage.updateTooth(num, estado, doctor, obs);
-    
-    // Actualiza en memoria
-    const now = new Date();
-    const fechaISO = now.toISOString();
-    this._estados[num] = { estado, fechaISO };
-    
-    if (!this._historial[num]) this._historial[num] = [];
-    const fechaStr = now.toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' });
-    this._historial[num].unshift({ fecha: fechaStr, fechaISO, estado, doctor, obs });
-
-    const label = ESTADOS_CONFIG.find(e => e.key === estado)?.label || estado;
-    this._ultimasMods.unshift({ num, estado: label, fecha: fechaStr, fechaISO, doctor });
-    if (this._ultimasMods.length > 8) this._ultimasMods.pop();
-
-    return { num, prev: null, estado };
-  }
-
-  getHistorialDiente(num) { return this._historial[num] || []; }
-  getUltimasMods() { return [...this._ultimasMods]; }
-
-  // Fix bug en cálculo de "sanos"
-  getResumen(tipo) {
-    const nums = ODO_CONFIG[tipo].groups.flatMap(g => g.rows.flatMap(r => r.nums));
-    const res = {};
-    
-    // Contar cada estado (excluyendo 'sano' inicialmente)
-    nums.forEach(n => {
-      const e = this.getEstado(n);
-      if (e && e !== 'sano') {
-        res[e] = (res[e] || 0) + 1;
-      }
-    });
-    
-    // Calcular sanos como el resto de piezas sin estado registrado
-    const conEstadoNoSano = Object.values(res).reduce((a, b) => a + b, 0);
-    res['sano'] = nums.length - conEstadoNoSano;
-    
-    return res;
-  }
-}
-
-const odoCtrl = new OdontogramaController();
-
-
-// ═══════════════════════════════════════════════════════════════════
-//  CONFIGURACIÓN DE ESTADOS Y COLORES (SIN MODIFICAR)
-// ═══════════════════════════════════════════════════════════════════
-
-const ESTADOS_CONFIG = [
-  { key: 'sano', label: 'Sano', ico: '✅', color: '#22c55e', tipo: 'dot', cssClass: 'eb-sano' },
-  { key: 'caries', label: 'Caries', ico: '⚠️', color: '#f59e0b', tipo: 'dot', cssClass: 'eb-caries' },
-  { key: 'corona', label: 'Corona', ico: '👑', color: '#f59e0b', tipo: 'dot', cssClass: 'eb-corona' },
-  { key: 'endodoncia', label: 'Endodoncia', ico: '🔬', color: '#9333ea', tipo: 'bar', cssClass: 'eb-endodoncia' },
-  { key: 'restauracion', label: 'Restauración', ico: '🔵', color: '#2563eb', tipo: 'bar', cssClass: 'eb-restauracion' },
-  { key: 'extraido', label: 'Extraído', ico: '✖', color: '#64748b', tipo: 'x', cssClass: 'eb-extraido' },
+const ESTADOS = [
+    { key: 'caries',     label: 'Caries',     color: '#ff4d6d', ico: '⚠️' },
+    { key: 'endodoncia', label: 'Endodoncia', color: '#378ADD', ico: '🔬' },
+    { key: 'sellante',   label: 'Sellante',   color: '#f4a62a', ico: '🛡️' },
+    { key: 'placa',      label: 'Placa',      color: '#1D9E75', ico: '🦠' },
+    { key: 'sano',       label: 'Sano',       color: '#00d4ff', ico: '✅' },
 ];
 
-const ESTADO_COLOR = Object.fromEntries(ESTADOS_CONFIG.map(e => [e.key, e.color]));
-const ESTADO_TIPO = Object.fromEntries(ESTADOS_CONFIG.map(e => [e.key, e.tipo]));
+const MODELO_ADULTO = '7f5b381c66674e0a969e8db04d139666';
 
-
-// ═══════════════════════════════════════════════════════════════════
-//  CONFIGURACIÓN FDI (adulto / niño) - SIN MODIFICAR
-// ═══════════════════════════════════════════════════════════════════
-
-const ODO_CONFIG = {
-  adulto: {
-    TW: 30, TH: 38,
-    groups: [
-      { rows: [
-        { label: 'MAXILAR SUPERIOR DERECHO (18 al 11)', nums: [18,17,16,15,14,13,12,11] },
-        { label: 'MAXILAR SUPERIOR IZQUIERDO (21 al 28)', nums: [21,22,23,24,25,26,27,28] },
-      ]},
-      { rows: [
-        { label: 'MAXILAR INFERIOR IZQUIERDO (31 al 38)', nums: [31,32,33,34,35,36,37,38] },
-        { label: 'MAXILAR INFERIOR DERECHO (41 al 48)', nums: [41,42,43,44,45,46,47,48] },
-      ]},
-    ],
-  },
-  nino: {
-    TW: 36, TH: 44,
-    groups: [
-      { rows: [
-        { label: 'SUPERIOR DERECHO (55 al 51)', nums: [55,54,53,52,51] },
-        { label: 'SUPERIOR IZQUIERDO (61 al 65)', nums: [61,62,63,64,65] },
-      ]},
-      { rows: [
-        { label: 'INFERIOR IZQUIERDO (85 al 81)', nums: [85,84,83,82,81] },
-        { label: 'INFERIOR DERECHO (71 al 75)', nums: [71,72,73,74,75] },
-      ]},
-    ],
-  },
+const MAPEO_FDI = {
+    '11': 'Incisivo Central Superior Derecho',   '12': 'Incisivo Lateral Superior Derecho',
+    '13': 'Canino Superior Derecho',             '14': 'Primer Premolar Superior Derecho',
+    '15': 'Segundo Premolar Superior Derecho',   '16': 'Primer Molar Superior Derecho',
+    '17': 'Segundo Molar Superior Derecho',      '18': 'Tercer Molar Superior Derecho',
+    '21': 'Incisivo Central Superior Izquierdo', '22': 'Incisivo Lateral Superior Izquierdo',
+    '23': 'Canino Superior Izquierdo',           '24': 'Primer Premolar Superior Izquierdo',
+    '25': 'Segundo Premolar Superior Izquierdo', '26': 'Primer Molar Superior Izquierdo',
+    '27': 'Segundo Molar Superior Izquierdo',    '28': 'Tercer Molar Superior Izquierdo',
+    '31': 'Incisivo Central Inferior Izquierdo', '32': 'Incisivo Lateral Inferior Izquierdo',
+    '33': 'Canino Inferior Izquierdo',           '34': 'Primer Premolar Inferior Izquierdo',
+    '35': 'Segundo Premolar Inferior Izquierdo', '36': 'Primer Molar Inferior Izquierdo',
+    '37': 'Segundo Molar Inferior Izquierdo',    '38': 'Tercer Molar Inferior Izquierdo',
+    '41': 'Incisivo Central Inferior Derecho',   '42': 'Incisivo Lateral Inferior Derecho',
+    '43': 'Canino Inferior Derecho',             '44': 'Primer Premolar Inferior Derecho',
+    '45': 'Segundo Premolar Inferior Derecho',   '46': 'Primer Molar Inferior Derecho',
+    '47': 'Segundo Molar Inferior Derecho',      '48': 'Tercer Molar Inferior Derecho'
 };
 
+// ═══════════════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════════════
+
+let apiActual = null;
+let apiListo = false;
+let seleccionadoNodeId = null;
+let seleccionadoNombre = "";
+let baseDatosTratamientos = {};
+let mapeoFDI = {};
+let mapaNodos = {};
+let mapeoActivo = false;
+let dienteActualMapeo = null;
+let tooltipVisible = false;
+let ultimoInstanceId = null;
+
+const config = window.smiletrackOdontogramaConfig || {};
+const paciente = {
+    id: config.pacienteId || null,
+    historiaId: config.historiaId || null,
+    nombre: config.pacienteNombre || 'Paciente',
+    codigoHC: config.codigoHC || 'HC-SIN-ASIGNAR',
+    fechaNacimiento: config.fechaNacimiento || '',
+};
 
 // ═══════════════════════════════════════════════════════════════════
-//  DIBUJO CANVAS - LÓGICA ORIGINAL PRESERVADA (NO MODIFICAR)
+//  PERSISTENCIA
 // ═══════════════════════════════════════════════════════════════════
 
-function isMolar(n) { const d = n%10; return d>=6 && d<=8; }
-function isPremolar(n) { const d = n%10; return d===4 || d===5; }
-function isCanine(n) { return n%10===3; }
+function cargarDatos() {
+    try {
+        const hist = localStorage.getItem('odontograma_historial');
+        if (hist) baseDatosTratamientos = JSON.parse(hist);
 
-function rrPath(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
-  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r);
-  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h);
-  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r);
-  ctx.quadraticCurveTo(x, y, x+r, y);
-  ctx.closePath();
-}
+        const mapeo = localStorage.getItem('odontograma_mapeo_fdi');
+        if (mapeo) mapeoFDI = JSON.parse(mapeo);
 
-function applyTooth(ctx, fill, border, lw = 1) {
-  ctx.fillStyle = fill; ctx.fill();
-  ctx.strokeStyle = border; ctx.lineWidth = lw; ctx.stroke();
-}
+        if (config.estadoPersistido) {
+            const persistido = typeof config.estadoPersistido === 'string' ? JSON.parse(config.estadoPersistido) : config.estadoPersistido;
+            if (persistido?.registros) baseDatosTratamientos = persistido.registros;
+            if (persistido?.mapeoFDI) mapeoFDI = persistido.mapeoFDI;
+        }
 
-function drawShape(ctx, num, ox, oy, tw, th, fill, border, lw) {
-  if (isMolar(num)) {
-    rrPath(ctx, ox, oy, tw, th, 4); applyTooth(ctx, fill, border, lw);
-    ctx.strokeStyle = 'rgba(0,180,255,.2)'; ctx.lineWidth = .5;
-    const cx = ox+tw/2, cy = oy+th/2-2;
-    ctx.beginPath(); ctx.moveTo(cx-4, cy-2); ctx.lineTo(cx+4, cy-2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx, cy-5); ctx.lineTo(cx, cy+3); ctx.stroke();
-  } else if (isPremolar(num)) {
-    rrPath(ctx, ox, oy, tw, th, 4); applyTooth(ctx, fill, border, lw);
-    ctx.strokeStyle = 'rgba(0,180,255,.15)'; ctx.lineWidth = .5;
-    const cx = ox+tw/2, cy = oy+th/2-2;
-    ctx.beginPath(); ctx.moveTo(cx, cy-4); ctx.lineTo(cx, cy+3); ctx.stroke();
-  } else if (isCanine(num)) {
-    const cx = ox+tw/2;
-    ctx.beginPath();
-    ctx.moveTo(ox+3, oy); ctx.lineTo(ox+tw-3, oy);
-    ctx.quadraticCurveTo(ox+tw, oy, ox+tw, oy+3);
-    ctx.lineTo(ox+tw, oy+th-8);
-    ctx.quadraticCurveTo(ox+tw-1, oy+th+2, cx, oy+th+2);
-    ctx.quadraticCurveTo(ox+1, oy+th+2, ox, oy+th-8);
-    ctx.lineTo(ox, oy+3); ctx.quadraticCurveTo(ox, oy, ox+3, oy); ctx.closePath();
-    applyTooth(ctx, fill, border, lw);
-  } else {
-    const cx = ox+tw/2;
-    ctx.beginPath();
-    ctx.moveTo(ox+2, oy); ctx.lineTo(ox+tw-2, oy);
-    ctx.quadraticCurveTo(ox+tw, oy, ox+tw, oy+2);
-    ctx.lineTo(ox+tw, oy+th-4);
-    ctx.quadraticCurveTo(ox+tw-.5, oy+th, cx, oy+th);
-    ctx.quadraticCurveTo(ox+.5, oy+th, ox, oy+th-4);
-    ctx.lineTo(ox, oy+2); ctx.quadraticCurveTo(ox, oy, ox+2, oy); ctx.closePath();
-    applyTooth(ctx, fill, border, lw);
-  }
-}
-
-function drawTooth(canvas, num, seleccionado) {
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
-  const pad = 3;
-  const tw = W - pad*2;
-  const th = H - pad*2 - 8;
-  const ox = pad, oy = pad + 2;
-
-  const isSel = seleccionado === num;
-  const fill = isSel ? 'rgba(0,45,88,.97)' : 'rgba(0,18,42,.9)';
-  const border = isSel ? '#00d4ff' : 'rgba(0,160,220,.6)';
-  const lw = isSel ? 1.8 : 1;
-
-  if (isSel) { ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 14; }
-  drawShape(ctx, num, ox, oy, tw, th, fill, border, lw);
-  ctx.shadowBlur = 0;
-
-  const estadoKey = odoCtrl.getEstado(num);
-  if (estadoKey) {
-    const color = ESTADO_COLOR[estadoKey] || '#00d4ff';
-    const tipo = ESTADO_TIPO[estadoKey] || 'dot';
-    const cx = W/2, cy = oy + 6;
-    ctx.shadowColor = color; ctx.shadowBlur = 9;
-
-    if (tipo === 'dot') {
-      ctx.beginPath(); ctx.arc(cx, cy, 3.8, 0, 2*Math.PI);
-      ctx.fillStyle = color; ctx.fill();
-    } else if (tipo === 'bar') {
-      ctx.fillStyle = color;
-      ctx.beginPath(); rrPath(ctx, cx-5, cy-2, 10, 3, 1.5); ctx.fill();
-    } else {
-      ctx.strokeStyle = color; ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.moveTo(cx-4, cy-4); ctx.lineTo(cx+4, cy+4);
-      ctx.moveTo(cx+4, cy-4); ctx.lineTo(cx-4, cy+4);
-      ctx.stroke();
+        console.log('✅ Datos cargados:', Object.keys(baseDatosTratamientos).length, 'piezas,', Object.keys(mapeoFDI).length, 'mapeos');
+    } catch (e) {
+        console.error('❌ Error al cargar datos:', e);
+        baseDatosTratamientos = {};
+        mapeoFDI = {};
     }
-    ctx.shadowBlur = 0;
-  }
-
-  ctx.font = `bold 7px sans-serif`;
-  ctx.fillStyle = isSel ? '#00eeff' : 'rgba(0,200,255,.75)';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(num, W/2, oy + th - 4);
 }
 
+function guardarDatos() {
+    try {
+        localStorage.setItem('odontograma_historial', JSON.stringify(baseDatosTratamientos));
+        localStorage.setItem('odontograma_mapeo_fdi', JSON.stringify(mapeoFDI));
+    } catch (e) {
+        console.error('❌ Error al guardar datos:', e);
+    }
+}
 
-// ═══════════════════════════════════════════════════════════════════
-//  RENDER ODONTOGRAMA HOLOGRÁFICO - LÓGICA ORIGINAL PRESERVADA
-// ═══════════════════════════════════════════════════════════════════
+async function persistirEstado({ mostrarToast: shouldShowToast = true } = {}) {
+    guardarDatos();
 
-let _canvases = {};
-
-function renderOdontograma(tipo) {
-  const host = safeGetElement('odontogramaHost');
-  if (!host) return;
-  _canvases = {};
-
-  const cfg = ODO_CONFIG[tipo];
-
-  if (!document.getElementById('_scan_kf')) {
-    const st = document.createElement('style');
-    st.id = '_scan_kf';
-    st.textContent = '@keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(600px)}}';
-    document.head.appendChild(st);
-  }
-
-  const hw = document.createElement('div');
-  hw.style.cssText = `
-    background:#030d1a; border-radius:12px; padding:14px 10px;
-    font-family:sans-serif; position:relative; overflow:hidden; width:100%;
-  `;
-
-  const sl = document.createElement('div');
-  sl.style.cssText = `
-    position:absolute;left:0;right:0;height:1px;top:0;z-index:1;pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(0,200,255,.22),transparent);
-    animation:scan 3s linear infinite;
-  `;
-  hw.appendChild(sl);
-
-  cfg.groups.forEach((g, gi) => {
-    const labRow = document.createElement('div');
-    labRow.style.cssText = 'display:flex;justify-content:center;gap:4px;margin-bottom:3px;position:relative;z-index:2;';
-    g.rows.forEach(r => {
-      const sp = document.createElement('span');
-      sp.style.cssText = 'font-size:7px;color:rgba(0,212,255,.38);letter-spacing:.04em;text-transform:uppercase;flex:1;text-align:center;';
-      sp.textContent = r.label;
-      labRow.appendChild(sp);
-    });
-    hw.appendChild(labRow);
-
-    const rowDiv = document.createElement('div');
-    rowDiv.style.cssText = 'display:flex;justify-content:center;align-items:stretch;gap:2px;position:relative;z-index:2;margin-bottom:8px;flex-wrap:nowrap;';
-
-    g.rows.forEach((r, ri) => {
-      const half = document.createElement('div');
-      half.style.cssText = 'display:flex;gap:2px;';
-
-      r.nums.forEach(num => {
-        const cv = document.createElement('canvas');
-        cv.width = cfg.TW; cv.height = cfg.TH;
-        cv.style.cssText = 'display:block;border-radius:3px;cursor:pointer;';
-        // Atributos de accesibilidad para canvas
-        cv.setAttribute('role', 'button');
-        cv.setAttribute('tabindex', '0');
-        cv.setAttribute('aria-label', `Diente ${num}: ${odoCtrl.getEstado(num) || 'Sin estado registrado'}. Haz clic o presiona Enter para seleccionar`);
-        
-        const est = odoCtrl.getEstado(num);
-        const lbl = est ? (ESTADOS_CONFIG.find(e => e.key === est)?.label || est) : '';
-        cv.title = `Diente ${num}${lbl ? ' — ' + lbl : ''}`;
-        drawTooth(cv, num, odoCtrl.getSelDiente());
-        
-        // Event listeners para accesibilidad
-        cv.addEventListener('click', () => onDienteClick(num));
-        cv.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onDienteClick(num);
-          }
+    try {
+        const response = await fetch('/historia-clinica/st-odo-04-odontograma/guardar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pacienteId: paciente.id,
+                registros: baseDatosTratamientos,
+                mapeoFDI: mapeoFDI
+            })
         });
-        
-        _canvases[num] = cv;
-        half.appendChild(cv);
-      });
 
-      rowDiv.appendChild(half);
-      if (ri === 0) {
-        const mid = document.createElement('div');
-        mid.style.cssText = 'width:1px;background:rgba(0,212,255,.22);align-self:stretch;flex-shrink:0;margin:0 3px;border-radius:1px;';
-        rowDiv.appendChild(mid);
-      }
-    });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success === false) {
+            throw new Error(data.message || 'No se pudo guardar en el servidor');
+        }
 
-    hw.appendChild(rowDiv);
-
-    if (gi === 0) {
-      const sep = document.createElement('div');
-      sep.style.cssText = 'height:7px;border-top:1px dashed rgba(0,212,255,.12);margin:0 0 10px;position:relative;z-index:2;';
-      hw.appendChild(sep);
+        if (shouldShowToast) showToast('✅ Cambios guardados correctamente', 'success');
+        return true;
+    } catch (e) {
+        console.error('❌ Error al sincronizar con el backend:', e);
+        if (shouldShowToast) {
+            showToast('⚠️ Se guardaron los cambios localmente, pero no se pudo sincronizar con el servidor', 'warning');
+        }
+        return false;
     }
-  });
-
-  const leg = document.createElement('div');
-  leg.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px;position:relative;z-index:2;';
-  ESTADOS_CONFIG.forEach(e => {
-    const item = document.createElement('div');
-    item.style.cssText = 'display:flex;align-items:center;gap:3px;font-size:9px;color:rgba(180,220,255,.6);';
-    const ic = e.tipo === 'dot'
-      ? `<span style="width:7px;height:7px;border-radius:50%;background:${e.color};display:inline-block;"></span>`
-      : e.tipo === 'bar'
-        ? `<span style="width:11px;height:3px;border-radius:2px;background:${e.color};display:inline-block;"></span>`
-        : `<span style="font-size:10px;color:${e.color};">✕</span>`;
-    item.innerHTML = `${ic} ${e.label}`;
-    leg.appendChild(item);
-  });
-  hw.appendChild(leg);
-
-  host.innerHTML = '';
-  host.appendChild(hw);
 }
 
-function rebuildAllCanvases() {
-  Object.entries(_canvases).forEach(([num, cv]) => {
-    drawTooth(cv, parseInt(num), odoCtrl.getSelDiente());
-    // Actualiza aria-label después de redibujar
-    const est = odoCtrl.getEstado(parseInt(num));
-    const lbl = est ? (ESTADOS_CONFIG.find(e => e.key === est)?.label || est) : '';
-    cv.setAttribute('aria-label', `Diente ${num}: ${lbl || 'Sin estado registrado'}. Haz clic o presiona Enter para seleccionar`);
-  });
+// ═══════════════════════════════════════════════════════════════════
+//  NOMENCLATURA
+// ═══════════════════════════════════════════════════════════════════
+
+function obtenerNombreNodo(instanceID) {
+    return mapaNodos[instanceID] || `PIEZA ${instanceID}`;
 }
 
+function obtenerNombrePieza(nodeName, instanceID) {
+    if (mapeoFDI[instanceID]) {
+        const num = mapeoFDI[instanceID];
+        return `${num} - ${MAPEO_FDI[num] || 'Pieza Dental'}`;
+    }
+    return nodeName ? nodeName.toUpperCase() : `PIEZA ${instanceID}`;
+}
 
 // ═══════════════════════════════════════════════════════════════════
-//  RENDER RESUMEN - LÓGICA ORIGINAL PRESERVADA
+//  TOOLTIP HOVER
 // ═══════════════════════════════════════════════════════════════════
 
-function renderResumen(tipo) {
-  const el = safeGetElement('odoResumen');
-  if (!el) return;
-  const res = odoCtrl.getResumen(tipo);
+function generarTooltipContent(hoverName, instanceID) {
+    const historialPieza = baseDatosTratamientos[instanceID];
+    let content = `<div class="tooltip-header">${hoverName}</div>`;
 
-  const colores = {
-    sano: { bg: '#dcfce7', color: '#16a34a', ico: '✅' },
-    caries: { bg: '#ffedd5', color: '#92400e', ico: '⚠️' },
-    corona: { bg: '#ffedd5', color: '#92400e', ico: '👑' },
-    endodoncia: { bg: '#f3e8ff', color: '#9333ea', ico: '🔬' },
-    restauracion: { bg: '#dbeafe', color: '#2563eb', ico: '🔵' },
-    extraido: { bg: '#f1f5f9', color: '#64748b', ico: '✖' },
-  };
+    if (historialPieza && historialPieza.tratamientos && historialPieza.tratamientos.length > 0) {
+        const tratamientos = historialPieza.tratamientos;
+        const actual = tratamientos[tratamientos.length - 1];
+        const est = ESTADOS.find(x => x.key === actual.key);
 
-  el.innerHTML = Object.entries(res)
-    .filter(([, cnt]) => cnt > 0)
-    .map(([key, cnt]) => {
-      const c = colores[key] || { bg: '#f1f5f9', color: '#64748b', ico: '·' };
-      const lbl = ESTADOS_CONFIG.find(e => e.key === key)?.label || key;
-      return `<span class="res-chip" style="background:${c.bg};color:${c.color};" role="status" aria-label="${cnt} ${lbl}${cnt !== 1 ? 's' : ''}">
-        ${c.ico} ${cnt} ${lbl}${cnt !== 1 ? 's' : ''}
-      </span>`;
+        content += `
+            <div class="tooltip-section">
+                <div class="tooltip-label">Estado Actual</div>
+                <div class="tooltip-current">
+                    <div class="tooltip-current-status" style="color:${est.color};">● ${est.label.toUpperCase()}</div>
+                    ${actual.obs ? `<div class="tooltip-current-obs">"${actual.obs}"</div>` : ''}
+                </div>
+            </div>
+        `;
+
+        if (tratamientos.length > 1) {
+            content += `<div class="tooltip-section"><div class="tooltip-history-title">📊 Historial (${tratamientos.length})</div>`;
+            for (let i = tratamientos.length - 1; i >= 0; i--) {
+                const t = tratamientos[i];
+                const e = ESTADOS.find(x => x.key === t.key);
+                const f = new Date(t.fecha).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                content += `
+                    <div class="tooltip-history-item">
+                        <div class="tooltip-history-status" style="color:${e.color};">● ${e.label}</div>
+                        ${t.obs ? `<div class="tooltip-history-obs">"${t.obs}"</div>` : ''}
+                        <div class="tooltip-history-date">${f}</div>
+                    </div>
+                `;
+            }
+            content += '</div>';
+        }
+    } else {
+        content += `<div class="tooltip-empty">Sin registros de tratamiento</div>`;
+    }
+    return content;
+}
+
+function actualizarPosicionTooltip(e) {
+    const tooltip = safeGetElement('holo-tooltip');
+    if (!tooltip) return;
+    let x = e.clientX + 20, y = e.clientY + 20;
+    const rect = tooltip.getBoundingClientRect();
+    if (x + 320 > window.innerWidth) x = e.clientX - 340;
+    if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 20;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MAPEO FDI
+// ═══════════════════════════════════════════════════════════════════
+
+function toggleMapeoFDI() {
+    mapeoActivo = !mapeoActivo;
+    const panel = safeGetElement('mapeo-panel');
+    const banner = safeGetElement('modo-mapeo-banner');
+    const btn = safeGetElement('btnMapeo');
+
+    if (mapeoActivo) {
+        panel.classList.add('visible');
+        banner.classList.add('visible');
+        btn.textContent = '❌ Salir de Mapeo';
+        generarBotonesMapeo();
+        actualizarProgresoMapeo();
+    } else {
+        panel.classList.remove('visible');
+        banner.classList.remove('visible');
+        btn.textContent = '🔧 Mapear FDI';
+        dienteActualMapeo = null;
+        safeGetElement('mapeo-current').classList.remove('visible');
+    }
+}
+
+function resetearMapeo() {
+    if (confirm('¿Seguro que quieres borrar todo el mapeo FDI?')) {
+        mapeoFDI = {};
+        guardarDatos();
+        generarBotonesMapeo();
+        actualizarProgresoMapeo();
+        showToast('Mapeo reseteado', 'success');
+    }
+}
+
+function generarBotonesMapeo() {
+    const grid = safeGetElement('mapeo-grid');
+    if (!grid) return;
+    grid.innerHTML = Object.keys(MAPEO_FDI).map(num => {
+        const mapeado = Object.values(mapeoFDI).includes(num);
+        return `<button class="mapeo-btn ${mapeado ? 'mapped' : ''}" onclick="asignarFDI('${num}')" title="${MAPEO_FDI[num]}">${num}</button>`;
     }).join('');
 }
 
-
-// ═══════════════════════════════════════════════════════════════════
-//  INTERACCIÓN — clic en diente - LÓGICA ORIGINAL PRESERVADA
-// ═══════════════════════════════════════════════════════════════════
-
-function onDienteClick(num) {
-  odoCtrl.setSelDiente(num);
-  rebuildAllCanvases();
-  renderPiezaPanel(num);
-  renderEstadosBtns(num);
-  
-  // Enfoca el panel de pieza para usuarios de teclado
-  const card = safeGetElement('cardPieza');
-  if (card) card.focus?.();
+async function asignarFDI(numeroFDI) {
+    if (!dienteActualMapeo) {
+        showToast('Primero haz clic en un diente del modelo 3D', 'warning');
+        return;
+    }
+    mapeoFDI[dienteActualMapeo.instanceID] = numeroFDI;
+    guardarDatos();
+    const nombre = `${numeroFDI} - ${MAPEO_FDI[numeroFDI]}`;
+    generarBotonesMapeo();
+    actualizarProgresoMapeo();
+    const current = safeGetElement('mapeo-current');
+    if (current) current.classList.remove('visible');
+    dienteActualMapeo = null;
+    await persistirEstado({ mostrarToast: false });
+    showToast(`✅ Asignado: ${nombre}`, 'success');
 }
 
-function renderPiezaPanel(num) {
-  const card = safeGetElement('cardPieza');
-  const titulo = safeGetElement('piezaTitulo');
-  const estado = safeGetElement('piezaEstado');
-  const hist = safeGetElement('piezaHist');
-  if (!card) return;
+function actualizarProgresoMapeo() {
+    const el = safeGetElement('mapeo-progress');
+    if (el) el.textContent = `Dientes mapeados: ${Object.keys(mapeoFDI).length} / 32`;
+}
 
-  card.style.display = 'block';
+// ═══════════════════════════════════════════════════════════════════
+//  INICIALIZACIÓN VISOR SKETCHFAB
+// ═══════════════════════════════════════════════════════════════════
 
-  const estadoKey = odoCtrl.getEstado(num);
-  const eCfg = ESTADOS_CONFIG.find(e => e.key === estadoKey);
+function inicializarVisor() {
+    const iframe = safeGetElement('api-frame');
+    if (!iframe) {
+        console.error('❌ No se encontró el iframe del visor');
+        return;
+    }
 
-  titulo.textContent = `Pieza ${num} seleccionada`;
+    const loading = safeGetElement('viewerLoading');
+    const error = safeGetElement('viewerError');
+    const tooltip = safeGetElement('holo-tooltip');
 
-  if (estadoKey) {
-    estado.innerHTML = `<strong>Estado actual:</strong> ${eCfg?.label || estadoKey}`;
-    estado.style.cssText = '';
-    estado.style.display = 'inline-flex';
-    const colors = {
-      sano: 'var(--estado-sano-bg)/var(--green)/var(--estado-sano-text)',
-      caries: 'var(--estado-caries-bg)/var(--orange)/var(--estado-caries-text)',
-      corona: 'var(--estado-corona-bg)/var(--orange)/var(--estado-corona-text)',
-      endodoncia: 'var(--estado-endodoncia-bg)/var(--purple)/var(--estado-endodoncia-text)',
-      restauracion: 'var(--estado-restauracion-bg)/var(--primary)/var(--estado-restauracion-text)',
-      extraido: 'var(--estado-extraido-bg)/var(--border)/var(--estado-extraido-text)'
-    };
-    const parts = (colors[estadoKey] || 'var(--estado-caries-bg)/var(--orange)/var(--estado-caries-text)').split('/');
-    estado.style.background = parts[0];
-    estado.style.border = `1.5px solid ${parts[1]}`;
-    estado.style.color = parts[2];
-    estado.style.padding = '6px 14px';
-    estado.style.borderRadius = 'var(--radius-sm)';
-    estado.style.fontSize = '.85rem';
-    estado.style.fontWeight = '600';
-    estado.style.marginBottom = '16px';
-  } else {
-    estado.innerHTML = '<strong>Estado actual:</strong> Sin registrar';
-    estado.style.color = 'var(--text-muted)';
-  }
+    // Asignar la URL correcta al iframe
+    const modelURL = `https://sketchfab.com/models/${MODELO_ADULTO}/embed`;
+    iframe.src = modelURL;
 
-  const entradas = odoCtrl.getHistorialDiente(num);
-  if (!entradas.length) {
-    hist.innerHTML = '<div style="font-size:.8rem;color:var(--text-muted);padding:8px 0;">Sin historial registrado</div>';
-  } else {
-    hist.innerHTML = entradas.map((h, i) => {
-      const cls = i % 2 === 0 ? 'hist-entry-red' : 'hist-entry-green';
-      const eCfgH = ESTADOS_CONFIG.find(e => e.key === h.estado);
-      const isoTime = h.fechaISO || `2025-01-01T10:00:00`;
-      return `<div class="hist-entry ${cls}" role="listitem">
-        <div><time class="hist-entry-date" datetime="${isoTime}">${h.fecha}</time> → <strong>${eCfgH?.label || h.estado}</strong>${h.obs ? ' · ' + h.obs : ''}</div>
-        <div class="hist-entry-doc">${h.doctor}</div>
-      </div>`;
+    console.log('🔄 Cargando modelo desde:', modelURL);
+
+    const client = new Sketchfab(iframe);
+
+    client.init(MODELO_ADULTO, {
+        ui_infos: 0, ui_watermark: 0, ui_controls: 1, ui_help: 0,
+        ui_settings: 0, ui_vr: 0, ui_fullscreen: 0, ui_annotations: 0, ui_stop: 0,
+
+        success: function(api) {
+            console.log('✅ API de Sketchfab inicializada');
+            api.start();
+            apiActual = api;
+
+            // Ocultar loading cuando esté listo
+            if (loading) loading.style.display = 'none';
+            if (error) error.style.display = 'none';
+
+            api.addEventListener('viewerready', function() {
+                console.log('✅ Viewer ready');
+                apiListo = true;
+
+                api.getNodeMap(function(err, nodes) {
+                    if (!err) {
+                        mapaNodos = {};
+                        Object.keys(nodes).forEach(nodeId => {
+                            const node = nodes[nodeId];
+                            if (node.name) mapaNodos[nodeId] = node.name;
+                            if (node.name && (
+                                node.name.toLowerCase().includes('screw') ||
+                                node.name.toLowerCase().includes('implant') ||
+                                node.name.toLowerCase().includes('metal')
+                            )) {
+                                api.hide(nodeId);
+                            }
+                        });
+                        console.log('🦷 Nodos detectados:', Object.keys(mapaNodos).length);
+                    }
+                });
+
+                // CLICK en diente
+                api.addEventListener('click', function(info) {
+                    if (!info || !info.instanceID) return;
+                    const instanceID = info.instanceID;
+                    const nombreNodo = obtenerNombreNodo(instanceID);
+
+                    if (mapeoActivo) {
+                        dienteActualMapeo = { instanceID, nodeName: nombreNodo };
+                        const current = safeGetElement('mapeo-current');
+                        current.classList.add('visible');
+                        safeGetElement('mapeo-current-value').textContent = `${nombreNodo} (ID: ${instanceID})`;
+                        return;
+                    }
+
+                    seleccionadoNodeId = instanceID;
+                    seleccionadoNombre = obtenerNombrePieza(nombreNodo, instanceID);
+                    abrirPanelDiagnostico();
+                });
+
+                // HOVER sobre diente
+                api.addEventListener('hover', function(info) {
+                    if (!tooltip) return;
+                    if (info && info.instanceID) {
+                        const hoverName = obtenerNombrePieza(null, info.instanceID);
+                        if (ultimoInstanceId !== info.instanceID) {
+                            ultimoInstanceId = info.instanceID;
+                            tooltip.innerHTML = generarTooltipContent(hoverName, info.instanceID);
+                        }
+                        tooltip.style.display = 'block';
+                        tooltipVisible = true;
+                    } else {
+                        tooltip.style.display = 'none';
+                        tooltipVisible = false;
+                        ultimoInstanceId = null;
+                    }
+                });
+
+                document.addEventListener('mousemove', function(e) {
+                    if (tooltipVisible) actualizarPosicionTooltip(e);
+                });
+            });
+        },
+
+        error: function(err) {
+            console.error('❌ Error Sketchfab:', err);
+            if (loading) loading.style.display = 'none';
+            if (error) error.style.display = 'block';
+            showToast('Error al cargar el modelo 3D', 'error');
+        }
+    });
+}
+
+// Reintentar carga
+function reintentarCarga() {
+    const loading = safeGetElement('viewerLoading');
+    const error = safeGetElement('viewerError');
+    if (loading) loading.style.display = 'block';
+    if (error) error.style.display = 'none';
+    inicializarVisor();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PANEL DE DIAGNÓSTICO
+// ═══════════════════════════════════════════════════════════════════
+
+function abrirPanelDiagnostico() {
+    const card = safeGetElement('cardPieza');
+    if (!card) return;
+    card.style.display = 'block';
+
+    const titulo = safeGetElement('piezaTitulo');
+    if (titulo) titulo.textContent = `DIAGNÓSTICO: ${seleccionadoNombre}`;
+
+    const datosPrevios = baseDatosTratamientos[seleccionadoNodeId];
+    const tratamientoActual = datosPrevios && datosPrevios.tratamientos && datosPrevios.tratamientos.length > 0
+        ? datosPrevios.tratamientos[datosPrevios.tratamientos.length - 1]
+        : { key: '', obs: '' };
+
+    safeGetElement('obsTa').value = tratamientoActual.obs;
+
+    const estadoEl = safeGetElement('piezaEstado');
+    if (tratamientoActual.key) {
+        const est = ESTADOS.find(x => x.key === tratamientoActual.key);
+        estadoEl.innerHTML = `<strong>Estado actual:</strong> ${est.label}`;
+        estadoEl.style.background = `${est.color}22`;
+        estadoEl.style.border = `1.5px solid ${est.color}`;
+        estadoEl.style.color = est.color;
+    } else {
+        estadoEl.innerHTML = '<strong>Estado actual:</strong> Sin registrar';
+        estadoEl.style.background = 'var(--bg)';
+        estadoEl.style.border = '1.5px solid var(--border)';
+        estadoEl.style.color = 'var(--text-muted)';
+    }
+
+    const btnsContainer = safeGetElement('estadoBtns');
+    btnsContainer.innerHTML = '';
+    ESTADOS.forEach(e => {
+        const b = document.createElement('button');
+        b.className = 'eb';
+        const sel = tratamientoActual.key === e.key;
+        if (sel) {
+            b.className = 'eb sel';
+            b.style.cssText = `border-color:${e.color}; color:${e.color}; background:${e.color}22;`;
+        }
+        b.innerHTML = `<span class="eb-dot" style="background:${e.color}"></span>${e.label}`;
+        b.onclick = () => {
+            btnsContainer.setAttribute('data-selected-key', e.key);
+            Array.from(btnsContainer.children).forEach(c => c.style.cssText = '');
+            b.style.cssText = `border-color:${e.color}; color:${e.color}; background:${e.color}22; border-width:2px;`;
+        };
+        btnsContainer.appendChild(b);
+        if (sel) btnsContainer.setAttribute('data-selected-key', e.key);
+    });
+
+    renderHistorialPieza();
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderHistorialPieza() {
+    const hist = safeGetElement('piezaHist');
+    if (!hist) return;
+    const datos = baseDatosTratamientos[seleccionadoNodeId];
+    if (!datos || !datos.tratamientos || datos.tratamientos.length === 0) {
+        hist.innerHTML = '<div style="font-size:.8rem;color:var(--text-muted);padding:8px 0;">Sin historial registrado</div>';
+        return;
+    }
+    hist.innerHTML = datos.tratamientos.map((t, i) => {
+        const est = ESTADOS.find(x => x.key === t.key);
+        const esActual = i === datos.tratamientos.length - 1;
+        const fecha = new Date(t.fecha).toLocaleString('es-ES', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+        return `
+            <div class="hist-entry ${esActual ? 'current' : ''}" role="listitem">
+                <div>
+                    <time class="hist-entry-date" datetime="${t.fecha}">${fecha}</time> →
+                    <strong style="color:${est.color};">${est.label}</strong>
+                    ${t.obs ? ' · ' + t.obs : ''}
+                </div>
+                ${esActual ? '<div style="font-size:.7rem;color:var(--primary);margin-top:2px;">● ACTUAL</div>' : ''}
+            </div>
+        `;
     }).join('');
-  }
 }
 
-
-// ═══════════════════════════════════════════════════════════════════
-//  PANEL DERECHO — botones de estado - LÓGICA ORIGINAL PRESERVADA
-// ═══════════════════════════════════════════════════════════════════
-
-function renderEstadosBtns(selNum = null) {
-  const list = safeGetElement('estadosList');
-  if (!list) return;
-  const estadoActual = selNum ? odoCtrl.getEstado(selNum) : null;
-
-  // Generar botones sin onclick inline
-  list.innerHTML = ESTADOS_CONFIG.map(e => {
-    const isSelected = estadoActual === e.key;
-    return `
-    <button class="estado-btn ${e.cssClass}${isSelected ? ' sel' : ''}"
-      data-estado="${e.key}"
-      role="radio"
-      aria-checked="${isSelected}"
-      aria-label="Establecer estado: ${e.label}">
-      <span class="estado-ico" aria-hidden="true">${e.ico}</span>
-      ${e.label}
-    </button>
-  `;
-  }).join('');
-  
-  // Agregar event listeners después de renderizar
-  list.querySelectorAll('.estado-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const estadoKey = btn.dataset.estado;
-      aplicarEstado(estadoKey);
-    });
-    
-    // Soporte para teclado
-    btn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        const estadoKey = btn.dataset.estado;
-        aplicarEstado(estadoKey);
-      }
-    });
-  });
+function cerrarPanel() {
+    safeGetElement('cardPieza').style.display = 'none';
+    seleccionadoNodeId = null;
 }
 
-function aplicarEstado(estadoKey) {
-  const num = odoCtrl.getSelDiente();
-  if (!num) { showToast('Primero selecciona un diente haciendo clic sobre él', 'warning'); return; }
+async function guardarRegistro() {
+    const btnsContainer = safeGetElement('estadoBtns');
+    const estadoKey = btnsContainer?.getAttribute('data-selected-key');
+    const observacion = safeGetElement('obsTa').value.trim();
 
-  odoCtrl.setEstado(num, estadoKey);
-  rebuildAllCanvases();
-  renderPiezaPanel(num);
-  renderEstadosBtns(num);
-  renderUltimasMods();
-  renderResumen(odoCtrl._tipo);
-  updateCounts();
-  showToast('Estado actualizado correctamente', 'success');
+    if (!estadoKey) {
+        showToast('Selecciona un estado clínico primero', 'warning');
+        return;
+    }
+
+    const nuevo = { key: estadoKey, obs: observacion, fecha: new Date().toISOString() };
+
+    if (!baseDatosTratamientos[seleccionadoNodeId]) {
+        baseDatosTratamientos[seleccionadoNodeId] = {
+            nombrePieza: seleccionadoNombre,
+            tratamientos: []
+        };
+    }
+    baseDatosTratamientos[seleccionadoNodeId].tratamientos.push(nuevo);
+    guardarDatos();
+
+    renderUltimasMods();
+    updateCounts();
+    abrirPanelDiagnostico();
+    await persistirEstado({ mostrarToast: false });
+    showToast('✅ Historial actualizado', 'success');
 }
 
-
 // ═══════════════════════════════════════════════════════════════════
-//  RENDER ÚLTIMAS MODIFICACIONES - LÓGICA ORIGINAL PRESERVADA
+//  ÚLTIMAS MODIFICACIONES
 // ═══════════════════════════════════════════════════════════════════
 
 function renderUltimasMods() {
-  const el = safeGetElement('ultimasMods');
-  if (!el) return;
-  const mods = odoCtrl.getUltimasMods();
-  if (!mods.length) {
-    el.innerHTML = '<div style="font-size:.8rem;color:var(--text-muted);padding:6px 0;">Sin modificaciones.</div>';
-    return;
-  }
-  el.innerHTML = mods.map(m => {
-    const isoTime = m.fechaISO || `2025-01-01T10:00:00`;
-    return `
-    <div class="mod-item" role="listitem">
-      <span class="mod-num">Pieza ${m.num}</span> →
-      <span class="mod-est">${m.estado}</span> ·
-      <time datetime="${isoTime}">${m.fecha}</time> · ${m.doctor}
-    </div>`;
-  }).join('');
+    const el = safeGetElement('ultimasMods');
+    if (!el) return;
+
+    const todos = [];
+    Object.entries(baseDatosTratamientos).forEach(([id, datos]) => {
+        datos.tratamientos.forEach(t => {
+            todos.push({ instanceID: id, nombrePieza: datos.nombrePieza, ...t });
+        });
+    });
+
+    todos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    const recientes = todos.slice(0, 8);
+
+    if (recientes.length === 0) {
+        el.innerHTML = '<div style="font-size:.8rem;color:var(--text-muted);padding:6px 0;">Sin modificaciones.</div>';
+        return;
+    }
+
+    el.innerHTML = recientes.map(m => {
+        const est = ESTADOS.find(x => x.key === m.key);
+        const fecha = new Date(m.fecha).toLocaleString('es-ES', {
+            day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        return `
+            <div class="mod-item" role="listitem">
+                <span class="mod-num">${m.nombrePieza}</span> →
+                <span class="mod-est" style="color:${est.color};">${est.label}</span> ·
+                <time datetime="${m.fecha}">${fecha}</time>
+            </div>
+        `;
+    }).join('');
 }
 
-
 // ═══════════════════════════════════════════════════════════════════
-//  CAMBIO DE TIPO (Adulto / Infantil) - LÓGICA ORIGINAL PRESERVADA
-// ═══════════════════════════════════════════════════════════════════
-
-function setTipo(tipo, btn) {
-  odoCtrl._tipo = tipo;
-  odoCtrl.setSelDiente(null);
-  
-  // Forzar ocultamiento del panel antes de cualquier render
-  const card = safeGetElement('cardPieza');
-  if (card) card.style.display = 'none';
-
-  // Tabs
-  document.querySelectorAll('.tipo-btn').forEach(b => {
-    b.classList.remove('active');
-    b.setAttribute('aria-selected', 'false');
-  });
-  btn.classList.add('active');
-  btn.setAttribute('aria-selected', 'true');
-
-  // Meta
-  const metaEl = safeGetElement('dentitionType');
-  if (metaEl) {
-    metaEl.textContent = tipo === 'adulto' ? 'Dentición adulta' : 'Dentición infantil';
-    metaEl.setAttribute('aria-label', `Tipo de dentición: ${tipo === 'adulto' ? 'adulta' : 'infantil'}`);
-  }
-
-  renderOdontograma(tipo);
-  renderResumen(tipo);
-  renderEstadosBtns(null);
-
-  // Actualizar contadores tabs y aria-label
-  const cfg = ODO_CONFIG[tipo];
-  const total = cfg.groups.flatMap(g => g.rows.flatMap(r => r.nums)).length;
-  
-  if (tipo === 'adulto') {
-    safeGetElement('cntAdulto').textContent = total;
-    safeGetElement('btnAdulto').setAttribute('aria-label', `Ver dentición adulta, ${total} piezas`);
-  } else {
-    safeGetElement('cntInfantil').textContent = total;
-    safeGetElement('btnInfantil').setAttribute('aria-label', `Ver dentición infantil, ${total} piezas`);
-  }
-  
-  updateCounts();
-}
-
-
-// ═══════════════════════════════════════════════════════════════════
-//  GUARDAR CAMBIOS - LÓGICA ORIGINAL PRESERVADA
-// ═══════════════════════════════════════════════════════════════════
-
-function guardarCambios() {
-  const modal = safeGetElement('modalGuardar');
-  if (modal) {
-    openModal(modal);
-  } else {
-    showToast('Guardando cambios…', 'info');
-    setTimeout(() => showToast('Cambios guardados exitosamente', 'success'), 1500);
-  }
-}
-
-function confirmarGuardado() {
-  const btn = safeGetElement('btnGuardar');
-  if (btn) {
-    const orig = btn.innerHTML;
-    btn.innerHTML = '✓ Guardado';
-    btn.disabled = true;
-    setTimeout(() => {
-      btn.innerHTML = orig;
-      btn.disabled = false;
-    }, 2000);
-  }
-  console.log('Guardando estados:', odoCtrl._estados);
-  closeModal(safeGetElement('modalGuardar'));
-  showToast('Cambios guardados exitosamente', 'success');
-}
-
-
-// ═══════════════════════════════════════════════════════════════════
-//  ACTUALIZAR CONTADORES KPIs
+//  CONTADORES / STATS
 // ═══════════════════════════════════════════════════════════════════
 
 function updateCounts() {
-  const tipo = odoCtrl._tipo;
-  const resumen = odoCtrl.getResumen(tipo);
-  
-  updateStat('stat-sanos', resumen.sano || 0);
-  updateStat('stat-caries', resumen.caries || 0);
-  updateStat('stat-tratamientos', (resumen.corona || 0) + (resumen.endodoncia || 0) + (resumen.restauracion || 0));
-  
-  const total = Object.values(resumen).reduce((a, b) => a + b, 0);
-  updateStat('stat-total', total);
+    const piezas = Object.values(baseDatosTratamientos);
+    const totalMapeado = Object.keys(mapeoFDI).length || 32;
+
+    let sanos = 0, caries = 0, tratados = 0;
+
+    piezas.forEach(p => {
+        if (!p.tratamientos || p.tratamientos.length === 0) return;
+        const actual = p.tratamientos[p.tratamientos.length - 1].key;
+        if (actual === 'sano') sanos++;
+        else if (actual === 'caries') caries++;
+        else tratados++;
+    });
+
+    const piezasRegistradas = piezas.length;
+    sanos += Math.max(0, totalMapeado - piezasRegistradas);
+
+    animateCounter(safeGetElement('stat-sanos'), sanos);
+    animateCounter(safeGetElement('stat-caries'), caries);
+    animateCounter(safeGetElement('stat-tratamientos'), tratados);
+    animateCounter(safeGetElement('stat-total'), totalMapeado);
 }
 
-function updateStat(elementId, value) {
-  const el = safeGetElement(elementId);
-  if (!el) return;
-  if (typeof animateCounter !== 'undefined') {
-    animateCounter(el, value);
-  } else {
-    el.textContent = value;
-  }
-}
-
-// Anima contador numérico con transición suave
 function animateCounter(el, target) {
-  if (!el) return;
-  let cur = 0;
-  const step = Math.max(1, Math.ceil(target / 30));
-  const t = setInterval(() => {
-    cur = Math.min(cur + step, target);
-    el.textContent = cur;
-    if (cur >= target) clearInterval(t);
-  }, 30);
+    if (!el) return;
+    let cur = parseInt(el.textContent) || 0;
+    const step = Math.max(1, Math.ceil(Math.abs(target - cur) / 20));
+    const dir = target > cur ? 1 : -1;
+    const t = setInterval(() => {
+        cur += step * dir;
+        if ((dir > 0 && cur >= target) || (dir < 0 && cur <= target)) {
+            cur = target;
+            clearInterval(t);
+        }
+        el.textContent = cur;
+    }, 30);
 }
-
 
 // ═══════════════════════════════════════════════════════════════════
-//  MODALES - ACCESIBILIDAD ARIA
+//  EXPORTAR / LIMPIAR
+// ═══════════════════════════════════════════════════════════════════
+
+function exportarHistorial() {
+    if (Object.keys(baseDatosTratamientos).length === 0) {
+        showToast('No hay registros para exportar', 'warning');
+        return;
+    }
+    const datos = {
+        fechaExportacion: new Date().toISOString(),
+        paciente: paciente,
+        totalPiezas: Object.keys(baseDatosTratamientos).length,
+        registros: baseDatosTratamientos,
+        mapeoFDI: mapeoFDI
+    };
+    const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `odontograma_${paciente.codigoHC}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('📥 Historial exportado', 'success');
+}
+
+async function limpiarTodo() {
+    if (Object.keys(baseDatosTratamientos).length === 0) {
+        showToast('No hay registros para limpiar', 'warning');
+        return;
+    }
+    if (confirm('⚠️ ¿Eliminar TODO el historial? Esta acción no se puede deshacer.')) {
+        baseDatosTratamientos = {};
+        guardarDatos();
+        renderUltimasMods();
+        updateCounts();
+        cerrarPanel();
+        await persistirEstado({ mostrarToast: false });
+        showToast('🗑️ Historial limpiado', 'success');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  GUARDAR CAMBIOS
+// ═══════════════════════════════════════════════════════════════════
+
+function guardarCambios() {
+    const modal = safeGetElement('modalGuardar');
+    if (modal) openModal(modal);
+}
+
+async function confirmarGuardado() {
+    console.log('📤 Guardando en backend:', baseDatosTratamientos);
+    closeModal(safeGetElement('modalGuardar'));
+    const btn = safeGetElement('btnGuardar');
+    const orig = btn?.innerHTML || '💾 Guardar cambios';
+    if (btn) {
+        btn.innerHTML = '✓ Guardando...';
+        btn.disabled = true;
+    }
+
+    try {
+        await persistirEstado({ mostrarToast: true });
+    } finally {
+        if (btn) {
+            btn.innerHTML = orig;
+            btn.disabled = false;
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODALES
 // ═══════════════════════════════════════════════════════════════════
 
 function openModal(modalEl) {
-  if (!modalEl) return;
-  modalEl.classList.add('open');
-  modalEl.setAttribute('aria-hidden', 'false');
-  modalEl.removeAttribute('inert');
-  
-  // Enfocar botón de cerrar al abrir modal
-  const closeBtn = modalEl.querySelector('.modal-close');
-  if (closeBtn) closeBtn.focus();
-  
-  // Bloquear scroll del body
-  document.body.style.overflow = 'hidden';
+    if (!modalEl) return;
+    modalEl.classList.add('open');
+    modalEl.setAttribute('aria-hidden', 'false');
+    modalEl.removeAttribute('inert');
+    modalEl.querySelector('.modal-close')?.focus();
+    document.body.style.overflow = 'hidden';
 }
 
 function closeModal(modalEl) {
-  if (!modalEl) return;
-  modalEl.classList.remove('open');
-  modalEl.setAttribute('aria-hidden', 'true');
-  modalEl.setAttribute('inert', '');
-  
-  // Restaurar scroll
-  document.body.style.overflow = '';
+    if (!modalEl) return;
+    modalEl.classList.remove('open');
+    modalEl.setAttribute('aria-hidden', 'true');
+    modalEl.setAttribute('inert', '');
+    document.body.style.overflow = '';
 }
 
-
 // ═══════════════════════════════════════════════════════════════════
-//  SIDEBAR MÓVIL (INTEGRACIÓN MÍNIMA)
+//  SIDEBAR MÓVIL
 // ═══════════════════════════════════════════════════════════════════
 
 const toggleSidebar = (show) => {
-  const sb = safeGetElement('sidebar');
-  const ov = safeGetElement('overlay');
-  const hb = safeGetElement('hamburger');
-  if (!sb || !ov) return;
-  if (show) {
-    sb.classList.add('open');
-    ov.classList.add('open');
-    hb?.classList.add('open');
-  } else {
-    sb.classList.remove('open');
-    ov.classList.remove('open');
-    hb?.classList.remove('open');
-  }
+    const sb = safeGetElement('sidebar');
+    const ov = safeGetElement('overlay');
+    const hb = safeGetElement('hamburger');
+    if (!sb || !ov) return;
+
+    if (show) {
+        sb.classList.add('open');
+        ov.classList.add('open');
+        hb?.setAttribute('aria-expanded', 'true');
+    } else {
+        sb.classList.remove('open');
+        ov.classList.remove('open');
+        hb?.setAttribute('aria-expanded', 'false');
+    }
 };
 
-
 // ═══════════════════════════════════════════════════════════════════
-//  FECHA DINÁMICA DEL HEADER
+//  FECHA HEADER
 // ═══════════════════════════════════════════════════════════════════
 
 function updateHeaderDate() {
-  const now = new Date();
-  const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  
-  const dayName = days[now.getDay()];
-  const dateStr = `${now.getDate()} de ${months[now.getMonth()]} ${now.getFullYear()}`;
-  const isoStr = now.toISOString().split('T')[0];
-  
-  const elDate = safeGetElement('headerDate');
-  if (elDate) {
-    elDate.textContent = `${dayName}, ${dateStr}`;
-    elDate.setAttribute('datetime', isoStr);
-  }
+    const now = new Date();
+    const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const str = `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]} ${now.getFullYear()}`;
+    const el = safeGetElement('headerDate');
+    if (el) {
+        el.textContent = str;
+        el.setAttribute('datetime', now.toISOString().split('T')[0]);
+    }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  SIDEBAR ACCORDION
+// ═══════════════════════════════════════════════════════════════════
+
+function initSidebarAccordion() {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+        const items = header.nextElementSibling;
+        const arrow = header.querySelector('.nav-arrow');
+        if (!items || !arrow) return;
+
+        const setExpanded = (isExpanded) => {
+            items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+            arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+            header.setAttribute('aria-expanded', String(isExpanded));
+        };
+
+        setExpanded(true); // Abierto por defecto
+
+        const toggle = () => {
+            const isExpanded = header.getAttribute('aria-expanded') === 'true';
+            setExpanded(!isExpanded);
+        };
+
+        header.addEventListener('click', toggle);
+        header.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+        });
+    });
+}
 
 // ═══════════════════════════════════════════════════════════════════
-//  INIT - INTEGRACIÓN MÍNIMA
+//  INIT
 // ═══════════════════════════════════════════════════════════════════
 
 function init() {
-  // Inicializar componentes de UI
-  const hb = safeGetElement('hamburger');
-  const ov = safeGetElement('overlay');
-  hb?.addEventListener('click', () => toggleSidebar(true));
-  ov?.addEventListener('click', () => toggleSidebar(false));
-  
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => { if (window.innerWidth <= 680) toggleSidebar(false); });
-  });
-
-  // Fecha dinámica
-  updateHeaderDate();
-  
-  // Datos del paciente
-  safeGetElement('patientName').textContent = odoCtrl._paciente.nombre;
-  safeGetElement('patientHC').textContent = odoCtrl._paciente.codigoHC;
-  
-  const tipo = odoCtrl.getTipoDenticion();
-
-  if (tipo === 'nino') {
-    safeGetElement('btnAdulto')?.classList.remove('active');
-    safeGetElement('btnInfantil')?.classList.add('active');
-    safeGetElement('btnAdulto')?.setAttribute('aria-selected', 'false');
-    safeGetElement('btnInfantil')?.setAttribute('aria-selected', 'true');
-  }
-
-  updateCounts();
-  
-  // Renderizar componentes del odontograma (LÓGICA ORIGINAL)
-  renderOdontograma(tipo);
-  renderResumen(tipo);
-  renderEstadosBtns(null);
-  renderUltimasMods();
-  
-  // Event listeners para tabs
-  document.querySelectorAll('.tipo-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const tipo = e.currentTarget.dataset.tipo;
-      setTipo(tipo, e.currentTarget);
+    // Sidebar
+    safeGetElement('hamburger')?.addEventListener('click', () => toggleSidebar(true));
+    safeGetElement('overlay')?.addEventListener('click', () => toggleSidebar(false));
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 680) toggleSidebar(false);
+        });
     });
-  });
-  
-  safeGetElement('btnGuardar')?.addEventListener('click', guardarCambios);
-  
-  // Modal guardar: acciones
-  safeGetElement('modalGuardarClose')?.addEventListener('click', () => {
-    closeModal(safeGetElement('modalGuardar'));
-  });
-  safeGetElement('modalGuardarCancel')?.addEventListener('click', () => {
-    closeModal(safeGetElement('modalGuardar'));
-  });
-  safeGetElement('modalGuardarConfirm')?.addEventListener('click', confirmarGuardado);
-  safeGetElement('modalGuardar')?.addEventListener('click', (e) => {
-    if (e.target.id === 'modalGuardar') {
-      closeModal(e.target);
-    }
-  });
-  
-  // Escape cierra modal y sidebar
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      closeModal(safeGetElement('modalGuardar'));
-      toggleSidebar(false);
-    }
-  });
-  
-  // Limpieza al unload
-  window.addEventListener('beforeunload', () => {
-    // Remover listeners en implementación SPA real
-  });
+
+    // Sidebar accordion
+    initSidebarAccordion();
+
+    // Header
+    updateHeaderDate();
+    const patientNameEl = safeGetElement('patientName');
+    const patientHcEl = safeGetElement('patientHC');
+    if (patientNameEl) patientNameEl.textContent = paciente.nombre;
+    if (patientHcEl) patientHcEl.textContent = paciente.codigoHC;
+
+    // Cargar datos
+    cargarDatos();
+
+    // Visor 3D
+    inicializarVisor();
+
+    // UI
+    renderUltimasMods();
+    updateCounts();
+
+    // Botones
+    safeGetElement('btnMapeo')?.addEventListener('click', toggleMapeoFDI);
+    safeGetElement('btnGuardar')?.addEventListener('click', guardarCambios);
+
+    // Modal
+    safeGetElement('modalGuardarClose')?.addEventListener('click', () => closeModal(safeGetElement('modalGuardar')));
+    safeGetElement('modalGuardarCancel')?.addEventListener('click', () => closeModal(safeGetElement('modalGuardar')));
+    safeGetElement('modalGuardarConfirm')?.addEventListener('click', confirmarGuardado);
+    safeGetElement('modalGuardar')?.addEventListener('click', (e) => {
+        if (e.target.id === 'modalGuardar') closeModal(e.target);
+    });
+
+    // Escape cierra modal/sidebar
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeModal(safeGetElement('modalGuardar'));
+            toggleSidebar(false);
+        }
+    });
 }
 
-// Ejecutar al cargar DOM
 document.addEventListener('DOMContentLoaded', init);

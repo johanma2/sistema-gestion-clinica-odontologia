@@ -51,15 +51,14 @@
           <span class="bc-sep" aria-hidden="true">→</span>
           <span class="bc-active">Gestión de Pacientes</span>
         </nav>
-        <h1 class="page-title">Mis Pacientes Atendidos</h1>
+        <h1 class="page-title">Gestión de Pacientes</h1>
         <p class="page-subtitle">Historial de pacientes — Solo lectura</p>
       </div>
       <div class="header-actions">
         <div class="search-wrap">
           <span class="search-icon" aria-hidden="true">🔍</span>
-          <input type="search" id="searchPatients" class="search-input" placeholder="Buscar Paciente..." aria-label="Buscar paciente" />
+          <input type="search" id="searchPatients" class="search-input" placeholder="Buscar paciente, cédula o diagnóstico..." aria-label="Buscar paciente" />
         </div>
-        <button class="btn-primary" id="btnNewPatient" aria-label="Registrar nuevo paciente">➕ Nuevo Registro</button>
       </div>
     </header>
 
@@ -88,6 +87,37 @@
         <span class="stat-label">Sin Alergias</span>
         <span class="stat-sub">Sin restricciones</span>
       </div>
+    </section>
+
+    <section class="filters-bar" aria-label="Filtros de búsqueda">
+      <div class="filters-row">
+        <div class="filter-group">
+          <label class="filter-label" for="filterAlergias">Alergias</label>
+          <select id="filterAlergias" class="filter-select" aria-label="Filtrar por alergias">
+            <option value="">Todas</option>
+            <option value="con">Con alergias</option>
+            <option value="sin">Sin alergias</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="filterCita">Próxima cita</label>
+          <select id="filterCita" class="filter-select" aria-label="Filtrar por próxima cita">
+            <option value="">Todas</option>
+            <option value="con">Con cita programada</option>
+            <option value="sin">Sin cita programada</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="filterHistorial">Historial clínico</label>
+          <select id="filterHistorial" class="filter-select" aria-label="Filtrar por historial clínico">
+            <option value="">Todos</option>
+            <option value="con">Con historial</option>
+            <option value="sin">Sin historial</option>
+          </select>
+        </div>
+        <button class="btn-clear-filters" id="btnClearFilters" aria-label="Limpiar todos los filtros">✕ Limpiar filtros</button>
+      </div>
+      <span class="filter-results" id="filterResults"></span>
     </section>
 
     <section class="table-section" aria-labelledby="tableTitle">
