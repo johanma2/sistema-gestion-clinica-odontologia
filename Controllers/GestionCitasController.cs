@@ -516,4 +516,42 @@ public class GestionCitasController : Controller
 
         ViewData["TopProfesionales"] = topProfesionales;
     }
+
+    // ====================================================================
+    //  CENTRO DE AYUDA
+    // ====================================================================
+    [HttpGet]
+    [Authorize(Roles = "Administrador,Recepcionista,Profesional,Auxiliar")]
+    [Route("centro-de-ayuda/como-programar-cita")]
+    public IActionResult CentroDeAyudaComoProgramarCita()
+    {
+        var userName = User.Identity?.Name ?? "Usuario SmileTrack";
+        var emailClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+
+        var partesNombre = userName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var initials = string.Join("", partesNombre.Take(2).Select(p => char.ToUpperInvariant(p[0])));
+        if (string.IsNullOrWhiteSpace(initials)) initials = "ST";
+
+        ViewData["UserInitials"] = initials;
+        ViewData["UserFullName"] = userName;
+        ViewData["UserEmail"] = !string.IsNullOrWhiteSpace(emailClaim) ? emailClaim : "usuario@smiletrack.local";
+
+        return View("~/Views/Centro_De_Ayuda/Como_Programar_Una_Cita/ComoProgramarUnaCita.cshtml");
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Administrador,Recepcionista,Profesional,Auxiliar")]
+    [Route("centro-de-ayuda/guias-tutoriales")]
+    public IActionResult CentroDeAyudaGuiasTutoriales()
+    {
+        return View("~/Views/Centro_De_Ayuda/Guias_Tutoriales_y_Soporte/index.cshtml");
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Administrador,Recepcionista,Profesional,Auxiliar")]
+    [Route("centro-de-ayuda/soporte")]
+    public IActionResult CentroDeAyudaSoporte()
+    {
+        return View("~/Views/Centro_De_Ayuda/Guia De Usuario/SoporteTicket.cshtml");
+    }
 }
