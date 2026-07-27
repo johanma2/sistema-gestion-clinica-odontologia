@@ -757,26 +757,34 @@ const initServerStats = () => {
  *   5. fetchProfessionals + renderTable — solo activos en modo fallback
  */
 const init = async () => {
-  initSidebar();
-  initFilters();
-  initModals();
-  initSearchDebounce(); // Debounce del buscador → GET real al servidor en modo SSR
+  try {
+    initSidebar();
+    initFilters();
+    initModals();
+    initSearchDebounce(); // Debounce del buscador → GET real al servidor en modo SSR
 
-  // Animar contadores del Stats Grid con los valores que Razor ya escribió en data-target.
-  // WHY: esto funciona en SSR y en fallback — siempre hay data-target en el HTML.
-  initServerStats();
+    // Animar contadores del Stats Grid con los valores que Razor ya escribió en data-target.
+    // WHY: esto funciona en SSR y en fallback — siempre hay data-target en el HTML.
+    initServerStats();
 
-  // Modo fallback: cargar datos y renderizar tabla desde JS
-  // (en SSR estos pasos producen un array vacío y la tabla ya tiene filas, así que no hacen nada)
-  professionals = await fetchProfessionals();
-  populateSpecialties();
-  updateStats();   // no-op en SSR (return temprano), anima en fallback
-  renderTable();   // no-op en SSR, renderiza en fallback
+    // Modo fallback: cargar datos y renderizar tabla desde JS
+    // (en SSR estos pasos producen un array vacío y la tabla ya tiene filas, así que no hacen nada)
+    professionals = await fetchProfessionals();
+    populateSpecialties();
+    updateStats();   // no-op en SSR (return temprano), anima en fallback
+    renderTable();   // no-op en SSR, renderiza en fallback
 
-  // Limpieza al unload para evitar memory leaks en implementaciones SPA
-  window.addEventListener('beforeunload', () => {
-    // Remover listeners en implementación SPA real
-  });
+    // Limpieza al unload para evitar memory leaks en implementaciones SPA
+    window.addEventListener('beforeunload', () => {
+      // Remover listeners en implementación SPA real
+    });
+  } catch (e) {
+    console.error('[SmileTrack] Error init modulo', e);
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:1rem;font-family:system-ui';
+    d.textContent = 'Error cargando módulo: ' + (e.message || 'Intente recargar');
+    document.body.prepend(d);
+  }
 };
 
 // Ejecutar al cargar DOM

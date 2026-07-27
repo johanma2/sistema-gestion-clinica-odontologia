@@ -385,35 +385,43 @@ const initExport = () => {
 // ═══════════════════════════════════════════════════════════════════
 
 const init = async () => {
-  // Inicializar componentes de UI
-  initSidebar();
-  initExport();
-  
-  // Cargar datos en paralelo
-  const [metrics, revenue, status, topPros, invoices] = await Promise.all([
-    fetchMetrics(),
-    fetchRevenue(),
-    fetchStatus(),
-    fetchTopProfessionals(),
-    fetchInvoices(),
-  ]);
-  
-  // Renderizar componentes
-  renderMetrics(metrics);
-  renderRevenueChart(revenue);
-  renderStatusChart(status);
-  renderTopProfessionals(topPros);
-  renderInvoices(invoices);
-  
-  // Toast de bienvenida (después de cargar datos)
-  setTimeout(() => {
-    showToast('✅ Conexión establecida con SmileTrack');
-  }, 800);
-  
-  // Limpieza al unload para evitar memory leaks
-  window.addEventListener('beforeunload', () => {
-    // Remover listeners en implementación SPA real
-  });
+  try {
+    // Inicializar componentes de UI
+    initSidebar();
+    initExport();
+    
+    // Cargar datos en paralelo
+    const [metrics, revenue, status, topPros, invoices] = await Promise.all([
+      fetchMetrics(),
+      fetchRevenue(),
+      fetchStatus(),
+      fetchTopProfessionals(),
+      fetchInvoices(),
+    ]);
+    
+    // Renderizar componentes
+    renderMetrics(metrics);
+    renderRevenueChart(revenue);
+    renderStatusChart(status);
+    renderTopProfessionals(topPros);
+    renderInvoices(invoices);
+    
+    // Toast de bienvenida (después de cargar datos)
+    setTimeout(() => {
+      showToast('✅ Conexión establecida con SmileTrack');
+    }, 800);
+    
+    // Limpieza al unload para evitar memory leaks
+    window.addEventListener('beforeunload', () => {
+      // Remover listeners en implementación SPA real
+    });
+  } catch (e) {
+    console.error('[SmileTrack] Error init modulo', e);
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:1rem;font-family:system-ui';
+    d.textContent = 'Error cargando módulo: ' + (e.message || 'Intente recargar');
+    document.body.prepend(d);
+  }
 };
 
 // Ejecutar al cargar DOM

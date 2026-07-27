@@ -16,6 +16,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/site.css")" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/styles.css")" />
 </head>
 <body>
@@ -187,6 +188,7 @@
   <script>
     window.RAZOR_PATIENTS = @Html.Raw(pacientesJson);      
   </script>
+  <script src="@Url.Content("~/js/site.js")" defer></script>
   <script src="@Url.Content("~/js/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/script.js")"></script>
 </body>
 </Html

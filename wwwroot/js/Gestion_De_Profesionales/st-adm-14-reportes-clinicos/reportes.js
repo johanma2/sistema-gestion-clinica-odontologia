@@ -91,8 +91,16 @@ const initServerStats = () => {
 // ═══════════════════════════════════════════════════════════════════
 
 const init = async () => {
-    initSidebar();
-    initServerStats(); // Anima contadores desde data-target
+    try {
+        initSidebar();
+        initServerStats(); // Anima contadores desde data-target
+    } catch (e) {
+        console.error('[SmileTrack] Error init modulo', e);
+        const d = document.createElement('div');
+        d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:1rem;font-family:system-ui';
+        d.textContent = 'Error cargando módulo: ' + (e.message || 'Intente recargar');
+        document.body.prepend(d);
+    }
 };
 
 // Ejecutar al cargar DOM

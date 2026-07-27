@@ -457,72 +457,90 @@ const initTableEvents = () => {
  * registra los eventos de filtros, modales, teclado y el menú móvil.
  */
 const init = () => {
-  // Anima los contadores y pinta la tabla al cargar la página por primera vez
-  animateCounters();
-  updateStats();
-  renderTable();
-  
-  // Inicializa el modal de nueva cita y la delegación de eventos de la tabla
-  initNuevaCitaModal();
-  initTableEvents();
-
-  // Re-renderiza la tabla cada vez que cambia el selector de estado
-  const filterEl = safeGetElement('filterEstado');
-  if (filterEl) filterEl.addEventListener('change', renderTable);
-
-  // Aplica debounce al campo de búsqueda para no re-renderizar en cada pulsación de tecla
-  const searchEl = safeGetElement('searchInput');
-  if (searchEl) {
-    const debouncedRender = debounce(renderTable, 180);
-    searchEl.addEventListener('input', debouncedRender);
-  }
-
-  // Registra el cierre del modal de detalle al pulsar la X o hacer clic fuera
-  const modalClose = safeGetElement('modalClose');
-  const modalOverlay = safeGetElement('modalOverlay');
-  if (modalClose) modalClose.addEventListener('click', closeModal);
-  if (modalOverlay) {
-    modalOverlay.addEventListener('click', e => {
-      if (e.target === modalOverlay) closeModal();
-    });
-  }
-
-  // Registra los botones 'Volver' y 'Sí, cancelar' del modal de confirmación
-  const cancelarNo = safeGetElement('cancelarNo');
-  const cancelarSi = safeGetElement('cancelarSi');
-  const modalCancelar = safeGetElement('modalCancelar');
-  
-  if (cancelarNo) cancelarNo.addEventListener('click', cerrarModalCancelar);
-  if (cancelarSi) cancelarSi.addEventListener('click', confirmarCancelacion);
-  if (modalCancelar) {
-    modalCancelar.addEventListener('click', e => {
-      if (e.target === modalCancelar) cerrarModalCancelar();
-    });
-  }
-
-  // La tecla Escape cierra el modal más reciente según el orden de apilamiento
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
+  try {
+    // Anima los contadores y pinta la tabla al cargar la página por primera vez
+    animateCounters();
+    updateStats();
+    renderTable();
     
-    // Cierra primero el modal de nueva cita, luego el de cancelación, luego el de detalle
-    const modalNueva = safeGetElement('modalNuevaCita');
-    const modalCancel = safeGetElement('modalCancelar');
-    const modalDetail = safeGetElement('modalOverlay');
-    
-    if (modalNueva?.classList.contains('open')) {
-      closeModalGeneric('modalNuevaCita');
-    } else if (modalCancel?.classList.contains('open')) {
-      cerrarModalCancelar();
-    } else if (modalDetail?.classList.contains('open')) {
-      closeModal();
+    // Inicializa el modal de nueva cita y la delegación de eventos de la tabla
+    initNuevaCitaModal();
+    initTableEvents();
+
+    // Re-renderiza la tabla cada vez que cambia el selector de estado
+    const filterEl = safeGetElement('filterEstado');
+    if (filterEl) filterEl.addEventListener('change', renderTable);
+
+    // Aplica debounce al campo de búsqueda para no re-renderizar en cada pulsación de tecla
+    const searchEl = safeGetElement('searchInput');
+    if (searchEl) {
+      const debouncedRender = debounce(renderTable, 180);
+      searchEl.addEventListener('input', debouncedRender);
     }
-  });
-  
-  // En una SPA se deben remover listeners aquí para evitar memory leaks al cambiar de página
-  window.addEventListener('beforeunload', () => {
-    // Ej: modalOverlay?.removeEventListener('click', closeModalHandler);
-  });
+
+    // Registra el cierre del modal de detalle al pulsar la X o hacer clic fuera
+    const modalClose = safeGetElement('modalClose');
+    const modalOverlay = safeGetElement('modalOverlay');
+    if (modalClose) modalClose.addEventListener('click', closeModal);
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', e => {
+        if (e.target === modalOverlay) closeModal();
+      });
+    }
+
+    // Registra los botones 'Volver' y 'Sí, cancelar' del modal de confirmación
+    const cancelarNo = safeGetElement('cancelarNo');
+    const cancelarSi = safeGetElement('cancelarSi');
+    const modalCancelar = safeGetElement('modalCancelar');
+    
+    if (cancelarNo) cancelarNo.addEventListener('click', cerrarModalCancelar);
+    if (cancelarSi) cancelarSi.addEventListener('click', confirmarCancelacion);
+    if (modalCancelar) {
+      modalCancelar.addEventListener('click', e => {
+        if (e.target === modalCancelar) cerrarModalCancelar();
+      });
+    }
+
+    // La tecla Escape cierra el modal más reciente según el orden de apilamiento
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      
+      // Cierra primero el modal de nueva cita, luego el de cancelación, luego el de detalle
+      const modalNueva = safeGetElement('modalNuevaCita');
+      const modalCancel = safeGetElement('modalCancelar');
+      const modalDetail = safeGetElement('modalOverlay');
+      
+      if (modalNueva?.classList.contains('open')) {
+        closeModalGeneric('modalNuevaCita');
+      } else if (modalCancel?.classList.contains('open')) {
+        cerrarModalCancelar();
+      } else if (modalDetail?.classList.contains('open')) {
+        closeModal();
+      }
+    });
+    
+    // En una SPA se deben remover listeners aquí para evitar memory leaks al cambiar de página
+    window.addEventListener('beforeunload', () => {
+      // Ej: modalOverlay?.removeEventListener('click', closeModalHandler);
+    });
+  } catch (e) {
+    console.error('[SmileTrack] Error inicializando modulo', e);
+    mostrarErrorUsuario(e.message || 'Error cargando módulo. Intente recargar.');
+  }
 };
+
+function mostrarErrorUsuario(mensaje) {
+  let div = document.getElementById('smiletrack-error-bar');
+  if (!div) {
+    div = document.createElement('div');
+    div.id = 'smiletrack-error-bar';
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:white;padding:14px 20px;text-align:center;font-family:system-ui,-apple-system,sans-serif;font-size:15px;box-shadow:0 4px 12px rgba(0,0,0,.15);border-bottom:3px solid #991b1b;';
+    div.setAttribute('role', 'alert');
+    document.body.appendChild(div);
+  }
+  div.innerHTML = '<strong>[SmileTrack]</strong> ' + mensaje + ' <button onclick="document.getElementById(\'smiletrack-error-bar\').style.display=\'none\'" style="margin-left:16px;background:white;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;">×</button>';
+  div.style.display = 'block';
+}
 
 // Ejecutar al cargar DOM
 document.addEventListener('DOMContentLoaded', init);

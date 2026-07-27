@@ -147,19 +147,26 @@ function renderServiceChart(servicios) {
 async function cargarMes(mesKey) {
   let data;
   try {
-    const res = await fetch(`${API_BASE}/reports?mes=${mesKey}`);
-    if (!res.ok) throw new Error();
-    data = await res.json();
-  } catch {
-    data = SAMPLE_DATA[mesKey] || SAMPLE_DATA['2026-03'];
+    try {
+      const res = await fetch(`${API_BASE}/reports?mes=${mesKey}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      data = await res.json();
+    } catch (e) {
+      console.error('[SmileTrack] Error cargando reporte mensual', e);
+      showToast('⚠️ Error de conexión, mostrando datos locales', false);
+      data = SAMPLE_DATA[mesKey] || SAMPLE_DATA['2026-03'];
+    }
+    currentData = data;
+    const label = MESES_LABELS[mesKey] || mesKey;
+    document.getElementById('pageSub').textContent =
+      `Productividad y estadísticas de Dr. Carlos Méndez · ${label}`;
+    renderStats(data);
+    renderBarChart(data, mesKey);
+    renderServiceChart(data.servicios);
+  } catch (e) {
+    console.error('[SmileTrack] Error procesando datos del mes', e);
+    showToast('❌ Error cargando los datos del reporte', false);
   }
-  currentData = data;
-  const label = MESES_LABELS[mesKey] || mesKey;
-  document.getElementById('pageSub').textContent =
-    `Productividad y estadísticas de Dr. Carlos Méndez · ${label}`;
-  renderStats(data);
-  renderBarChart(data, mesKey);
-  renderServiceChart(data.servicios);
 }
 
 // ── Toast ──
@@ -175,14 +182,26 @@ function showToast(msg, ok=true) {
 document.getElementById('btnGuardar').addEventListener('click', async () => {
   const mes = document.getElementById('mesSelect').value;
   try {
-    const res = await fetch(`${API_BASE}/reports/save`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ mes, data: currentData }),
-    });
-    if (!res.ok) throw new Error();
-  } catch { /* silencioso */ }
-  showToast('Cambios guardados correctamente ✓');
+    let guardadoOk = false;
+    try {
+      const res = await fetch(`${API_BASE}/reports/save`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ mes, data: currentData }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      guardadoOk = true;
+    } catch (e) {
+      console.error('[SmileTrack] Error guardando reporte', e);
+      showToast('❌ Error de conexión al guardar', false);
+    }
+    if (guardadoOk) {
+      showToast('Cambios guardados correctamente ✓');
+    }
+  } catch (e) {
+    console.error('[SmileTrack] Error en flujo de guardado', e);
+    showToast('❌ Error al procesar el guardado', false);
+  }
 });
 
 // ── Cambio de mes ──
@@ -204,7 +223,18 @@ function initSidebar() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  initSidebar();
-  cargarMes('2026-03');
-});
+const init = async () => {
+  try {
+    initSidebar();
+    cargarMes('2026-03');
+  } catch (e) {
+    console.error('[SmileTrack] Error init modulo', e);
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;padding:1rem;font-family:system-ui';
+    d.textContent = 'Error cargando módulo: ' + (e.message || 'Intente recargar');
+    document.body.prepend(d);
+  }
+};
+
+// Ejecutar al cargar DOM
+document.addEventListener('DOMContentLoaded', init);

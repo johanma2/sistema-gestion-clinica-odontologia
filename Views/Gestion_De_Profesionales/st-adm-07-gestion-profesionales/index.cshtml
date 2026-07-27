@@ -29,6 +29,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
+  <link rel="stylesheet" href="@Url.Content("~/css/site.css")" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css?v=2")" />
 </head>
 
@@ -489,6 +490,7 @@
   </footer>
 
 
+  <script src="@Url.Content("~/js/site.js")" defer></script>
   <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/app.js")"></script>
 
 <script>
@@ -500,24 +502,6 @@
         sel.addEventListener('change', () => filterForm.submit());
       });
     }
-
-    // Sidebar nav-group collapsible
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-      if (!items || !arrow) return;
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-      setExpanded(false);
-      const toggle = () => { const isExpanded = header.getAttribute('aria-expanded') === 'true'; setExpanded(!isExpanded); };
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
-      });
-    });
 
     // Auto-abrir modal si hay un profesional en edición
     const isEditing = '@(editingProfesional != null ? "true" : "false")' === 'true';

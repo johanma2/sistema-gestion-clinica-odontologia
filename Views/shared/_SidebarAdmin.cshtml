@@ -2,89 +2,108 @@
     var currentPath = Context.Request.Path.Value ?? "/";
     Func<string, string> linkClass = href => currentPath.Equals(href, StringComparison.OrdinalIgnoreCase) ? "nav-item active" : "nav-item";
 }
-<nav class="sidebar-nav">
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+<nav class="sidebar-nav" aria-label="Navegación administrativa">
+  <div class="nav-group" id="nav-group-inicio">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-inicio-items">
+      Inicio <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-inicio-items">
       <a href="/" class="@linkClass("/")" data-icon="🏠">Homepage</a>
     </div>
   </div>
-  
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Acceso y Seguridad <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+
+  <div class="nav-group" id="nav-group-acceso">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-acceso-items">
+      Acceso y Seguridad <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-acceso-items">
       <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="@linkClass("/acceso-y-seguridad/st-adm-02-gestion-usuarios")" data-icon="👥">Gestión de Usuarios</a>
       <a href="/acceso-y-seguridad/st-adm-03-gestion-roles" class="@linkClass("/acceso-y-seguridad/st-adm-03-gestion-roles")" data-icon="🛡️">Gestión de Roles</a>
       <a href="/acceso-y-seguridad/st-adm-04-matriz-permisos" class="@linkClass("/acceso-y-seguridad/st-adm-04-matriz-permisos")" data-icon="🔑">Matriz de Permisos</a>
       <a href="/acceso-y-seguridad/st-adm-15-bitacora" class="@linkClass("/acceso-y-seguridad/st-adm-15-bitacora")" data-icon="📜">Bitácora del Sistema</a>
     </div>
   </div>
-  
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+
+  <div class="nav-group" id="nav-group-pacientes">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-pacientes-items">
+      Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-pacientes-items">
       <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="@linkClass("/gestion-de-pacientes/st-adm-05-gestion-pacientes")" data-icon="👥">Gestión de Pacientes</a>
     </div>
   </div>
 
-  <!-- NUEVA SECCIÓN: HISTORIA CLÍNICA -->
-    <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="false">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+  <div class="nav-group" id="nav-group-historia-clinica">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-historia-clinica-items">
+      Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-historia-clinica-items">
       <a href="/historia-clinica/st-adm-historial" class="@linkClass("/historia-clinica/st-adm-historial")" data-icon="📋">Historial Clínico</a>
     </div>
   </div>
-  
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+
+  <div class="nav-group" id="nav-group-profesionales">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-profesionales-items">
+      Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-profesionales-items">
       <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="@linkClass("/gestion-de-profesionales/st-adm-07-gestion-profesionales")" data-icon="🩺">Gestión de Profesionales</a>
       <a href="/gestion-de-profesionales/st-adm-14-reportes-clinicos" class="@linkClass("/gestion-de-profesionales/st-adm-14-reportes-clinicos")" data-icon="📈">Reportes Clínicos</a>
     </div>
   </div>
-  
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+
+  <div class="nav-group" id="nav-group-citas">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-citas-items">
+      Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-citas-items">
       <a href="/gestion-de-citas/st-adm-01-dashboard" class="@linkClass("/gestion-de-citas/st-adm-01-dashboard")" data-icon="📊">Dashboard General</a>
       <a href="/gestion-de-citas/st-adm-08-agenda" class="@linkClass("/gestion-de-citas/st-adm-08-agenda")" data-icon="📅">Agenda General</a>
       <a href="/gestion-de-citas/st-adm-09-citas" class="@linkClass("/gestion-de-citas/st-adm-09-citas")" data-icon="🗓️">Gestión Integral de Citas</a>
     </div>
   </div>
-  
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+
+  <div class="nav-group" id="nav-group-facturacion">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-facturacion-items">
+      Facturación y Pagos <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-facturacion-items">
       <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="@linkClass("/facturacion-y-pagos/st-adm-12-facturacion")" data-icon="💰">Gestión de Facturación</a>
       <a href="/facturacion-y-pagos/st-adm-13-reportes-financieros" class="@linkClass("/facturacion-y-pagos/st-adm-13-reportes-financieros")" data-icon="📊">Reportes Financieros</a>
     </div>
   </div>
-  
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Servicios y Recursos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+
+  <div class="nav-group" id="nav-group-servicios">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-servicios-items">
+      Servicios y Recursos <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-servicios-items">
       <a href="/servicios-y-recursos/st-adm-10-servicios" class="@linkClass("/servicios-y-recursos/st-adm-10-servicios")" data-icon="🔧">Catálogo de Servicios</a>
       <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="@linkClass("/servicios-y-recursos/st-adm-16-configuracion-general")" data-icon="⚙️">Configuración General</a>
     </div>
   </div>
-  
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Gestión de PQR <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+
+  <div class="nav-group" id="nav-group-pqr">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-pqr-items">
+      Gestión de PQR <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-pqr-items">
       <a href="/gestion-de-pqr/st-adm-17-gestion-pqr" class="@linkClass("/gestion-de-pqr/st-adm-17-gestion-pqr")" data-icon="📮">Peticiones, Quejas y Reclamos</a>
       <a href="/gestion-de-pqr/st-pac-04-nueva-pqr" class="@linkClass("/gestion-de-pqr/st-pac-04-nueva-pqr")" data-icon="📝">Nueva Solicitud</a>
     </div>
   </div>
-  
-  <div class="nav-group">
-    <div class="nav-group-header" role="button" tabindex="0">Centro de Ayuda <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    <div class="nav-group-items">
+
+  <div class="nav-group" id="nav-group-ayuda">
+    <div class="nav-group-header" role="button" tabindex="0" aria-expanded="true" aria-controls="nav-group-ayuda-items">
+      Centro de Ayuda <span class="nav-arrow" aria-hidden="true">▼</span>
+    </div>
+    <div class="nav-group-items" id="nav-group-ayuda-items">
       <a href="/centro-de-ayuda/como-programar-cita" class="@linkClass("/centro-de-ayuda/como-programar-cita")" data-icon="📅">Cómo programar una cita</a>
       <a href="/centro-de-ayuda/guias-tutoriales" class="@linkClass("/centro-de-ayuda/guias-tutoriales")" data-icon="📚">Guías y Tutoriales</a>
-      <a href="/centro-de-ayuda/soporte" class="@linkClass("/centro-de-ayuda/soporte")" data-icon="�">Soporte y Tickets</a>
+      <a href="/centro-de-ayuda/soporte" class="@linkClass("/centro-de-ayuda/soporte")" data-icon="🎧">Soporte y Tickets</a>
     </div>
   </div>
-  
+
   <div class="nav-separator" aria-hidden="true"></div>
   <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
 </nav>
