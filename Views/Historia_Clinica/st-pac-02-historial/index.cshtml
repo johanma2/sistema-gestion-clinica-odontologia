@@ -1,4 +1,28 @@
-@{ Layout = null; }
+@using System.Text.Json
+@using SmileTrack_MVC.Models.ViewModels
+@model HistorialPacienteViewModel
+@{
+    Layout = null;
+    var odonto = Model.Odontograma;
+    var odontoConfigJson = JsonSerializer.Serialize(new
+    {
+        pacienteId = odonto.PacienteId,
+        historiaId = odonto.HistoriaId,
+        pacienteNombre = odonto.PacienteNombre,
+        codigoHC = odonto.CodigoHC,
+        fechaNacimiento = odonto.FechaNacimiento,
+        estadoPersistido = odonto.ObservacionesGenerales
+    });
+    var registrosJson = JsonSerializer.Serialize(Model.Registros.Select(r => new
+    {
+        fecha = r.Fecha.ToString("yyyy-MM-dd"),
+        fechaTexto = r.Fecha.ToString("dd MMM yyyy"),
+        tipo = r.Tipo,
+        descripcion = r.Descripcion,
+        doctor = r.Doctor,
+        estado = r.Estado
+    }));
+}
 
 ﻿<!DOCTYPE html>
 <html lang="es">
@@ -154,8 +178,8 @@
                   <div
                     style="font-size:12px;font-weight:600;color:#00d4ff;letter-spacing:0.08em;text-transform:uppercase">
                     SmileTrack — Odontograma</div>
-                  <div id="sub" style="font-size:9px;color:rgba(0,212,255,0.45);margin-top:2px">Paciente: Juan Manuel ·
-                    14-03-2026</div>
+                  <div id="sub" style="font-size:9px;color:rgba(0,212,255,0.45);margin-top:2px">Paciente: @Model.Odontograma.PacienteNombre ·
+    @Model.Odontograma.CodigoHC</div>
                 </div>
                 <!-- [MEJORA]: role="radiogroup" para toggles de dentición -->
                 <div style="display:flex;gap:5px" role="radiogroup" aria-label="Tipo de dentición">
@@ -233,24 +257,39 @@
             <h4 class="sidebar-card-title">⚕️ Antecedentes</h4>
             <div class="antecedentes-content">
               <!-- [MEJORA]: role="alert" para alerta crítica de alergias -->
-              <div class="allergy-alert" role="alert" aria-live="assertive">
-                <span class="allergy-icon" aria-hidden="true">🚨</span>
-                <div><strong>Alergias</strong>
-                  <p>Penicilina, Latex</p>
-                </div>
-              </div>
-              <div class="info-row"><span>Grupo sanguíneo</span><strong>O+</strong></div>
-              <div class="info-row"><span>Enfermedades</span><strong>Hipertensión leve</strong></div>
+              @if (Model.Alergias.Any())
+              {
+                  <div class="allergy-alert" role="alert" aria-live="assertive">
+                      <span class="allergy-icon" aria-hidden="true">🚨</span>
+                      <div><strong>Alergias</strong>
+                          <p>@string.Join(", ", Model.Alergias)</p>
+                      </div>
+                  </div>
+              }
+              else
+              {
+                  <div class="info-row"><span>Alergias</span><strong>Sin alergias registradas</strong></div>
+              }
+              <div class="info-row"><span>Grupo sanguíneo</span><strong>@Model.GrupoSanguineo</strong></div>
+              <div class="info-row"><span>Antecedentes</span><strong>@Model.AntecedentesMedicos</strong></div>
             </div>
           </div>
 
           <div class="appointment-card-mini">
             <h4>📅 Próxima cita</h4>
-            <p class="appointment-date">01 de mayo 2026</p>
-            <p class="appointment-doctor">Dr. Carlos Méndez</p>
-            <!-- [MEJORA]: aria-label descriptivo -->
-            <button class="btn-small" id="btnAgendarSugerida"
-              aria-label="Agendar cita sugerida con Dr. Carlos Méndez">Agendar</button>
+            @if (Model.ProximaCitaFecha.HasValue)
+            {
+                <p class="appointment-date">@Model.ProximaCitaFecha.Value.ToString("dd 'de' MMMM yyyy")</p>
+                <p class="appointment-doctor">@(Model.ProximaCitaProfesional ?? "Por asignar")</p>
+                <button class="btn-small" id="btnAgendarSugerida"
+                  aria-label="Ver detalle de la próxima cita">Ver detalle</button>
+            }
+            else
+            {
+                <p class="appointment-date">Sin citas próximas</p>
+                <button class="btn-small" id="btnAgendarSugerida"
+                  aria-label="Agendar una nueva cita">Agendar</button>
+            }
           </div>
 
           <div class="sidebar-card">
@@ -300,7 +339,10 @@
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Scripts -->
-  <script src="@Url.Content("~/js/historial.js")"></script>
+  <script>
+    window.smiletrackOdontogramaConfig = @Html.Raw(odontoConfigJson);
+    window.smiletrackHistorialRegistros = @Html.Raw(registrosJson);
+</script>
 
   <!-- ═══ ODONTOGRAMA JS COMPLETO (OPTIMIZADO) ═══ -->
   <script>
@@ -376,10 +418,37 @@
       }
     };
 
+    const buildEstadoInicial = () => {
+      const cfg = window.smiletrackOdontogramaConfig || {};
+      const estados = {};
+      const obsD = {};
+      try {
+        if (cfg.estadoPersistido) {
+          const persistido = typeof cfg.estadoPersistido === 'string'
+            ? JSON.parse(cfg.estadoPersistido)
+            : cfg.estadoPersistido;
+          const registros = persistido?.registros || {};
+          Object.entries(registros).forEach(([numDiente, registro]) => {
+            const tratamientos = registro?.tratamientos || registro?.Tratamientos || [];
+            if (!tratamientos.length) return;
+            const ultimo = tratamientos[tratamientos.length - 1];
+            const key = ultimo?.key || ultimo?.Key;
+            const obs = ultimo?.obs || ultimo?.Obs;
+            if (key) estados[numDiente] = key;
+            if (obs) obsD[numDiente] = obs;
+          });
+        }
+      } catch (e) {
+        console.warn('[SmileTrack] No se pudo leer el odontograma guardado:', e);
+      }
+      return { estados, obsD };
+    };
+
+    const estadoInicial = buildEstadoInicial();
     let odontogramState = {
       tipo: 'adulto',
-      estados: { 13: 'sellante', 26: 'caries', 36: 'endodoncia', 11: 'sano', 46: 'caries' },
-      obsD: { 26: 'Caries profunda' },
+      estados: estadoInicial.estados,
+      obsD: estadoInicial.obsD,
       sel: null
     };
 
@@ -619,9 +688,11 @@
       const panel = safeGetElement('panel');
       if (panel) panel.style.display = 'none';
       const sub = safeGetElement('sub');
+      const cfgNombre = (window.smiletrackOdontogramaConfig || {}).pacienteNombre || 'Paciente';
+      const cfgCodigo = (window.smiletrackOdontogramaConfig || {}).codigoHC || '';
       if (sub) sub.textContent = t === 'adulto'
-        ? 'Paciente: Juan Manuel · 14-03-2026 · Dentición permanente'
-        : 'Paciente: Juan Manuel · 14-03-2026 · Dentición temporal';
+        ? `Paciente: ${cfgNombre} · ${cfgCodigo} · Dentición permanente`
+        : `Paciente: ${cfgNombre} · ${cfgCodigo} · Dentición temporal`;
 
       buildOdonto();
       updateHist();

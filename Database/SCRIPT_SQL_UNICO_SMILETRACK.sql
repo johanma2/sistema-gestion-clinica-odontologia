@@ -796,3 +796,178 @@ BEGIN
     END
 END
 GO
+
+-- ============================================================
+-- 8) DATOS FICTICIOS ADICIONALES (poblado para pruebas / demo)
+-- Añadido para sincronizar este script de respaldo con el seed
+-- real que ejecuta la aplicación en Data/DbInitializer.cs.
+-- Todo el bloque es idempotente (verifica existencia antes de insertar).
+-- ============================================================
+
+-- --- 8.1 Servicios adicionales ---------------------------------
+DECLARE @serviciosNuevos TABLE (nombre VARCHAR(150), descripcion VARCHAR(500), precio DECIMAL(12,2));
+INSERT INTO @serviciosNuevos (nombre, descripcion, precio) VALUES
+('Endodoncia', 'Tratamiento de conductos radiculares', 450000),
+('Implante dental', 'Reemplazo de piezas perdidas', 2800000),
+('Odontopediatria', 'Cuidado dental especializado para ninos', 60000),
+('Extraccion simple', 'Extraccion de pieza dental sin complicaciones', 120000),
+('Resina dental', 'Restauracion estetica de una pieza danada', 90000),
+('Profilaxis y fluor', 'Prevencion de caries en ninos y adultos', 70000),
+('Cirugia de terceros molares', 'Extraccion quirurgica de muelas del juicio', 650000);
+
+DECLARE @sNombre VARCHAR(150), @sDescripcion VARCHAR(500), @sPrecio DECIMAL(12,2);
+DECLARE cur_servicios CURSOR FOR SELECT nombre, descripcion, precio FROM @serviciosNuevos;
+OPEN cur_servicios;
+FETCH NEXT FROM cur_servicios INTO @sNombre, @sDescripcion, @sPrecio;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Servicio WHERE nombre = @sNombre)
+        INSERT INTO Servicio (nombre, descripcion, precio, estado) VALUES (@sNombre, @sDescripcion, @sPrecio, 'activo');
+    FETCH NEXT FROM cur_servicios INTO @sNombre, @sDescripcion, @sPrecio;
+END
+CLOSE cur_servicios; DEALLOCATE cur_servicios;
+GO
+
+-- --- 8.2 Consultorios adicionales -------------------------------
+IF NOT EXISTS (SELECT 1 FROM Consultorio WHERE nombre = 'Box 04 - Odontopediatria')
+    INSERT INTO Consultorio (nombre, ubicacion, tipo, nombre_estado, capacidad, estado)
+    VALUES ('Box 04 - Odontopediatria', 'Planta 1 - Ala Este', 'Odontopediatria', 'Disponible', 1, 'disponible');
+IF NOT EXISTS (SELECT 1 FROM Consultorio WHERE nombre = 'Box 05 - Rehabilitacion Oral')
+    INSERT INTO Consultorio (nombre, ubicacion, tipo, nombre_estado, capacidad, estado)
+    VALUES ('Box 05 - Rehabilitacion Oral', 'Planta 2 - Ala Oeste', 'Rehabilitacion Oral', 'Disponible', 1, 'disponible');
+GO
+
+-- --- 8.3 Pacientes ficticios -------------------------------------
+DECLARE @pacientesNuevos TABLE (
+    documento VARCHAR(20), nombres VARCHAR(100), apellidos VARCHAR(100),
+    fecha_nacimiento DATE, genero VARCHAR(5), correo VARCHAR(150), ciudad VARCHAR(100)
+);
+INSERT INTO @pacientesNuevos (documento, nombres, apellidos, fecha_nacimiento, genero, correo, ciudad) VALUES
+('10239485', 'Julian', 'Restrepo', '1995-04-12', 'M', 'julian.restrepo@ejemplo.com', 'Bogota'),
+('52109432', 'Lucia', 'Torres', '1990-08-25', 'F', 'lucia.torres@ejemplo.com', 'Bogota'),
+('88764321', 'Mariana', 'Esparza', '1985-11-30', 'F', 'mariana.esparza@ejemplo.com', 'Medellin'),
+('11098452', 'Sebastian', 'Correa', '2002-02-14', 'M', 'sebastian.correa@ejemplo.com', 'Cali'),
+('10345678', 'Andrea', 'Gomez', '1998-06-03', 'F', 'andrea.gomez@ejemplo.com', 'Bogota'),
+('10456789', 'Camilo', 'Vargas', '1993-09-21', 'M', 'camilo.vargas@ejemplo.com', 'Bucaramanga'),
+('10567890', 'Valentina', 'Rios', '2010-01-17', 'F', 'valentina.rios@ejemplo.com', 'Bogota'),
+('10678901', 'Santiago', 'Pena', '1988-12-05', 'M', 'santiago.pena@ejemplo.com', 'Cali'),
+('10789012', 'Isabella', 'Suarez', '2015-03-09', 'F', 'isabella.suarez@ejemplo.com', 'Medellin'),
+('10890123', 'Nicolas', 'Cardenas', '1979-07-22', 'M', 'nicolas.cardenas@ejemplo.com', 'Bogota'),
+('10901234', 'Daniela', 'Morales', '2001-10-11', 'F', 'daniela.morales@ejemplo.com', 'Barranquilla'),
+('11012345', 'Felipe', 'Ortiz', '1996-05-27', 'M', 'felipe.ortiz@ejemplo.com', 'Bogota'),
+('11123456', 'Gabriela', 'Munoz', '1992-02-02', 'F', 'gabriela.munoz@ejemplo.com', 'Cali'),
+('11234567', 'Tomas', 'Herrera', '1983-08-14', 'M', 'tomas.herrera@ejemplo.com', 'Medellin'),
+('11345678', 'Paula', 'Jimenez', '2005-04-30', 'F', 'paula.jimenez@ejemplo.com', 'Bogota');
+
+DECLARE @pDoc VARCHAR(20), @pNom VARCHAR(100), @pApe VARCHAR(100), @pNac DATE, @pGen VARCHAR(5), @pCor VARCHAR(150), @pCiu VARCHAR(100);
+DECLARE cur_pac CURSOR FOR SELECT documento, nombres, apellidos, fecha_nacimiento, genero, correo, ciudad FROM @pacientesNuevos;
+OPEN cur_pac;
+FETCH NEXT FROM cur_pac INTO @pDoc, @pNom, @pApe, @pNac, @pGen, @pCor, @pCiu;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Paciente WHERE documento = @pDoc)
+    BEGIN
+        INSERT INTO Paciente (id_usuario, tipo_documento, documento, nombres, apellidos, fecha_nacimiento, genero, correo, telefono, ciudad, fecha_registro, estado)
+        VALUES (
+            CASE WHEN @pDoc = '10239485' THEN (SELECT id_usuario FROM Usuario WHERE correo = 'pac@smiletrack.co') ELSE NULL END,
+            'CC', @pDoc, @pNom, @pApe, @pNac, @pGen, @pCor,
+            '300' + CAST(ABS(CHECKSUM(NEWID())) % 9000000 + 1000000 AS VARCHAR(10)),
+            @pCiu, CAST(GETDATE() AS DATE), 'activo'
+        );
+    END
+    FETCH NEXT FROM cur_pac INTO @pDoc, @pNom, @pApe, @pNac, @pGen, @pCor, @pCiu;
+END
+CLOSE cur_pac; DEALLOCATE cur_pac;
+GO
+
+-- --- 8.4 Historias clinicas para cada paciente --------------------
+INSERT INTO Historia_Clinica (id_paciente, fecha_apertura, observaciones_generales, activa)
+SELECT p.id_paciente, p.fecha_registro, 'Paciente sin antecedentes relevantes registrados al momento de apertura.', 1
+FROM Paciente p
+WHERE NOT EXISTS (SELECT 1 FROM Historia_Clinica h WHERE h.id_paciente = p.id_paciente);
+GO
+
+-- --- 8.5 Profesionales ficticios -----------------------------------
+DECLARE @profesionalesNuevos TABLE (
+    registro VARCHAR(50), nombres VARCHAR(100), apellidos VARCHAR(100),
+    categoria VARCHAR(100), especialidad VARCHAR(100)
+);
+INSERT INTO @profesionalesNuevos (registro, nombres, apellidos, categoria, especialidad) VALUES
+('RM-001', 'Ricardo', 'Mendez', 'Odontologo General', 'Odontologia General'),
+('RM-002', 'Elena', 'Sotelo', 'Ortodoncista', 'Ortodoncia'),
+('RM-003', 'Carlos', 'Ruiz', 'Endodoncista', 'Endodoncia'),
+('RM-004', 'Veronica', 'Lozano', 'Periodoncista', 'Periodoncia'),
+('RM-005', 'Andres', 'Beltran', 'Cirujano Oral', 'Cirugia Oral'),
+('RM-006', 'Monica', 'Salazar', 'Odontopediatra', 'Odontopediatria'),
+('RM-007', 'Diego', 'Fajardo', 'Rehabilitador Oral', 'Rehabilitacion Oral y Estetica Dental'),
+('RM-008', 'Laura', 'Cifuentes', 'Odontologa General', 'Odontologia General');
+
+DECLARE @prReg VARCHAR(50), @prNom VARCHAR(100), @prApe VARCHAR(100), @prCat VARCHAR(100), @prEsp VARCHAR(100);
+DECLARE cur_prof CURSOR FOR SELECT registro, nombres, apellidos, categoria, especialidad FROM @profesionalesNuevos;
+OPEN cur_prof;
+FETCH NEXT FROM cur_prof INTO @prReg, @prNom, @prApe, @prCat, @prEsp;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Profesional WHERE registro_medico = @prReg)
+    BEGIN
+        INSERT INTO Profesional (id_usuario, nombres, apellidos, registro_medico, descripcion, categoria, telefono, estado, fecha_ingreso)
+        VALUES (
+            CASE WHEN @prReg = 'RM-001' THEN (SELECT id_usuario FROM Usuario WHERE correo = 'prof@smiletrack.co') ELSE NULL END,
+            @prNom, @prApe, @prReg, 'Especialista en ' + LOWER(@prEsp), @prCat,
+            '310' + CAST(ABS(CHECKSUM(NEWID())) % 9000000 + 1000000 AS VARCHAR(10)),
+            'activo', CAST(GETDATE() AS DATE)
+        );
+    END
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Profesional_Especialidad pe
+        JOIN Profesional p ON p.id_profesional = pe.id_profesional
+        JOIN Especialidad e ON e.id_especialidad = pe.id_especialidad
+        WHERE p.registro_medico = @prReg AND e.nombre = @prEsp
+    )
+    BEGIN
+        INSERT INTO Profesional_Especialidad (id_profesional, id_especialidad, principal)
+        SELECT p.id_profesional, e.id_especialidad, 1
+        FROM Profesional p, Especialidad e
+        WHERE p.registro_medico = @prReg AND e.nombre = @prEsp;
+    END
+
+    FETCH NEXT FROM cur_prof INTO @prReg, @prNom, @prApe, @prCat, @prEsp;
+END
+CLOSE cur_prof; DEALLOCATE cur_prof;
+GO
+
+-- --- 8.6 Citas ficticias (25, mezclando pasado y futuro) -----------
+DECLARE @i INT = 1;
+DECLARE @totalPacientes INT = (SELECT COUNT(*) FROM Paciente);
+DECLARE @totalProfesionales INT = (SELECT COUNT(*) FROM Profesional);
+DECLARE @totalServicios INT = (SELECT COUNT(*) FROM Servicio);
+DECLARE @citasExistentes INT = (SELECT COUNT(*) FROM Cita);
+
+IF @citasExistentes < 20 AND @totalPacientes > 0 AND @totalProfesionales > 0
+BEGIN
+    WHILE @i <= 25
+    BEGIN
+        DECLARE @idPaciente INT = (SELECT id_paciente FROM (SELECT id_paciente, ROW_NUMBER() OVER (ORDER BY id_paciente) rn FROM Paciente) t WHERE rn = ((@i - 1) % @totalPacientes) + 1);
+        DECLARE @idProfesional INT = (SELECT id_profesional FROM (SELECT id_profesional, ROW_NUMBER() OVER (ORDER BY id_profesional) rn FROM Profesional) t WHERE rn = ((@i * 3 - 1) % @totalProfesionales) + 1);
+        DECLARE @idServicio INT = CASE WHEN @totalServicios > 0 THEN (SELECT id_servicio FROM (SELECT id_servicio, ROW_NUMBER() OVER (ORDER BY id_servicio) rn FROM Servicio) t WHERE rn = ((@i * 5 - 1) % @totalServicios) + 1) ELSE NULL END;
+        DECLARE @estadoTxt VARCHAR(30) = (SELECT valor FROM (VALUES ('Agendada'), ('Confirmada'), ('Atendida'), ('Cancelada'), ('No asistio')) v(valor)
+                                           ORDER BY (ABS(CHECKSUM(NEWID()))) OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY);
+        DECLARE @offsetDias INT = CASE WHEN @i % 2 = 0 THEN -(ABS(CHECKSUM(NEWID())) % 60 + 1) ELSE (ABS(CHECKSUM(NEWID())) % 45 + 1) END;
+        DECLARE @fechaHora DATETIME = DATEADD(MINUTE, (ABS(CHECKSUM(NEWID())) % 4) * 30, DATEADD(HOUR, 8 + (ABS(CHECKSUM(NEWID())) % 9), DATEADD(DAY, @offsetDias, CAST(CAST(GETDATE() AS DATE) AS DATETIME))));
+
+        IF @idPaciente IS NOT NULL AND @idProfesional IS NOT NULL
+        BEGIN
+            INSERT INTO Cita (id_paciente, id_profesional, id_servicio, fecha_hora, estado, notas)
+            VALUES (@idPaciente, @idProfesional, @idServicio, @fechaHora,
+                    CASE WHEN @offsetDias < 0 AND @estadoTxt = 'Agendada' THEN 'Atendida' ELSE @estadoTxt END,
+                    'Registro ficticio generado para pruebas.');
+        END
+
+        SET @i = @i + 1;
+    END
+END
+GO
+
+PRINT 'Bloque 8 (datos ficticios adicionales) ejecutado correctamente.';
+GO

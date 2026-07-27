@@ -93,10 +93,77 @@ public class HistoriaClinicaController : Controller
     public IActionResult StrecHistorial() => View("~/Views/Historia_Clinica/st-rec-historial/historial-rec.cshtml");
 
     [HttpGet]
-    [Authorize(Roles = "Paciente")]
-    [Route("historia-clinica/st-pac-02-historial")]
-    public IActionResult Stpac02Historial() => View("~/Views/Historia_Clinica/st-pac-02-historial/index.cshtml");
+[Authorize(Roles = "Paciente")]
+[Route("historia-clinica/st-pac-02-historial")]
+public async Task<IActionResult> Stpac02Historial()
+{
+    var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    int? idUsuario = int.TryParse(userIdStr, out var uid) ? uid : null;
 
+    var paciente = idUsuario.HasValue
+        ? await _context.Pacientes.FirstOrDefaultAsync(p => p.IdUsuario == idUsuario)
+        : null;
+
+    paciente ??= await _context.Pacientes.OrderBy(p => p.IdPaciente).FirstOrDefaultAsync();
+
+    var vm = new HistorialPacienteViewModel();
+
+    if (paciente is not null)
+    {
+        vm.Odontograma = await BuildOdontogramaViewModelAsync(paciente.IdPaciente, null);
+
+        vm.GrupoSanguineo = string.IsNullOrWhiteSpace(paciente.GrupoSanguineo) ? "N/D" : paciente.GrupoSanguineo;
+        vm.Alergias = string.IsNullOrWhiteSpace(paciente.Alergias)
+            ? new List<string>()
+            : paciente.Alergias.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        vm.AntecedentesMedicos = string.IsNullOrWhiteSpace(paciente.AntecedentesMedicos)
+            ? "Sin antecedentes registrados"
+            : paciente.AntecedentesMedicos;
+
+        var citas = await _context.Citas
+            .Include(c => c.Servicio)
+            .Include(c => c.Profesional)
+            .Where(c => c.IdPaciente == paciente.IdPaciente)
+            .OrderByDescending(c => c.FechaHora)
+            .ToListAsync();
+
+        var ahora = DateTime.Now;
+
+        var proxima = citas
+            .Where(c => c.FechaHora > ahora && c.Estado != "Cancelada")
+            .OrderBy(c => c.FechaHora)
+            .FirstOrDefault();
+
+        vm.ProximaCitaFecha = proxima?.FechaHora;
+        vm.ProximaCitaProfesional = proxima?.Profesional is not null
+            ? $"Dr(a). {proxima.Profesional.Nombres} {proxima.Profesional.Apellidos}"
+            : null;
+
+        vm.Registros = citas
+            .Where(c => c.FechaHora <= ahora)
+            .Select(c => new RegistroHistorialItem
+            {
+                Fecha = c.FechaHora,
+                Tipo = InferirTipoServicio(c.Servicio?.Nombre),
+                Descripcion = c.Servicio?.Nombre ?? c.Notas ?? "Consulta",
+                Doctor = c.Profesional is not null ? $"Dr(a). {c.Profesional.Nombres} {c.Profesional.Apellidos}" : "Sin asignar",
+                Estado = c.Estado
+            })
+            .ToList();
+    }
+
+    return View("~/Views/Historia_Clinica/st-pac-02-historial/index.cshtml", vm);
+}
+
+private static string InferirTipoServicio(string? nombreServicio)
+{
+    if (string.IsNullOrWhiteSpace(nombreServicio)) return "consulta";
+    var n = nombreServicio.ToLowerInvariant();
+    if (n.Contains("limpieza") || n.Contains("profilaxis")) return "limpieza";
+    if (n.Contains("radiograf")) return "radiografia";
+    if (n.Contains("ortodon") || n.Contains("endodon") || n.Contains("implante") || n.Contains("cirugia") || n.Contains("resina") || n.Contains("extrac")) return "tratamiento";
+    return "consulta";
+}
     private async Task<OdontogramaViewModel> BuildOdontogramaViewModelAsync(int? pacienteId, int? historiaId)
     {
         var paciente = await _context.Pacientes.FirstOrDefaultAsync(p => p.IdPaciente == pacienteId)

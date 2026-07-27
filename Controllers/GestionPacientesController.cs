@@ -1,23 +1,95 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SmileTrack_MVC.Data;
+using SmileTrack_MVC.Models.ViewModels;
 
 namespace SmileTrack_MVC.Controllers;
 
 public class GestionPacientesController : Controller
 {
+    private readonly AppDbContext _context;
+
+    public GestionPacientesController(AppDbContext context)
+    {
+        _context = context;
+    }
+
     [HttpGet]
     [Authorize(Roles = "Administrador,Recepcionista,Profesional")]
     [Route("gestion-de-pacientes/st-adm-05-gestion-pacientes")]
-    public IActionResult Stadm05GestionPacientes()
+    public async Task<IActionResult> Stadm05GestionPacientes()
     {
-        var pacientes = new List<SmileTrack_MVC.Models.ViewModels.PacienteViewModel>
+        var colores = new[] { "blue", "green", "yellow", "purple", "slate" };
+        var ahora = DateTime.Now;
+
+        var pacientesDb = await _context.Pacientes
+            .Where(p => p.Estado == "activo")
+            .OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres)
+            .ToListAsync();
+
+        var idsPacientes = pacientesDb.Select(p => p.IdPaciente).ToList();
+
+        // Traemos todas las citas de estos pacientes de una sola vez (evita N+1 queries)
+        var citas = await _context.Citas
+            .Include(c => c.Servicio)
+            .Include(c => c.Profesional)
+            .Where(c => idsPacientes.Contains(c.IdPaciente))
+            .OrderByDescending(c => c.FechaHora)
+            .ToListAsync();
+
+        var pacientes = new List<PacienteViewModel>();
+
+        for (int i = 0; i < pacientesDb.Count; i++)
         {
-            new() { Id = 1, Initials = "PG", Name = "Pedro Garcia", Doc = "CC 1045678901", LastVisit = new DateTime(2026, 03, 20), Diagnosis = "Caries pieza 12", NextVisit = new DateTime(2025, 05, 01), Allergies = new List<string> { "Penicilina" }, Color = "blue", History = new List<SmileTrack_MVC.Models.ViewModels.PacienteHistorialViewModel> { new() { Date = new DateTime(2026, 03, 20), Procedure = "Resina clase II", Doctor = "Dr. Méndez" }, new() { Date = new DateTime(2026, 01, 15), Procedure = "Limpieza", Doctor = "Dra. López" } } },
-            new() { Id = 2, Initials = "ML", Name = "Maria López", Doc = "CC 1023456789", LastVisit = new DateTime(2026, 03, 17), Diagnosis = "Limpieza dental", NextVisit = new DateTime(2026, 06, 20), Allergies = new List<string>(), Color = "green", History = new List<SmileTrack_MVC.Models.ViewModels.PacienteHistorialViewModel> { new() { Date = new DateTime(2026, 03, 17), Procedure = "Profilaxis", Doctor = "Dr. Méndez" } } },
-            new() { Id = 3, Initials = "CR", Name = "Carlos Ruiz", Doc = "CC 1034567890", LastVisit = new DateTime(2026, 03, 17), Diagnosis = "Control ortodoncia", NextVisit = new DateTime(2026, 03, 24), Allergies = new List<string>(), Color = "yellow", History = new List<SmileTrack_MVC.Models.ViewModels.PacienteHistorialViewModel>() },
-            new() { Id = 4, Initials = "AM", Name = "Ana Martínez", Doc = "CC 1056789012", LastVisit = new DateTime(2026, 03, 16), Diagnosis = "Endodoncia pieza 23", NextVisit = new DateTime(2025, 05, 10), Allergies = new List<string>(), Color = "purple", History = new List<SmileTrack_MVC.Models.ViewModels.PacienteHistorialViewModel>() },
-            new() { Id = 5, Initials = "LH", Name = "Luis Herrera", Doc = "CC 1067890123", LastVisit = null, Diagnosis = "", NextVisit = null, Allergies = new List<string>(), Color = "slate", History = new List<SmileTrack_MVC.Models.ViewModels.PacienteHistorialViewModel>() }
-        };
+            var p = pacientesDb[i];
+            var citasPaciente = citas.Where(c => c.IdPaciente == p.IdPaciente).ToList();
+
+            var ultima = citasPaciente
+                .Where(c => c.FechaHora <= ahora)
+                .OrderByDescending(c => c.FechaHora)
+                .FirstOrDefault();
+
+            var proxima = citasPaciente
+                .Where(c => c.FechaHora > ahora && c.Estado != "Cancelada")
+                .OrderBy(c => c.FechaHora)
+                .FirstOrDefault();
+
+            var alergias = string.IsNullOrWhiteSpace(p.Alergias)
+                ? new List<string>()
+                : p.Alergias
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToList();
+
+            var inicialNombre = p.Nombres.Trim().FirstOrDefault();
+            var inicialApellido = p.Apellidos.Trim().FirstOrDefault();
+            var iniciales = $"{inicialNombre}{inicialApellido}".ToUpperInvariant();
+
+            pacientes.Add(new PacienteViewModel
+            {
+                Id = p.IdPaciente,
+                Initials = string.IsNullOrWhiteSpace(iniciales) ? "??" : iniciales,
+                Name = $"{p.Nombres} {p.Apellidos}".Trim(),
+                Doc = $"{p.TipoDocumento} {p.Documento}",
+                LastVisit = ultima?.FechaHora,
+                Diagnosis = ultima?.Servicio?.Nombre ?? ultima?.Notas ?? string.Empty,
+                NextVisit = proxima?.FechaHora,
+                Allergies = alergias,
+                Color = colores[i % colores.Length],
+                History = citasPaciente
+                    .Where(c => c.FechaHora <= ahora)
+                    .OrderByDescending(c => c.FechaHora)
+                    .Select(c => new PacienteHistorialViewModel
+                    {
+                        Date = c.FechaHora,
+                        Procedure = c.Servicio?.Nombre ?? c.Notas ?? "Consulta",
+                        Doctor = c.Profesional != null
+                            ? $"{c.Profesional.Nombres} {c.Profesional.Apellidos}"
+                            : "Sin asignar"
+                    })
+                    .ToList()
+            });
+        }
 
         return View("~/Views/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/index.cshtml", pacientes);
     }
