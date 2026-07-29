@@ -1,3 +1,37 @@
+/**
+ * ============================================
+ * SmileTrack — Controller: Gestión de Citas
+ * ============================================
+ * Autor: Johan Santamaria
+ * Fecha: 2026-07-30
+ * 
+ * PROPÓSITO:
+ * Centraliza la lógica de negocio para todos los módulos
+ * relacionados con citas: dashboards, agenda, gestión integral,
+ * paneles auxiliares y vistas de profesionales/pacientes.
+ * 
+ * PATRONES APLICADOS:
+ * - Constructor injection para dependencias (ILogger, AppDbContext)
+ * - CancellationToken en todas las operaciones asíncronas para soporte de cancelación
+ * - Try-catch estratificado: logs específicos por tipo de excepción para debugging preciso
+ * - TempData para mensajes amigables al usuario final sin exponer detalles técnicos
+ * - Validación de ownership implícita vía [Authorize(Roles=...)] para seguridad por capas
+ * 
+ * RUTAS PRINCIPALES:
+ * - GET /gestion-de-citas/st-adm-01-dashboard → Dashboard Admin
+ * - GET /gestion-de-citas/st-adm-08-agenda → Agenda General
+ * - POST /api/citas/agenda → Crear cita desde agenda (API REST)
+ * - GET /gestion-de-citas/st-adm-09-citas → Gestión Integral
+ * - POST /gestion-de-citas/guardar-cita → Guardar/Actualizar cita
+ * - POST /gestion-de-citas/eliminar-cita → Cancelar cita (soft delete)
+ * 
+ * NOTAS DE MANTENIMIENTO:
+ * - Los comentarios explican el "por qué" de las decisiones, no el "qué" del código
+ * - Las rutas usan atributos [Route] explícitos para resiliencia ante cambios de routing
+ * - Los datos sensibles se loguean sin exponer información personal (PII)
+ * ============================================
+ */
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -11,12 +45,33 @@ using System.Net;
 
 namespace SmileTrack_MVC.Controllers;
 
+/**
+ * ============================================
+ * Controller: Gestión de Citas
+ * ============================================
+ * Autor: Johan Santamaria
+ * 
+ * PROPÓSITO:
+ * Centraliza la lógica de negocio para módulos de citas,
+ * incluyendo dashboards, agenda y gestión integral.
+ * 
+ * PATRONES APLICADOS:
+ * - Constructor injection para dependencias (ILogger, AppDbContext)
+ * - CancellationToken para operaciones asíncronas cancelables
+ * - Try-catch estratificado: logs específicos por tipo de excepción
+ * - TempData para mensajes de error amigables al usuario final
+ * ============================================
+ */
 public class GestionCitasController(AppDbContext context, ILogger<GestionCitasController> logger) : Controller
 {
+    // WHY: Campos readonly para inmutabilidad después de la construcción, previniendo reasignación accidental
     private readonly AppDbContext _context = context;
     private readonly ILogger<GestionCitasController> _logger = logger;
+    
+    // WHY: Array estático para evitar re-creación en cada llamada a Split, optimizando performance
     private static readonly char[] _separadorEspacio = [' '];
 
+    // WHY: Mensaje genérico para errores no controlados: evita exponer detalles técnicos al usuario final por seguridad
     private const string MensajeErrorFallback =
         "Ocurrió un error inesperado al cargar la página. Por favor intente nuevamente. Si el problema persiste, contacte al soporte.";
 
@@ -25,6 +80,11 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     [Route("gestion-de-citas/st-adm-01-dashboard")]
     public async Task<IActionResult> Stadm01Dashboard([FromQuery] int? editId, CancellationToken ct = default)
     {
+        // TRY/CATCH ESTRATIFICADO:
+        // - OperationCanceledException: se loguea como warning (no es error real, solo timeout/cancelación de usuario)
+        // - DbUpdateException: problema de integridad en BD, se loguea con detalle técnico para debugging
+        // - SqlException: caída de conexión o timeout de SQL Server, requiere atención de infraestructura
+        // - Exception genérica: catch-all para errores no anticipados, nunca expone stack trace al usuario
         try
         {
             await CargarDatosCitas(editId, "/gestion-de-citas/st-adm-01-dashboard", null, ct);
@@ -33,14 +93,35 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (OperationCanceledException ocex)
         {
-            _logger.LogWarning(ocex, "Solicitud cancelada Stadm01Dashboard");
+            // WHY: OperationCanceledException ocurre cuando el usuario cancela la request o hay timeout;
+            // no es un error de negocio, por eso se loguea como warning y se retorna vista normal para mejor UX
+            _logger.LogWarning(ocex, "Solicitud cancelada Stadm01Dashboard para usuario {Usuario}", 
+                User.Identity?.Name ?? "anonimo");
             TempData["ErrorValidacion"] = MensajeErrorFallback;
+            return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
+        }
+        catch (DbUpdateException dbEx)
+        {
+            // WHY: DbUpdateException indica problema de integridad en BD (ej: constraint violado, FK rota);
+            // se loguea con detalle técnico para el equipo de desarrollo, pero al usuario se le muestra mensaje genérico
+            _logger.LogError(dbEx, "Error de base de datos en Stadm01Dashboard: {Message}", dbEx.Message);
+            TempData["ErrorValidacion"] = "Error al consultar datos. Intente nuevamente.";
+            return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
+        }
+        catch (SqlException sqlEx)
+        {
+            // WHY: SqlException puede indicar caída de conexión o timeout de SQL Server;
+            // se loguea el número de error para diagnóstico de infraestructura, pero se protege al usuario de detalles sensibles
+            _logger.LogError(sqlEx, "Error SQL {Number} en Stadm01Dashboard", sqlEx.Number);
+            TempData["ErrorValidacion"] = "Servicio temporalmente no disponible. Intente en unos minutos.";
             return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error cargando Stadm01Dashboard para usuario {Usuario}",
-                User.Identity?.Name ?? "anonimo");
+            // WHY: Catch-all para excepciones no anticipadas; se loguea stack trace completo para debugging posterior,
+            // pero nunca se expone al usuario final por seguridad (previene información disclosure)
+            _logger.LogError(ex, "Error crítico cargando Stadm01Dashboard para usuario {Usuario} en {Path}",
+                User.Identity?.Name ?? "anonimo", HttpContext.Request.Path);
             TempData["ErrorValidacion"] = MensajeErrorFallback;
             return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
         }
@@ -51,17 +132,20 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     [Route("gestion-de-citas/st-adm-08-agenda")]
     public async Task<IActionResult> Stadm08Agenda([FromQuery] int? editId, CancellationToken ct = default)
     {
+        // TRY/CATCH ESTRATIFICADO: mismo patrón que Stadm01Dashboard para consistencia en manejo de errores
         try
         {
             await CargarDatosCitas(editId, "/gestion-de-citas/st-adm-08-agenda", null, ct);
             await CargarDatosAgenda(ct);
 
+            // WHY: Cargar dropdowns con filtros de estado activo para evitar opciones inválidas en UI
             ViewBag.Pacientes = await _context.Pacientes
                 .Where(p => p.Estado == "activo")
                 .OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres)
                 .Select(p => new { p.IdPaciente, DisplayName = $"{p.Apellidos}, {p.Nombres}" })
                 .ToListAsync(ct);
 
+            // WHY: Construir DisplayName con fallback para manejar profesionales sin usuario asociado
             ViewBag.Profesionales = await _context.Profesionales
                 .Include(p => p.Usuario)
                 .Where(p => p.Estado == "activo")
@@ -86,19 +170,32 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 .Select(s => new { s.IdServicio, s.Nombre })
                 .ToListAsync(ct);
 
+            // WHY: Fecha base controlada para demos/pruebas, inyectada vía ViewData para que JS la use
             ViewData["WeekStart"] = new DateTime(2026, 7, 20).ToString("yyyy-MM-dd");
             return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
         }
         catch (OperationCanceledException ocex)
         {
-            _logger.LogWarning(ocex, "Solicitud cancelada Stadm08Agenda");
+            _logger.LogWarning(ocex, "Solicitud cancelada Stadm08Agenda para usuario {Usuario}", User.Identity?.Name ?? "anonimo");
             TempData["ErrorValidacion"] = MensajeErrorFallback;
+            return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
+        }
+        catch (DbUpdateException dbEx)
+        {
+            _logger.LogError(dbEx, "Error de base de datos en Stadm08Agenda: {Message}", dbEx.Message);
+            TempData["ErrorValidacion"] = "Error al consultar datos. Intente nuevamente.";
+            return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
+        }
+        catch (SqlException sqlEx)
+        {
+            _logger.LogError(sqlEx, "Error SQL {Number} en Stadm08Agenda", sqlEx.Number);
+            TempData["ErrorValidacion"] = "Servicio temporalmente no disponible. Intente en unos minutos.";
             return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error cargando Stadm08Agenda para usuario {Usuario}",
-                User.Identity?.Name ?? "anonimo");
+            _logger.LogError(ex, "Error crítico cargando Stadm08Agenda para usuario {Usuario} en {Path}",
+                User.Identity?.Name ?? "anonimo", HttpContext.Request.Path);
             TempData["ErrorValidacion"] = MensajeErrorFallback;
             return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
         }
@@ -109,6 +206,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     [Route("api/citas/agenda")]
     public async Task<IActionResult> CrearCitaDesdeAgenda([FromBody] CitaAgendaDto dto, CancellationToken ct = default)
     {
+        // WHY: Validar ModelState primero para evitar procesamiento de datos inválidos
         if (!ModelState.IsValid)
         {
             var errores = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
@@ -118,10 +216,17 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
         try
         {
+            // VALIDACIONES DE NEGOCIO PREVIAS:
+            // 1. Profesional y paciente deben existir y estar activos
+            // 2. Hora fin debe ser posterior a hora inicio
+            // 3. No debe haber conflicto de horarios para el profesional
+            // WHY: Validar en capa de aplicación antes de intentar guardar en BD previene errores costosos
+
             var profesionalExiste = await _context.Profesionales
                 .AnyAsync(p => p.IdProfesional == dto.IdProfesional && p.Estado == "activo", ct);
             if (!profesionalExiste)
             {
+                // WHY: Loguear con Warning porque es validación de negocio esperada, no error de sistema
                 _logger.LogWarning("CrearCitaDesdeAgenda: Profesional {IdProfesional} no existe o inactivo", dto.IdProfesional);
                 return BadRequest(new { message = "El profesional seleccionado no está disponible." });
             }
@@ -139,6 +244,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 return BadRequest(new { message = "La hora de fin debe ser posterior a la hora de inicio." });
             }
 
+            // WHY: Calcular rangos de tiempo para detectar conflictos de agenda (ventana de 30 min de buffer)
             var inicioDto = dto.Fecha.Date.Add(dto.HoraInicio);
             var finDto = dto.Fecha.Date.Add(dto.HoraFin);
 
@@ -150,6 +256,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
             if (hayConflicto)
             {
+                // WHY: Loguear con Info porque es flujo esperado (usuario eligió horario ocupado)
                 _logger.LogInformation("Conflicto de agenda detectado para Profesional {IdProfesional} en {Fecha}", dto.IdProfesional, inicioDto);
                 return Conflict(new { message = "El profesional ya tiene una cita programada en este horario. Por favor seleccione otro horario." });
             }
@@ -173,10 +280,12 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
             if (guardados <= 0)
             {
+                // WHY: SaveChanges devolviendo 0 indica posible problema de concurrencia o trigger
                 _logger.LogError("CrearCitaDesdeAgenda: SaveChanges devolvió 0 filas afectadas.");
                 return StatusCode((int)HttpStatusCode.InternalServerError, new { message = "No se pudo guardar la cita. Intente nuevamente." });
             }
 
+            // WHY: Loguear éxito con datos mínimos necesarios para auditoría, sin exponer PII completa
             _logger.LogInformation(
                 "Cita agendada correctamente desde Agenda: IdCita={IdCita}, IdPaciente={IdPaciente}, IdProfesional={IdProfesional}, FechaHora={FechaHora}, UsuarioSolicitante={Usuario}",
                 nuevaCita.IdCita,
@@ -195,28 +304,33 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (DbUpdateConcurrencyException cex)
         {
+            // WHY: ConcurrencyException indica que otro usuario modificó los datos durante la operación
             _logger.LogError(cex, "Conflicto de concurrencia al crear cita en agenda.");
             return StatusCode((int)HttpStatusCode.Conflict, new { message = "Conflicto al guardar: los datos cambiaron durante la operación. Actualice y vuelva a intentar." });
         }
         catch (DbUpdateException dbex) when (EsViolacionIndiceUnico(dbex, out _))
         {
+            // WHY: Violación de índice único indica cita duplicada; se maneja con mensaje amigable
             _logger.LogError(dbex, "Violacion UNIQUE/FK al crear cita desde Agenda. IdPaciente={IdPaciente}, IdProfesional={IdProfesional}",
                 dto?.IdPaciente, dto?.IdProfesional);
             return StatusCode((int)HttpStatusCode.Conflict, new { message = "Ya existe una cita registrada con estas características." });
         }
         catch (DbUpdateException dbex)
         {
+            // WHY: DbUpdateException genérica puede indicar problemas de schema o triggers
             _logger.LogError(dbex, "Error BD al crear cita desde Agenda. IdPaciente={IdPaciente}, IdProfesional={IdProfesional}",
                 dto?.IdPaciente, dto?.IdProfesional);
             return StatusCode((int)HttpStatusCode.InternalServerError, new { message = "Error de base de datos. Vuelva a intentar en unos segundos." });
         }
         catch (SqlException sqlex)
         {
+            // WHY: SqlException crítica requiere atención inmediata de infraestructura
             _logger.LogCritical(sqlex, "SqlException fatal creando cita desde Agenda. Number={Number}, Class={Class}", sqlex.Number, sqlex.Class);
             return StatusCode((int)HttpStatusCode.InternalServerError, new { message = "Error de conectividad con la base de datos." });
         }
         catch (Exception ex)
         {
+            // WHY: Catch-all para errores no anticipados; nunca exponer detalles al usuario
             _logger.LogCritical(ex, "Error inesperado al crear cita desde Agenda. IdPaciente={IdPaciente}, IdProfesional={IdProfesional}",
                 dto?.IdPaciente, dto?.IdProfesional);
             return StatusCode((int)HttpStatusCode.InternalServerError, new { message = "Error interno del servidor. El incidente fue registrado." });
@@ -243,6 +357,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (Exception ex)
         {
+            // WHY: Loguear contexto de filtros para debugging, pero retornar vista con mensaje genérico
             _logger.LogError(ex, "Error cargando Stadm09Citas (pagina={Pagina}, search={Search})", page, search);
             TempData["ErrorValidacion"] = MensajeErrorFallback;
             return View("~/Views/Gestion_De_Citas/st-adm-09-citas/index.cshtml");
@@ -388,6 +503,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         var idCitaOperacion = model?.IdCita ?? 0;
         var operacion = (idCitaOperacion > 0) ? "Actualizacion" : "Creacion";
 
+        // WHY: Validar ModelState antes de cualquier lógica de negocio para feedback inmediato al usuario
         if (!ModelState.IsValid)
         {
             var firstError = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage;
@@ -399,6 +515,13 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
         try
         {
+            // VALIDACIONES DE INTEGRIDAD:
+            // 1. Paciente y profesional deben existir y estar activos
+            // 2. FechaHora debe ser válida (no en pasado)
+            // 3. Para actualizaciones: verificar que la cita existe
+            // 4. Para ambas: validar que no hay conflicto de horarios
+            // WHY: Prevenir datos inconsistentes antes de intentar SaveChanges
+
             if (model!.IdPaciente <= 0 || !await _context.Pacientes.AnyAsync(p => p.IdPaciente == model.IdPaciente && p.Estado == "activo", ct))
             {
                 TempData["ErrorValidacion"] = "El paciente seleccionado no existe o se encuentra inactivo.";
@@ -421,6 +544,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
             if (model.IdCita is > 0)
             {
+                // WHY: Para actualización, verificar que la cita existe antes de modificar
                 var cita = await _context.Citas.FindAsync([model.IdCita.Value], ct);
                 if (cita == null)
                 {
@@ -429,6 +553,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                     return Redirect(returnUrlSafe);
                 }
 
+                // WHY: Validar conflicto excluyendo la cita actual que se está editando
                 var hayConflicto = await _context.Citas
                     .AnyAsync(c => c.IdCita != model.IdCita.Value
                         && c.IdProfesional == model.IdProfesional
@@ -444,6 +569,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                     return Redirect(returnUrlSafe);
                 }
 
+                // WHY: Actualizar solo campos permitidos para prevenir mass-assignment attacks
                 cita.IdPaciente = model.IdPaciente;
                 cita.IdProfesional = model.IdProfesional;
                 cita.IdServicio = model.IdServicio;
@@ -455,6 +581,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             }
             else
             {
+                // WHY: Para creación, validar conflicto con todas las citas activas del profesional
                 var hayConflicto = await _context.Citas
                     .AnyAsync(c => c.IdProfesional == model.IdProfesional
                         && c.Estado != "Cancelada"
@@ -483,6 +610,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
             await _context.SaveChangesAsync(ct);
 
+            // WHY: Loguear éxito con datos mínimos para auditoría, sin exponer PII completa
             _logger.LogInformation(
                 "{Operacion} de cita correcta: IdCita={IdCita}, IdPaciente={IdPaciente}, IdProfesional={IdProfesional}, FechaHora={FechaHora}, Estado={Estado}, Usuario={Usuario}",
                 operacion,
@@ -504,31 +632,37 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (DbUpdateConcurrencyException cex)
         {
+            // WHY: ConcurrencyException indica que otro usuario modificó la cita durante la edición
             _logger.LogError(cex, "Conflicto de concurrencia al guardar cita Id={Id}", idCitaOperacion);
             TempData["ErrorValidacion"] = "Conflicto de datos: otro usuario modificó esta cita. Actualice la página y vuelva a intentar.";
         }
         catch (DbUpdateException dbex) when (EsViolacionIndiceUnico(dbex, out var indice))
         {
+            // WHY: Violación de índice único indica cita duplicada; se maneja con mensaje amigable
             _logger.LogError(dbex, "Violacion de restriccion UNIQUE ({Indice}) al guardar cita Id={Id}.", indice, idCitaOperacion);
             TempData["ErrorValidacion"] = "No se pudo guardar: ya existe una cita con estas características (restricción única de base de datos).";
         }
         catch (DbUpdateException dbex) when (EsViolacionIntegridadReferencial(dbex))
         {
+            // WHY: Violación de FK indica referencia a entidad inexistente; se maneja con mensaje claro
             _logger.LogError(dbex, "Violacion FK integridad referencial al guardar cita Id={Id}.", idCitaOperacion);
             TempData["ErrorValidacion"] = "No se pudo guardar: el paciente, profesional, servicio o consultorio seleccionado no es válido.";
         }
         catch (DbUpdateException dbex)
         {
+            // WHY: DbUpdateException genérica puede indicar problemas de schema o triggers
             _logger.LogError(dbex, "DbUpdateException al guardar cita Id={Id}.", idCitaOperacion);
             TempData["ErrorValidacion"] = "Ocurrió un error al guardar los cambios en la base de datos.";
         }
         catch (SqlException sqlex)
         {
+            // WHY: SqlException crítica requiere atención inmediata de infraestructura
             _logger.LogCritical(sqlex, "SqlException al guardar cita Id={Id}. Number={Number}.", idCitaOperacion, sqlex.Number);
             TempData["ErrorValidacion"] = "Error de conectividad con la base de datos. Intente nuevamente en unos segundos.";
         }
         catch (Exception ex)
         {
+            // WHY: Catch-all para errores no anticipados; nunca exponer detalles al usuario
             _logger.LogCritical(ex, "Excepcion inesperada al guardar cita Id={Id}.", idCitaOperacion);
             TempData["ErrorValidacion"] = "Ocurrió un error inesperado. El incidente fue registrado y reportado.";
         }
@@ -546,6 +680,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
         try
         {
+            // WHY: Validar ID antes de consultar BD para evitar queries innecesarias
             if (IdCita <= 0)
             {
                 TempData["ErrorValidacion"] = "Identificador de cita inválido.";
@@ -556,11 +691,13 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             var cita = await _context.Citas.FindAsync([IdCita], ct);
             if (cita == null)
             {
+                // WHY: Loguear con Warning porque es flujo esperado (cita ya eliminada o ID inválido)
                 TempData["ErrorValidacion"] = "La cita que intenta cancelar no existe.";
                 _logger.LogWarning("EliminarCita: Cita no encontrada IdCita={IdCita}", IdCita);
                 return Redirect(returnUrlSafe);
             }
 
+            // WHY: Verificar permisos explícitos además del atributo [Authorize] para defensa en profundidad
             var esAdmin = User.IsInRole("Administrador");
             var esRecepcionista = User.IsInRole("Recepcionista");
             if (!esAdmin && !esRecepcionista)
@@ -571,10 +708,12 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 return Redirect(returnUrlSafe);
             }
 
+            // WHY: Soft delete vía cambio de estado en lugar de DELETE físico para preservar historial
             cita.Estado = "cancelada";
             _context.Citas.Update(cita);
             await _context.SaveChangesAsync(ct);
 
+            // WHY: Loguear éxito con datos mínimos para auditoría, sin exponer PII completa
             _logger.LogInformation(
                 "Cita cancelada correctamente: IdCita={IdCita}, IdPaciente={IdPaciente}, IdProfesional={IdProfesional}, FechaHora={FechaHora}, UsuarioCancelador={Usuario}",
                 cita.IdCita,
@@ -592,26 +731,31 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (DbUpdateConcurrencyException cex)
         {
+            // WHY: ConcurrencyException indica que otro usuario modificó la cita durante la operación
             _logger.LogError(cex, "Concurrencia al cancelar cita Id={Id}", IdCita);
             TempData["ErrorValidacion"] = "Conflicto: esta cita fue modificada recientemente. Actualice y vuelva a intentar.";
         }
         catch (DbUpdateException dbex) when (EsViolacionIntegridadReferencial(dbex))
         {
+            // WHY: Violación de FK indica que hay registros dependientes (atención, factura, etc.)
             _logger.LogError(dbex, "Violacion integridad referencial al cancelar cita Id={Id}", IdCita);
             TempData["ErrorValidacion"] = "No se puede cancelar esta cita porque tiene registros asociados (atención, factura, etc.).";
         }
         catch (DbUpdateException dbex)
         {
+            // WHY: DbUpdateException genérica puede indicar problemas de schema o triggers
             _logger.LogError(dbex, "DbUpdateException al cancelar cita Id={Id}", IdCita);
             TempData["ErrorValidacion"] = "Ocurrió un error al intentar cancelar la cita.";
         }
         catch (SqlException sqlex)
         {
+            // WHY: SqlException crítica requiere atención inmediata de infraestructura
             _logger.LogCritical(sqlex, "SqlException al cancelar cita Id={Id}. Number={Number}", IdCita, sqlex.Number);
             TempData["ErrorValidacion"] = "Error de conectividad con la base de datos. Intente nuevamente.";
         }
         catch (Exception ex)
         {
+            // WHY: Catch-all para errores no anticipados; nunca exponer detalles al usuario
             _logger.LogCritical(ex, "Error inesperado al cancelar cita Id={Id}", IdCita);
             TempData["ErrorValidacion"] = "Ocurrió un error inesperado. El incidente fue registrado.";
         }
@@ -619,10 +763,16 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         return Redirect(returnUrlSafe);
     }
 
+    /**
+     * CargarDatosAgenda: Construye ViewModel para vista de agenda semanal.
+     * WHY: Separa lógica de carga de datos para mantener el action limpio y testeable.
+     * MANEJO DE ERRORES: Catch por día para que un error en un día no rompa toda la semana.
+     */
     private async Task CargarDatosAgenda(CancellationToken ct = default)
     {
         try
         {
+            // WHY: Calcular inicio de semana (lunes) para iterar 7 días consecutivos
             var hoy = DateTime.Today;
             var inicioSemana = hoy.AddDays(-(int)hoy.DayOfWeek + (int)DayOfWeek.Monday);
             var agendaDias = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
@@ -632,10 +782,10 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 var fecha = inicioSemana.AddDays(i);
                 try
                 {
+                    // WHY: Incluir relaciones necesarias para mostrar datos completos en vista
                     var citasDia = await _context.Citas
                         .Include(c => c.Paciente)
-                        .Include(c => c.Profesional)
-                        .ThenInclude(p => p!.Usuario)
+                        .Include(c => c.Profesional).ThenInclude(p => p!.Usuario)
                         .Include(c => c.Consultorio)
                         .Include(c => c.EstadoCita)
                         .Where(c => c.FechaHora.Date == fecha.Date)
@@ -669,6 +819,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 }
                 catch (Exception ex)
                 {
+                    // WHY: Catch por día para que un error en un día no rompa toda la semana
                     _logger.LogError(ex, "Error cargando citas para dia {Fecha} en CargarDatosAgenda. Se continua con dias restantes.", fecha);
                     agendaDias.Add(new global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel
                     {
@@ -692,17 +843,24 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (SqlException sqlex)
         {
+            // WHY: SqlException crítica requiere atención inmediata de infraestructura
             _logger.LogCritical(sqlex, "SqlException CargarDatosAgenda. Number={Number}", sqlex.Number);
             ViewData["AgendaDias"] = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
         }
         catch (Exception ex)
         {
+            // WHY: Catch-all para errores no anticipados; retornar estado vacío para que la vista maneje gracefully
             _logger.LogError(ex, "Error general en CargarDatosAgenda. Se devuelve agenda vacia.");
             ViewData["AgendaDias"] = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
             ViewData["SemanaLabel"] = "Agenda no disponible temporalmente";
         }
     }
 
+    /**
+     * CargarDatosCitas: Prepara datos paginados y filtrados para vistas de gestión.
+     * WHY: Centraliza lógica de filtrado y paginación para evitar duplicación en múltiples actions.
+     * MANEJO DE ERRORES: Catch específico para InvalidOperationException en filtros mal formados.
+     */
     private async Task CargarDatosCitas(int? editId, string returnUrl, PaginationQuery? query = null, CancellationToken ct = default)
     {
         try
@@ -711,6 +869,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             var page = pagination.Page < 1 ? 1 : pagination.Page;
             var pageSize = pagination.PageSize < 1 ? 10 : pagination.PageSize;
 
+            // WHY: Construir query base con includes necesarios para evitar N+1 queries
             var citasQuery = _context.Citas
                 .Include(c => c.Paciente)
                 .Include(c => c.Profesional)
@@ -720,6 +879,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                         .ThenInclude(pe => pe.Especialidad)
                 .AsQueryable();
 
+            // WHY: Aplicar filtros de búsqueda con StringComparison.OrdinalIgnoreCase para consistencia
             if (!string.IsNullOrWhiteSpace(pagination.Search))
             {
                 var searchTerm = pagination.Search.Trim();
@@ -729,26 +889,31 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                     (c.Notas != null && c.Notas.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
             }
 
+            // WHY: Filtro por estado con comparación case-insensitive para mejor UX
             if (!string.IsNullOrWhiteSpace(pagination.Estado))
             {
                 var estado = pagination.Estado.Trim();
                 citasQuery = citasQuery.Where(c => c.Estado != null && c.Estado.Equals(estado, StringComparison.OrdinalIgnoreCase));
             }
 
+            // WHY: Parsear ID de profesional solo si es numérico válido para evitar errores de conversión
             if (int.TryParse(pagination.Profesional, out var idProfesional) && idProfesional > 0)
             {
                 citasQuery = citasQuery.Where(c => c.IdProfesional == idProfesional);
             }
 
+            // WHY: Parsear fecha solo si es válida para evitar excepciones en filtro
             if (!string.IsNullOrWhiteSpace(pagination.Fecha) && DateTime.TryParse(pagination.Fecha, out var fechaValida))
             {
                 citasQuery = citasQuery.Where(c => c.FechaHora.Date == fechaValida.Date);
             }
 
+            // WHY: Ordenar por fecha descendente para mostrar citas más recientes primero
             citasQuery = citasQuery.OrderByDescending(c => c.FechaHora).ThenByDescending(c => c.FechaHora.TimeOfDay);
 
             var paged = await citasQuery.ToPagedResultAsync(page, pageSize, ct);
 
+            // WHY: Poblar ViewData con datos paginados y filtros activos para preservar estado en UI
             ViewData["Citas"] = paged.Items.ToList();
             ViewData["CitasPage"] = paged;
             ViewData["PaginationQuery"] = pagination;
@@ -756,6 +921,8 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             ViewData["EstadoFilter"] = pagination.Estado ?? string.Empty;
             ViewData["ProfesionalFilter"] = pagination.Profesional ?? string.Empty;
             ViewData["FechaFilter"] = pagination.Fecha ?? string.Empty;
+            
+            // WHY: Cargar dropdowns con AsNoTracking para mejor performance en lecturas
             ViewData["Pacientes"] = await _context.Pacientes.AsNoTracking().Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres).ToListAsync(ct);
             ViewData["Profesionales"] = await _context.Profesionales.AsNoTracking().Include(p => p.Usuario).Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ToListAsync(ct);
             ViewData["ProfesionalesFilterOptions"] = await _context.Profesionales.AsNoTracking().Include(p => p.Usuario).Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ToListAsync(ct);
@@ -764,6 +931,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             ViewData["Servicios"] = await _context.Servicios.AsNoTracking().Where(s => s.Estado == "activo").OrderBy(s => s.Nombre).ToListAsync(ct);
             ViewData["ReturnUrl"] = returnUrl;
 
+            // WHY: Cargar cita para edición solo si editId es válido, con catch interno para no romper toda la vista
             if (editId > 0)
             {
                 try
@@ -788,6 +956,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (InvalidOperationException ioex)
         {
+            // WHY: InvalidOperationException puede indicar filtros mal formados o LINQ inválido
             _logger.LogError(ioex, "InvalidOperationException en CargarDatosCitas (filtros: Search={Search}, Estado={Estado}, Profesional={Profesional}, Fecha={Fecha})",
                 query?.Search, query?.Estado, query?.Profesional, query?.Fecha);
             InicializarViewDataCitasVacia(returnUrl);
@@ -795,17 +964,20 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (SqlException sqlex)
         {
+            // WHY: SqlException crítica requiere atención inmediata de infraestructura
             _logger.LogCritical(sqlex, "SqlException en CargarDatosCitas. Number={Number}", sqlex.Number);
             InicializarViewDataCitasVacia(returnUrl);
             TempData["ErrorValidacion"] = MensajeErrorFallback;
         }
         catch (Exception ex)
         {
+            // WHY: Catch-all para errores no anticipados; retornar estado vacío para que la vista maneje gracefully
             _logger.LogError(ex, "Error general en CargarDatosCitas. Se devuelven listas vacias.");
             InicializarViewDataCitasVacia(returnUrl);
         }
     }
 
+    // WHY: Método helper para inicializar ViewData vacía y evitar NullReferenceException en vistas
     private void InicializarViewDataCitasVacia(string returnUrl)
     {
         ViewData["Citas"] = new List<Cita>();
@@ -825,6 +997,11 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         ViewData["EditingCita"] = null;
     }
 
+    /**
+     * CargarDatosDashboard: Calcula KPIs y métricas para vista de dashboard.
+     * WHY: Separa cálculos complejos del action principal para mejor testabilidad y mantenimiento.
+     * OPTIMIZACIÓN: Usa AsNoTracking() y proyecciones para minimizar carga de memoria.
+     */
     private async Task CargarDatosDashboard(CancellationToken ct = default)
     {
         try
@@ -833,27 +1010,32 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             var inicioMes = new DateTime(hoy.Year, hoy.Month, 1);
             var finMes = inicioMes.AddMonths(1);
 
+            // WHY: Conteos simples con CountAsync para queries eficientes
             ViewData["TotalPacientes"] = await _context.Pacientes.CountAsync(ct);
             ViewData["CitasHoy"] = await _context.Citas.CountAsync(c => c.FechaHora.Date == hoy, ct);
             ViewData["ProfesionalesActivos"] = await _context.Profesionales.CountAsync(p => p.Estado == "activo", ct);
 
+            // WHY: Cargar citas del mes con Include mínimo necesario para cálculo de ingresos
             var citasDelMes = await _context.Citas
                 .Include(c => c.Servicio)
                 .Where(c => c.FechaHora >= inicioMes && c.FechaHora < finMes)
                 .AsNoTracking()
                 .ToListAsync(ct);
 
+            // WHY: Calcular ingresos solo de citas atendidas con fallback a 0 si Servicio es null
             var ingresos = citasDelMes
                 .Where(c => string.Equals(c.Estado, "Atendida", StringComparison.OrdinalIgnoreCase))
                 .Sum(c => c.Servicio?.Precio ?? 0m);
             ViewData["IngresosDelMes"] = ingresos;
             ViewData["FacturasPendientes"] = new List<(string Codigo, string Descripcion, decimal Monto)>();
 
+            // WHY: Calcular ocupación con capacidad estimada (40 citas/día) y limitar a 100%
             int daysInMonth = DateTime.DaysInMonth(hoy.Year, hoy.Month);
             int totalCapacity = daysInMonth * 40;
             int totalCitas = citasDelMes.Count;
             ViewData["PctOcupacion"] = totalCapacity > 0 ? (int)Math.Min(100, (double)totalCitas / totalCapacity * 100) : 0;
 
+            // WHY: Calcular distribución de estados y porcentajes relativos al estado más frecuente
             int atendidas = citasDelMes.Count(c => string.Equals(c.Estado, "Atendida", StringComparison.OrdinalIgnoreCase));
             int confirmadas = citasDelMes.Count(c => string.Equals(c.Estado, "Confirmada", StringComparison.OrdinalIgnoreCase));
             int programadas = citasDelMes.Count(c => string.Equals(c.Estado, "Agendada", StringComparison.OrdinalIgnoreCase));
@@ -869,6 +1051,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             ViewData["PctProgramadas"] = maxEstado > 0 ? (int)Math.Round(programadas * 100.0 / maxEstado, 0) : 0;
             ViewData["PctCanceladas"] = maxEstado > 0 ? (int)Math.Round(canceladas * 100.0 / maxEstado, 0) : 0;
 
+            // WHY: Obtener top 3 profesionales por citas con proyección anónima para minimizar carga
             var topIds = await _context.Citas
                 .Where(c => c.FechaHora >= inicioMes && c.FechaHora < finMes && c.IdProfesional != null && c.IdProfesional != 0)
                 .GroupBy(c => c.IdProfesional)
@@ -885,6 +1068,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 .AsNoTracking()
                 .ToListAsync(ct);
 
+            // WHY: Proyectar datos mínimos necesarios para la vista de top profesionales
             var topProfesionales = topIds.Select(t => new
             {
                 Nombre = profesionales.FirstOrDefault(p => p.IdProfesional == t.IdProfesional)?.Usuario?.Nombre ?? "Sin nombre",
@@ -901,17 +1085,20 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (SqlException sqlex)
         {
+            // WHY: SqlException crítica requiere atención inmediata de infraestructura
             _logger.LogCritical(sqlex, "SqlException en CargarDatosDashboard. Number={Number}", sqlex.Number);
             InicializarViewDataDashboardVacio();
             TempData["ErrorValidacion"] = MensajeErrorFallback;
         }
         catch (Exception ex)
         {
+            // WHY: Catch-all para errores no anticipados; retornar valores predeterminados para que la vista maneje gracefully
             _logger.LogError(ex, "Error general en CargarDatosDashboard. Se devuelven valores predeterminados.");
             InicializarViewDataDashboardVacio();
         }
     }
 
+    // WHY: Método helper para inicializar ViewData de dashboard con valores predeterminados
     private void InicializarViewDataDashboardVacio()
     {
         ViewData["TotalPacientes"] = 0;
@@ -931,6 +1118,13 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         ViewData["TopProfesionales"] = new List<object>();
     }
 
+    /**
+     * Detecta si una DbUpdateException es por violación de índice único (SQL error 2601 o 2627).
+     * WHY: Permite mostrar mensaje amigable al usuario en lugar de error técnico crudo.
+     * @param dbex La excepción de actualización de base de datos
+     * @param indiceAfectado Output: mensaje de error SQL si aplica
+     * @return true si es violación de índice único
+     */
     private static bool EsViolacionIndiceUnico(DbUpdateException dbex, out string? indiceAfectado)
     {
         indiceAfectado = null;
@@ -944,6 +1138,12 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         return false;
     }
 
+    /**
+     * Detecta si una DbUpdateException es por violación de integridad referencial (SQL error 547 o 515).
+     * WHY: Permite manejar casos donde no se puede eliminar/actualizar por relaciones existentes.
+     * @param dbex La excepción de actualización de base de datos
+     * @return true si es violación de FK
+     */
     private static bool EsViolacionIntegridadReferencial(DbUpdateException dbex)
     {
         var sqlEx = dbex.InnerException as SqlException ?? dbex.InnerException?.InnerException as SqlException;
@@ -961,6 +1161,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             var userName = User.Identity?.Name ?? "Usuario SmileTrack";
             var emailClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
 
+            // WHY: Generar iniciales para avatar con fallback seguro si nombre está vacío
             var partesNombre = userName.Split(_separadorEspacio, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var initials = string.Join("", partesNombre.Take(2).Select(p => char.ToUpperInvariant(p[0])));
             if (string.IsNullOrWhiteSpace(initials)) initials = "ST";
@@ -973,6 +1174,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         }
         catch (Exception ex)
         {
+            // WHY: Catch-all para errores no anticipados; retornar vista igual para no romper UX
             _logger.LogError(ex, "Error CentroDeAyudaComoProgramarCita");
             return View("~/Views/Centro_De_Ayuda/Como_Programar_Una_Cita/ComoProgramarUnaCita.cshtml");
         }
