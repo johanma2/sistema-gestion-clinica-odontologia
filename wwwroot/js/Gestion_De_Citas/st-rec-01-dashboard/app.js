@@ -316,55 +316,37 @@ const initAlertButtons = () => {
  * Función principal de inicialización del dashboard
  */
 const init = () => {
-  try {
-    // Inicializar componentes de UI
-    initMobileMenu();
-    
-    // Renderizado inicial de datos
-    renderAppointments();
-    
-    // Inicializar interacciones
-    initActionButtons();
-    initAlertButtons();
-    
-    // [MEJORA]: Event delegation para tabla de citas (performance)
-    const tableBody = safeGetElement('appointmentsTable');
-    if (tableBody) {
-      tableBody.addEventListener('click', handleTableAction);
-      // [MEJORA]: Soporte para activación con teclado (Enter/Space)
-      tableBody.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          const target = e.target.closest('.action-icon');
-          if (target) {
-            e.preventDefault();
-            target.click();
-          }
+  // Inicializar componentes de UI
+  initMobileMenu();
+  
+  // Renderizado inicial de datos
+  renderAppointments();
+  
+  // Inicializar interacciones
+  initActionButtons();
+  initAlertButtons();
+  
+  // [MEJORA]: Event delegation para tabla de citas (performance)
+  const tableBody = safeGetElement('appointmentsTable');
+  if (tableBody) {
+    tableBody.addEventListener('click', handleTableAction);
+    // [MEJORA]: Soporte para activación con teclado (Enter/Space)
+    tableBody.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const target = e.target.closest('.action-icon');
+        if (target) {
+          e.preventDefault();
+          target.click();
         }
-      });
-    }
-    
-    // [MEJORA]: Limpieza de listeners al unload (buena práctica para SPAs)
-    window.addEventListener('beforeunload', () => {
-      // En una SPA real, aquí se removerían listeners para evitar memory leaks
+      }
     });
-  } catch (e) {
-    console.error('[SmileTrack] Error inicializando modulo', e);
-    mostrarErrorUsuario(e.message || 'Error cargando módulo. Intente recargar.');
   }
+  
+  // [MEJORA]: Limpieza de listeners al unload (buena práctica para SPAs)
+  window.addEventListener('beforeunload', () => {
+    // En una SPA real, aquí se removerían listeners para evitar memory leaks
+  });
 };
-
-function mostrarErrorUsuario(mensaje) {
-  let div = document.getElementById('smiletrack-error-bar');
-  if (!div) {
-    div = document.createElement('div');
-    div.id = 'smiletrack-error-bar';
-    div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:white;padding:14px 20px;text-align:center;font-family:system-ui,-apple-system,sans-serif;font-size:15px;box-shadow:0 4px 12px rgba(0,0,0,.15);border-bottom:3px solid #991b1b;';
-    div.setAttribute('role', 'alert');
-    document.body.appendChild(div);
-  }
-  div.innerHTML = '<strong>[SmileTrack]</strong> ' + mensaje + ' <button onclick="document.getElementById(\'smiletrack-error-bar\').style.display=\'none\'" style="margin-left:16px;background:white;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;">×</button>';
-  div.style.display = 'block';
-}
 
 // Ejecutar al cargar DOM
 document.addEventListener('DOMContentLoaded', init);

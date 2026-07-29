@@ -575,61 +575,43 @@ const initNewAppointmentButtons = () => {
 
 // ── Init ──────────────────────────────────────────────────────────
 const init = () => {
-  try {
-    appointmentStorage.init();
+  appointmentStorage.init();
 
-    initMobileMenu();
-    initModalHandlers();
-    initNewAppointmentForm();
-    initEditAppointmentForm();
-    initPagination();
-    initNewAppointmentButtons();
+  initMobileMenu();
+  initModalHandlers();
+  initNewAppointmentForm();
+  initEditAppointmentForm();
+  initPagination();
+  initNewAppointmentButtons();
 
-    updateMetrics();
-    renderAppointments(appointmentStorage.getAll());
+  updateMetrics();
+  renderAppointments(appointmentStorage.getAll());
 
-    document.querySelectorAll('.view-toggle').forEach(btn => {
-      btn.addEventListener('click', () => handleViewToggle(btn));
-      btn.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleViewToggle(btn); }
-      });
+  document.querySelectorAll('.view-toggle').forEach(btn => {
+    btn.addEventListener('click', () => handleViewToggle(btn));
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleViewToggle(btn); }
     });
+  });
 
-    const searchInput = safeGetElement('searchPatient');
-    if (searchInput) searchInput.addEventListener('input', debounce(filterAppointments, 180));
+  const searchInput = safeGetElement('searchPatient');
+  if (searchInput) searchInput.addEventListener('input', debounce(filterAppointments, 180));
 
-    ['filterProfessional', 'filterDate', 'filterStatus'].forEach(id => {
-      safeGetElement(id)?.addEventListener('change', filterAppointments);
+  ['filterProfessional', 'filterDate', 'filterStatus'].forEach(id => {
+    safeGetElement(id)?.addEventListener('change', filterAppointments);
+  });
+
+  const tableBody = safeGetElement('appointmentsTable');
+  if (tableBody) {
+    tableBody.addEventListener('click', handleTableAction);
+    tableBody.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-action]')) {
+        e.preventDefault();
+        e.target.click();
+      }
     });
-
-    const tableBody = safeGetElement('appointmentsTable');
-    if (tableBody) {
-      tableBody.addEventListener('click', handleTableAction);
-      tableBody.addEventListener('keydown', (e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-action]')) {
-          e.preventDefault();
-          e.target.click();
-        }
-      });
-    }
-  } catch (e) {
-    console.error('[SmileTrack] Error inicializando modulo', e);
-    mostrarErrorUsuario(e.message || 'Error cargando módulo. Intente recargar.');
   }
 };
-
-function mostrarErrorUsuario(mensaje) {
-  let div = document.getElementById('smiletrack-error-bar');
-  if (!div) {
-    div = document.createElement('div');
-    div.id = 'smiletrack-error-bar';
-    div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:white;padding:14px 20px;text-align:center;font-family:system-ui,-apple-system,sans-serif;font-size:15px;box-shadow:0 4px 12px rgba(0,0,0,.15);border-bottom:3px solid #991b1b;';
-    div.setAttribute('role', 'alert');
-    document.body.appendChild(div);
-  }
-  div.innerHTML = '<strong>[SmileTrack]</strong> ' + mensaje + ' <button onclick="document.getElementById(\'smiletrack-error-bar\').style.display=\'none\'" style="margin-left:16px;background:white;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;">×</button>';
-  div.style.display = 'block';
-}
 
 // ── Datos de ejemplo ──────────────────────────────────────────────
 const appointmentsData = [

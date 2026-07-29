@@ -11,8 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"]</title>
-    <link rel="stylesheet" href="~/css/site.css">
-    <link rel="stylesheet" href="~/css/styles.css">
+    <link rel="stylesheet" href="@Url.Content("~/css/Centro_De_Ayuda/Guias_Tutoriales_Y_Soporte/styles.css")">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -165,8 +164,39 @@
         </main>
     </div>
 
-    <script src="~/js/site.js" defer></script>
-    <script src="~/js/app.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+    <script src="@Url.Content("~/js/Centro_De_Ayuda/Guias_Tutoriales_Y_Soporte/app.js")"></script>
 </body>
 
 </html>
+

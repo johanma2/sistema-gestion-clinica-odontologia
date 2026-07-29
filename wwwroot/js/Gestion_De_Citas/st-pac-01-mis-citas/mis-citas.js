@@ -38,11 +38,11 @@ const debounce = (fn, delay) => {
 const closeModalGeneric = (modalId) => {
   const modal = safeGetElement(modalId);
   if (!modal) return;
-  
+
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
   modal.setAttribute('inert', '');
-  
+
   // Restaura el foco al elemento que activó el modal para mantener la navegación por teclado
   const opener = modal.dataset.opener;
   if (opener) {
@@ -59,29 +59,29 @@ const closeModalGeneric = (modalId) => {
  */
 const animateCounter = (el, target) => {
   if (!el) return;
-  
+
   let cur = 0;
   const step = Math.max(1, Math.ceil(target / 30));
   const duration = 900; // 30 frames * 30ms
   const startTime = performance.now();
-  
+
   const animate = (currentTime) => {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
-    
+
     // Aplica curva de easing cúbica inversa para desacelerar la animación al final
     const eased = 1 - Math.pow(1 - progress, 3);
     cur = Math.floor(eased * target);
-    
+
     el.textContent = cur;
-    
+
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
       el.textContent = target; // Fuerza el valor exacto al terminar la animación
     }
   };
-  
+
   requestAnimationFrame(animate);
 };
 
@@ -126,10 +126,10 @@ const badgeClass = (estado) => {
 const getFiltered = () => {
   const searchInput = safeGetElement('searchInput');
   const filterEstado = safeGetElement('filterEstado');
-  
+
   // Verifica que los elementos del DOM existan antes de leer sus valores
   if (!searchInput || !filterEstado) return citas;
-  
+
   const q = searchInput.value.toLowerCase().trim();
   const st = filterEstado.value;
 
@@ -160,7 +160,7 @@ const updateStats = () => {
   const elComp = safeGetElement('cnt-completadas');
   const elPend = safeGetElement('cnt-pendientes');
   const elCanc = safeGetElement('cnt-canceladas');
-  
+
   if (elTotal) elTotal.textContent = total;
   if (elComp) elComp.textContent = comp;
   if (elPend) elPend.textContent = pend;
@@ -169,7 +169,7 @@ const updateStats = () => {
   const progressBar = safeGetElement('progressBar');
   const progressLabel = safeGetElement('progressLabel');
   const pct = total > 0 ? Math.round((comp / total) * 100) : 0;
-  
+
   if (progressBar) {
     progressBar.style.width = pct + '%';
     // Sincroniza el atributo aria-valuenow para que lectores de pantalla anuncien el progreso
@@ -203,7 +203,7 @@ const renderTable = () => {
   const data = getFiltered();
   const tbody = safeGetElement('citasTbody');
   if (!tbody) return;
-  
+
   tbody.innerHTML = '';
 
   const label = safeGetElement('countLabel');
@@ -275,7 +275,7 @@ const openModal = (id) => {
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     modal.removeAttribute('inert');
-    
+
     // Mueve el foco al botón de cerrar para que el usuario de teclado pueda salir del modal
     const closeBtn = safeGetElement('modalClose');
     if (closeBtn) closeBtn.focus();
@@ -300,14 +300,14 @@ const abrirModalCancelar = (id) => {
   cancelId = id;
   const desc = safeGetElement('cancelarDesc');
   if (desc) desc.textContent = `Cita del ${item.fecha} a las ${item.hora} — ${item.servicio}`;
-  
+
   const modal = safeGetElement('modalCancelar');
   if (modal) {
     modal.dataset.opener = `btn-cancelar-${id}`;
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     modal.removeAttribute('inert');
-    
+
     // Lleva el foco al botón de confirmación para facilitar la acción con teclado
     const btnSi = safeGetElement('cancelarSi');
     if (btnSi) btnSi.focus();
@@ -329,7 +329,7 @@ const cerrarModalCancelar = () => {
  */
 const confirmarCancelacion = () => {
   if (!cancelId) return;
-  
+
   const item = citas.find(c => c.id === cancelId);
   if (item) {
     item.estado = 'Cancelada';
@@ -350,10 +350,10 @@ const confirmarCancelacion = () => {
 const showToast = (msg) => {
   const t = safeGetElement('toast');
   if (!t) return;
-  
+
   t.textContent = msg;
   t.classList.add('show');
-  
+
   // Cancela el ocultado anterior si el toast se llama varias veces seguidas
   if (t._timeoutId) clearTimeout(t._timeoutId);
   t._timeoutId = setTimeout(() => t.classList.remove('show'), 3000);
@@ -376,7 +376,7 @@ const initNuevaCitaModal = () => {
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
       modal.removeAttribute('inert');
-      
+
       // Lleva el foco al primer campo del formulario para mejorar la experiencia de usuario
       const firstInput = modal.querySelector('.form-input');
       if (firstInput) firstInput.focus();
@@ -393,7 +393,7 @@ const initNuevaCitaModal = () => {
     confirmBtn.addEventListener('click', () => {
       const fechaInput = safeGetElement('citaFecha');
       const fecha = fechaInput?.value;
-      
+
       // Si no se eligió fecha, marca el campo visualmente y regresa el foco a él
       if (!fecha) {
         if (fechaInput) {
@@ -406,7 +406,7 @@ const initNuevaCitaModal = () => {
 
       closeModalGeneric('modalNuevaCita');
       showToast('Solicitud de cita enviada exitosamente');
-      
+
       // Limpia todos los campos del formulario para dejarlo listo para la próxima solicitud
       const servicioSelect = safeGetElement('citaServicio');
       const notaTextarea = safeGetElement('citaNota');
@@ -439,7 +439,7 @@ const initTableEvents = () => {
 
     const action = btn.dataset.action;
     const id = parseInt(btn.dataset.id, 10);
-    
+
     // Descarta el evento si el data-id no puede convertirse a un número entero válido
     if (isNaN(id)) return;
 
@@ -457,90 +457,98 @@ const initTableEvents = () => {
  * registra los eventos de filtros, modales, teclado y el menú móvil.
  */
 const init = () => {
-  try {
-    // Anima los contadores y pinta la tabla al cargar la página por primera vez
-    animateCounters();
-    updateStats();
-    renderTable();
-    
-    // Inicializa el modal de nueva cita y la delegación de eventos de la tabla
-    initNuevaCitaModal();
-    initTableEvents();
+  // Anima los contadores y pinta la tabla al cargar la página por primera vez
+  animateCounters();
+  updateStats();
+  renderTable();
+  
+  // Inicializa el modal de nueva cita y la delegación de eventos de la tabla
+  initNuevaCitaModal();
+  initTableEvents();
 
-    // Re-renderiza la tabla cada vez que cambia el selector de estado
-    const filterEl = safeGetElement('filterEstado');
-    if (filterEl) filterEl.addEventListener('change', renderTable);
+  // Re-renderiza la tabla cada vez que cambia el selector de estado
+  const filterEl = safeGetElement('filterEstado');
+  if (filterEl) filterEl.addEventListener('change', renderTable);
 
-    // Aplica debounce al campo de búsqueda para no re-renderizar en cada pulsación de tecla
-    const searchEl = safeGetElement('searchInput');
-    if (searchEl) {
-      const debouncedRender = debounce(renderTable, 180);
-      searchEl.addEventListener('input', debouncedRender);
-    }
-
-    // Registra el cierre del modal de detalle al pulsar la X o hacer clic fuera
-    const modalClose = safeGetElement('modalClose');
-    const modalOverlay = safeGetElement('modalOverlay');
-    if (modalClose) modalClose.addEventListener('click', closeModal);
-    if (modalOverlay) {
-      modalOverlay.addEventListener('click', e => {
-        if (e.target === modalOverlay) closeModal();
-      });
-    }
-
-    // Registra los botones 'Volver' y 'Sí, cancelar' del modal de confirmación
-    const cancelarNo = safeGetElement('cancelarNo');
-    const cancelarSi = safeGetElement('cancelarSi');
-    const modalCancelar = safeGetElement('modalCancelar');
-    
-    if (cancelarNo) cancelarNo.addEventListener('click', cerrarModalCancelar);
-    if (cancelarSi) cancelarSi.addEventListener('click', confirmarCancelacion);
-    if (modalCancelar) {
-      modalCancelar.addEventListener('click', e => {
-        if (e.target === modalCancelar) cerrarModalCancelar();
-      });
-    }
-
-    // La tecla Escape cierra el modal más reciente según el orden de apilamiento
-    document.addEventListener('keydown', e => {
-      if (e.key !== 'Escape') return;
-      
-      // Cierra primero el modal de nueva cita, luego el de cancelación, luego el de detalle
-      const modalNueva = safeGetElement('modalNuevaCita');
-      const modalCancel = safeGetElement('modalCancelar');
-      const modalDetail = safeGetElement('modalOverlay');
-      
-      if (modalNueva?.classList.contains('open')) {
-        closeModalGeneric('modalNuevaCita');
-      } else if (modalCancel?.classList.contains('open')) {
-        cerrarModalCancelar();
-      } else if (modalDetail?.classList.contains('open')) {
-        closeModal();
-      }
-    });
-    
-    // En una SPA se deben remover listeners aquí para evitar memory leaks al cambiar de página
-    window.addEventListener('beforeunload', () => {
-      // Ej: modalOverlay?.removeEventListener('click', closeModalHandler);
-    });
-  } catch (e) {
-    console.error('[SmileTrack] Error inicializando modulo', e);
-    mostrarErrorUsuario(e.message || 'Error cargando módulo. Intente recargar.');
+  // Aplica debounce al campo de búsqueda para no re-renderizar en cada pulsación de tecla
+  const searchEl = safeGetElement('searchInput');
+  if (searchEl) {
+    const debouncedRender = debounce(renderTable, 180);
+    searchEl.addEventListener('input', debouncedRender);
   }
+
+  // Registra el cierre del modal de detalle al pulsar la X o hacer clic fuera
+  const modalClose = safeGetElement('modalClose');
+  const modalOverlay = safeGetElement('modalOverlay');
+  if (modalClose) modalClose.addEventListener('click', closeModal);
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', e => {
+      if (e.target === modalOverlay) closeModal();
+    });
+  }
+
+  // Registra los botones 'Volver' y 'Sí, cancelar' del modal de confirmación
+  const cancelarNo = safeGetElement('cancelarNo');
+  const cancelarSi = safeGetElement('cancelarSi');
+  const modalCancelar = safeGetElement('modalCancelar');
+  
+  if (cancelarNo) cancelarNo.addEventListener('click', cerrarModalCancelar);
+  if (cancelarSi) cancelarSi.addEventListener('click', confirmarCancelacion);
+  if (modalCancelar) {
+    modalCancelar.addEventListener('click', e => {
+      if (e.target === modalCancelar) cerrarModalCancelar();
+    });
+  }
+
+  // La tecla Escape cierra el modal más reciente según el orden de apilamiento
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    
+    // Cierra primero el modal de nueva cita, luego el de cancelación, luego el de detalle
+    const modalNueva = safeGetElement('modalNuevaCita');
+    const modalCancel = safeGetElement('modalCancelar');
+    const modalDetail = safeGetElement('modalOverlay');
+
+    if (modalNueva?.classList.contains('open')) {
+      closeModalGeneric('modalNuevaCita');
+    } else if (modalCancel?.classList.contains('open')) {
+      cerrarModalCancelar();
+    } else if (modalDetail?.classList.contains('open')) {
+      closeModal();
+    }
+  });
+  
+  // En una SPA se deben remover listeners aquí para evitar memory leaks al cambiar de página
+  window.addEventListener('beforeunload', () => {
+    // Ej: modalOverlay?.removeEventListener('click', closeModalHandler);
+  });
 };
-
-function mostrarErrorUsuario(mensaje) {
-  let div = document.getElementById('smiletrack-error-bar');
-  if (!div) {
-    div = document.createElement('div');
-    div.id = 'smiletrack-error-bar';
-    div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:white;padding:14px 20px;text-align:center;font-family:system-ui,-apple-system,sans-serif;font-size:15px;box-shadow:0 4px 12px rgba(0,0,0,.15);border-bottom:3px solid #991b1b;';
-    div.setAttribute('role', 'alert');
-    document.body.appendChild(div);
-  }
-  div.innerHTML = '<strong>[SmileTrack]</strong> ' + mensaje + ' <button onclick="document.getElementById(\'smiletrack-error-bar\').style.display=\'none\'" style="margin-left:16px;background:white;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;">×</button>';
-  div.style.display = 'block';
-}
 
 // Ejecutar al cargar DOM
 document.addEventListener('DOMContentLoaded', init);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Ejecutar al cargar DOM
+document.addEventListener('DOMContentLoaded', init)

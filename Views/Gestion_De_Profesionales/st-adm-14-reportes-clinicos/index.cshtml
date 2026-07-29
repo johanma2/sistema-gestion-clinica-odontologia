@@ -16,7 +16,6 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="@Url.Content("~/css/site.css")" />
     <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/styles.css?v=2")" />
 </head>
 
@@ -285,19 +284,31 @@
         <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
     </footer>
 
-
-    <script src="@Url.Content("~/js/site.js")" defer></script>
     <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/reportes.js")"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Filtros se auto-envían al cambiar select
-            const filterForm = document.querySelector('form[method="get"]');
-            if (filterForm) {
-                filterForm.querySelectorAll('select').forEach(sel => {
+   <script>
+@@ -296,24 +298,6 @@
                     sel.addEventListener('change', () => filterForm.submit());
                 });
             }
+
+            // Sidebar nav-group collapsible
+            document.querySelectorAll('.nav-group-header').forEach(header => {
+                const items = header.nextElementSibling;
+                const arrow = header.querySelector('.nav-arrow');
+                if (!items || !arrow) return;
+                const setExpanded = (isExpanded) => {
+                    items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+                    arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+                    header.setAttribute('aria-expanded', String(isExpanded));
+                };
+                setExpanded(false);
+                const toggle = () => { const isExpanded = header.getAttribute('aria-expanded') === 'true'; setExpanded(!isExpanded); };
+                header.addEventListener('click', toggle);
+                header.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+                });
+            });
         });
     </script>
 </body>

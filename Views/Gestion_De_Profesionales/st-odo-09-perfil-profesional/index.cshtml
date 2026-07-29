@@ -20,8 +20,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="@Url.Content("~/css/site.css")" />
-  <link rel="stylesheet" href="@Url.Content("~/css/Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-odo-09-perfil-profesional/styles.css")" />
 </head>
 
 <body>
@@ -292,9 +291,7 @@
       border: 0;
     }
   </style>
-
-  <script src="@Url.Content("~/js/site.js")" defer></script>
-  <script src="@Url.Content("~/js/perfil-profesional.js")"></script>
+  <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil.js")"></script>
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
@@ -303,7 +300,38 @@
     </div>
     <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
     <script src="@Url.Content("~/js/footer.js")"></script>
-    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
+
   </footer>
 
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SMILETRACK — ESTADO DEL CONSULTORIO (app.js)
  * Lógica con persistencia, checklist accesible y validaciones
  */
@@ -490,7 +490,6 @@ const initHistoryList = () => {
 
 // Función principal de inicialización
 const init = () => {
-  try {
     // Inicializar componentes de UI
     initMobileMenu();
     initChecklist();
@@ -504,24 +503,7 @@ const init = () => {
     window.addEventListener('beforeunload', () => {
       // Remover listeners en implementación SPA real
     });
-  } catch (e) {
-    console.error('[SmileTrack] Error inicializando modulo', e);
-    mostrarErrorUsuario(e.message || 'Error cargando módulo. Intente recargar.');
-  }
 };
-
-function mostrarErrorUsuario(mensaje) {
-  let div = document.getElementById('smiletrack-error-bar');
-  if (!div) {
-    div = document.createElement('div');
-    div.id = 'smiletrack-error-bar';
-    div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:white;padding:14px 20px;text-align:center;font-family:system-ui,-apple-system,sans-serif;font-size:15px;box-shadow:0 4px 12px rgba(0,0,0,.15);border-bottom:3px solid #991b1b;';
-    div.setAttribute('role', 'alert');
-    document.body.appendChild(div);
-  }
-  div.innerHTML = '<strong>[SmileTrack]</strong> ' + mensaje + ' <button onclick="document.getElementById(\'smiletrack-error-bar\').style.display=\'none\'" style="margin-left:16px;background:white;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;">×</button>';
-  div.style.display = 'block';
-}
 
 // Ejecutar al cargar DOM
 document.addEventListener('DOMContentLoaded', init);

@@ -1,4 +1,4 @@
-@{ Layout = null; }
+﻿@{ Layout = null; }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -11,7 +11,6 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
         rel="stylesheet" />
-    <link rel="stylesheet" href="@Url.Content("~/css/site.css")" />
     <link rel="stylesheet" href="@Url.Content("~/css/Perfiles/st-rec-06-perfil-recepcionista/perfil-recepcionista.css")" />
 </head>
 
@@ -333,10 +332,38 @@
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
-
-
-    <script src="@Url.Content("~/js/site.js")" defer></script>
     <script src="@Url.Content("~/js/Perfiles/st-rec-06-perfil-recepcionista/perfil-recepcionista.js")"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+
+      if (!items || !arrow) return;
+
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+
+      setExpanded(false);
+
+      const toggle = () => {
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        setExpanded(!isExpanded);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+  });
+</script>
 
 </body>
 
