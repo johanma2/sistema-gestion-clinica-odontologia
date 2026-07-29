@@ -1,123 +1,101 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using Serilog;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.Entities;
 using System.Security.Claims;
 using System.Net;
 using System.Text.Json;
 
-    var builder = WebApplication.CreateBuilder(args);
-    builder.Host.UseSerilog(dispose: true);
+var builder = WebApplication.CreateBuilder(args);
 
-    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
-    builder.Services.AddControllersWithViews();
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    if (string.IsNullOrWhiteSpace(connectionString))
+builder.Services.AddControllersWithViews();
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    connectionString = "Server=(localdb)\\mssqllocaldb;Database=SmileTrackDB;Trusted_Connection=True;TrustServerCertificate=True;";
+}
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure(
+        maxRetryCount: 3,
+        maxRetryDelay: TimeSpan.FromSeconds(3),
+        errorNumbersToAdd: null)));
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
     {
-        connectionString = "Server=(localdb)\\mssqllocaldb;Database=SmileTrackDB;Trusted_Connection=True;TrustServerCertificate=True;";
-    }
-
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(3),
-            errorNumbersToAdd: null)));
-
-    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-        .AddCookie(options =>
-        {
-            options.LoginPath = "/acceso-y-seguridad/login";
-            options.AccessDeniedPath = "/acceso-y-seguridad/login";
-            options.ExpireTimeSpan = TimeSpan.FromHours(8);
-            options.SlidingExpiration = true;
-        });
-    builder.Services.AddAuthorization();
-
-    builder.Services.AddHttpContextAccessor();
-    builder.Services.AddScoped<SmileTrack_MVC.Services.IAuthService, SmileTrack_MVC.Services.AuthService>();
-
-    var app = builder.Build();
-
-    app.UseSerilogRequestLogging(options =>
-    {
-        options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} respondio {StatusCode} en {Elapsed:0.0000} ms";
-        options.GetLevel = (_, dur, ex) =>
-            ex != null ? Serilog.Events.LogEventLevel.Error :
-            dur > 1000 ? Serilog.Events.LogEventLevel.Warning :
-            Serilog.Events.LogEventLevel.Information;
+        options.LoginPath = "/acceso-y-seguridad/login";
+        options.AccessDeniedPath = "/acceso-y-seguridad/login";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
     });
+builder.Services.AddAuthorization();
 
-    app.Use(async (context, next) =>
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<SmileTrack_MVC.Services.IAuthService, SmileTrack_MVC.Services.AuthService>();
+
+var app = builder.Build();
+
+app.Use(async (context, next) =>
+{
+    var requestId = context.TraceIdentifier;
+    if (context.Request.Headers.TryGetValue("X-Request-ID", out var incomingId) && !string.IsNullOrWhiteSpace(incomingId))
     {
-        var requestId = context.TraceIdentifier;
-        if (context.Request.Headers.TryGetValue("X-Request-ID", out var incomingId) && !string.IsNullOrWhiteSpace(incomingId))
+        requestId = incomingId.ToString().Trim();
+    }
+    context.Response.Headers["X-Request-ID"] = requestId;
+
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        if (ex is OperationCanceledException)
         {
-            requestId = incomingId.ToString().Trim();
+            logger.LogWarning("Solicitud cancelada por el cliente: {Metodo} {Ruta}", context.Request.Method, context.Request.Path);
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return;
         }
-        context.Response.Headers["X-Request-ID"] = requestId;
 
-        var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonimo";
-        var userRol = context.User.FindFirst(ClaimTypes.Role)?.Value ?? "sin-rol";
-        var modulo = InferirModuloDesdeRuta(context.Request.Path.Value);
-        var ipCliente = context.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
-        if (ipCliente == "::1") ipCliente = "127.0.0.1";
+        logger.LogError(ex, "Excepcion NO MANEJADA en pipeline: {Metodo} {Ruta} - {Mensaje}",
+            context.Request.Method, context.Request.Path, ex.Message);
 
-        using (Serilog.Context.LogContext.PushProperty("RequestId", requestId))
-        using (Serilog.Context.LogContext.PushProperty("UsuarioId", userId))
-        using (Serilog.Context.LogContext.PushProperty("UsuarioRol", userRol))
-        using (Serilog.Context.LogContext.PushProperty("Modulo", modulo))
-        using (Serilog.Context.LogContext.PushProperty("IpCliente", ipCliente))
+        if (context.Response.HasStarted)
         {
-            try
+            logger.LogWarning("Ya se habia iniciado la respuesta; no se puede reescribir error para RequestId {RequestId}", requestId);
+            throw;
+        }
+
+        var esApi = context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
+                  || (context.Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase));
+
+        context.Response.Clear();
+        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
+        if (esApi)
+        {
+            context.Response.ContentType = "application/problem+json; charset=utf-8";
+            var problem = new
             {
-                await next();
-            }
-            catch (Exception ex)
-            {
-                if (ex is OperationCanceledException)
-                {
-                    Log.Warning("Solicitud cancelada por el cliente: {Metodo} {Ruta}", context.Request.Method, context.Request.Path);
-                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return;
-                }
-
-                Log.Fatal(ex, "Excepcion NO MANEJADA en pipeline: {Metodo} {Ruta} - {Mensaje}",
-                    context.Request.Method, context.Request.Path, ex.Message);
-
-                if (context.Response.HasStarted)
-                {
-                    Log.Warning("Ya se habia iniciado la respuesta; no se puede reescribir error para RequestId {RequestId}", requestId);
-                    throw;
-                }
-
-                var esApi = context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
-                          || (context.Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase));
-
-                context.Response.Clear();
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
-                if (esApi)
-                {
-                    context.Response.ContentType = "application/problem+json; charset=utf-8";
-                    var problem = new
-                    {
-                        type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
-                        title = "Error interno del servidor",
-                        status = 500,
-                        detail = app.Environment.IsDevelopment()
-                            ? $"Se presento un error inesperado. RequestId: {requestId}. Detalle: {ex.Message}"
-                            : $"Se presento un error inesperado. Proporcione este codigo al soporte: {requestId}",
-                        instance = context.Request.Path.Value,
-                        requestId
-                    };
-                    await context.Response.WriteAsync(JsonSerializer.Serialize(problem, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
-                }
-                else
-                {
-                    context.Response.ContentType = "text/html; charset=utf-8";
-                    var mensajeHtml = $@"
+                type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
+                title = "Error interno del servidor",
+                status = 500,
+                detail = app.Environment.IsDevelopment()
+                    ? $"Se presento un error inesperado. RequestId: {requestId}. Detalle: {ex.Message}"
+                    : $"Se presento un error inesperado. Proporcione este codigo al soporte: {requestId}",
+                instance = context.Request.Path.Value,
+                requestId
+            };
+            await context.Response.WriteAsync(JsonSerializer.Serialize(problem, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+        }
+        else
+        {
+            context.Response.ContentType = "text/html; charset=utf-8";
+            var mensajeHtml = $@"
 <!DOCTYPE html>
 <html lang='es'>
 <head><meta charset='utf-8'><title>Error Interno - SmileTrack</title>
@@ -134,11 +112,10 @@ a{{color:#0f766e;text-decoration:none;font-weight:600;}}
 <div class='code' title='Proporcione este código al soporte'>{requestId}</div>
 <p><a href='javascript:history.back()'>← Volver a la página anterior</a></p>
 </div></body></html>";
-                    await context.Response.WriteAsync(mensajeHtml);
-                }
-            }
+            await context.Response.WriteAsync(mensajeHtml);
         }
-    });
+    }
+});
 
     if (!app.Environment.IsDevelopment())
     {
@@ -193,12 +170,37 @@ a{{color:#0f766e;text-decoration:none;font-weight:600;}}
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
 
-using (var scope = app.Services.CreateScope())
+// ⚡ Seed en background: el servidor arranca INMEDIATAMENTE
+// La inicialización de BD ocurre en paralelo sin bloquear el startup
+_ = Task.Run(async () =>
 {
+    await Task.Delay(500); // pequeña pausa para que el servidor arranque primero
+    using var scope = app.Services.CreateScope();
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+        // Solo verificar si la BD existe y tiene datos (1 sola query)
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         await db.Database.EnsureCreatedAsync();
+        sw.Stop();
+        logger.LogInformation("⏱ EnsureCreated tardó {Ms}ms", sw.ElapsedMilliseconds);
+
+        // ⚡ 1 sola query para verificar si hay datos
+        if (await db.Roles.AnyAsync() &&
+            await db.Usuarios.AnyAsync() &&
+            await db.Especialidades.AnyAsync() &&
+            await db.Servicios.AnyAsync() &&
+            await db.Pacientes.AnyAsync() &&
+            await db.Profesionales.AnyAsync() &&
+            await db.Consultorios.AnyAsync())
+        {
+            logger.LogInformation("✅ BD ya inicializada, seed omitido");
+            return;
+        }
+
+        logger.LogInformation("🌱 Ejecutando seed inicial de la BD...");
 
     if (!await db.Roles.AnyAsync())
     {
@@ -390,8 +392,8 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex, "No se pudo inicializar la base de datos durante el inicio.");
+        logger.LogWarning(ex, "⚠️ Error al inicializar la base de datos en background: {Mensaje}", ex.Message);
     }
-}
+});
 
 app.Run();

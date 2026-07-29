@@ -14,16 +14,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Gestiona y supervisa el historial completo de citas en SmileTrack." />
-  <title>SmileTrack — Gestión de Citas</title>
+  <title>SmileTrack  Gestión de Citas</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="@Url.Content("~/css/site.css")" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css")" />
 </head>
-
 <body>
 
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
@@ -45,7 +43,7 @@
 
 
 
-  <!--  HAMBURGER (m�vil) -->
+  <!--  HAMBURGER (móvil) -->
   <button class="hamburger" id="hamburger" aria-label="Abrir men�" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
@@ -61,13 +59,15 @@
       <div class="header-left">
         <nav class="breadcrumb" aria-label="Ruta de navegaci�n">
           <span>Administración</span>
-          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-sep" aria-hidden="true">?</span>
           <span class="bc-active">Gestión de Citas</span>
         </nav>
         <h1 class="page-title">Gestión Integral de Citas</h1>
         <p class="page-subtitle">Supervisión y control</p>
       </div>
-
+      <button class="btn-primary" id="btnNewCita" aria-label="Programar nueva cita" onclick="document.getElementById('modalCita').classList.add('open');">
+        + Nueva Cita
+      </button>
     </header>
 
     <!-- KPI Cards con aria-live para contadores -->
@@ -106,7 +106,7 @@
         <button class="tab-btn" data-tab="cancelled" role="tab" aria-selected="false"
           aria-controls="citasBody">Cancelaciones</button>
         <button class="tab-btn" data-tab="no-show" role="tab" aria-selected="false" aria-controls="citasBody">No
-          asisti�</button>
+          asistió</button>
       </div>
 
       <!-- Filtros -->
@@ -171,11 +171,11 @@
             </select>
           </div>
           <div class="filter-wrap">
-            <input type="date" id="filterDate" name="fecha" class="filter-date" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]">
+            <input type="date" id="filterDate" name="fecha" class="status-select" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]">
           </div>
           <input type="hidden" name="page" value="1" />
           <button class="btn-primary" type="submit">Aplicar</button>
-          <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">🗑️ Limpiar</a>
+          <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">Limpiar</a>
         </form>
       </section>
 
@@ -248,12 +248,12 @@
               </form>
             </div>
             <div class="table-col col-acciones text-right" role="cell">
-              <a class="action-btn" href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" title="Editar">✏️ <span class="btn-text">Editar</span></a>
+              <a class="action-btn" href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" title="Editar">✏️</a>
               <form method="post" action="/gestion-de-citas/eliminar-cita" style="display:inline;">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="IdCita" value="@cita.IdCita" />
                 <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-                <button class="action-btn btn-delete" type="submit" onclick="return confirm('¿Eliminar esta cita?');" title="Eliminar">❌ <span class="btn-text">Eliminar</span></button>
+                <button class="action-btn btn-delete" type="submit" onclick="return confirm('¿Eliminar esta cita?');" title="Eliminar">❌</button>
               </form>
             </div>
           </div>
@@ -550,7 +550,6 @@
   </footer>
 
 
-  <script src="@Url.Content("~/js/site.js")" defer></script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js")"></script>
 
   <script>
@@ -586,6 +585,22 @@
           }
         });
       });
+    });
+
+    // ─── Sidebar nav-group collapsible ───
+    document.querySelectorAll('.nav-group-header').forEach(header => {
+      const items = header.nextElementSibling;
+      const arrow = header.querySelector('.nav-arrow');
+      if (!items || !arrow) return;
+      const setExpanded = (isExpanded) => {
+        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
+        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+        header.setAttribute('aria-expanded', String(isExpanded));
+      };
+      setExpanded(false);
+      const toggle = () => { const isExpanded = header.getAttribute('aria-expanded') === 'true'; setExpanded(!isExpanded); };
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
     });
 
     // Auto-abrir modal de cita si estamos en edición

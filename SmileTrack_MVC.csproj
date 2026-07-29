@@ -1,13 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <NuGetAudit>false</NuGetAudit>
-  </PropertyGroup>
+<PropertyGroup>
+  <TargetFramework>net9.0</TargetFramework>
+  <Nullable>enable</Nullable>
+  <ImplicitUsings>enable</ImplicitUsings>
+  <NuGetAudit>false</NuGetAudit>
 
-
+  <!-- Optimizaciones para acelerar la compilación en desarrollo -->
+  <Optimize>false</Optimize>
+  <TieredCompilation>true</TieredCompilation>
+  <!-- Saltar validación de paquetes en cada build -->
+  <SkipValidatePackageReferences>true</SkipValidatePackageReferences>
+</PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
@@ -20,9 +24,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
-    <PackageReference Include="Serilog.Enrichers.Context" Version="4.6.5" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
 </Project>

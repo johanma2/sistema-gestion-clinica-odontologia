@@ -105,7 +105,9 @@ public class AccesoYSeguridadController(AppDbContext context) : Controller
         usuario.UltimoLogin = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-         var destino = IsLocalUrl(returnUrl) ? returnUrl : redirectUrl;
+        var destino = (IsLocalUrl(returnUrl) && !returnUrl.StartsWith("/acceso-y-seguridad/login", StringComparison.OrdinalIgnoreCase))
+            ? returnUrl
+            : redirectUrl;
         return Redirect(destino!);
     }
 
