@@ -22,7 +22,7 @@ namespace SmileTrack_MVC.Models.ViewModels
         public string NumeroDia { get; set; } = string.Empty;
         public bool EsHoy { get; set; }
         public bool Cerrado { get; set; }
-        public List<AgendaCitaViewModel> Citas { get; set; } = new();
+        public List<AgendaCitaViewModel> Citas { get; set; } = [];
     }
 
     public class AgendaCitaViewModel

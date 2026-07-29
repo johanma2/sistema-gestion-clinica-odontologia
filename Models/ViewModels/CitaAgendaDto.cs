@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace SmileTrack_MVC.Models.ViewModels
@@ -41,13 +39,13 @@ namespace SmileTrack_MVC.Models.ViewModels
             {
                 yield return new ValidationResult(
                     "La hora de fin debe ser posterior a la hora de inicio.",
-                    new[] { nameof(HoraFin) });
+                    [nameof(HoraFin)]);
             }
             else if ((HoraFin - HoraInicio).TotalMinutes < 15)
             {
                 yield return new ValidationResult(
                     "La cita debe tener una duración mínima de 15 minutos.",
-                    new[] { nameof(HoraFin) });
+                    [nameof(HoraFin)]);
             }
         }
     }

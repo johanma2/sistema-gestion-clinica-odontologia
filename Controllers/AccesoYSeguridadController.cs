@@ -1,31 +1,27 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
-using SmileTrack_MVC.Models.Entities;
 
 namespace SmileTrack_MVC.Controllers;
 
-public class AccesoYSeguridadController : Controller
+public class AccesoYSeguridadController(AppDbContext context) : Controller
 {
-      private readonly AppDbContext _context;
+       private readonly AppDbContext _context = context;
 
-    public AccesoYSeguridadController(AppDbContext context)
-    {
-        _context = context;
-    }
     [HttpGet]
     [Route("acceso-y-seguridad/login")]
     public IActionResult Login() => View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
 
-  
     [HttpPost]
     [Route("acceso-y-seguridad/login")]
     public async Task<IActionResult> LoginPost(string email, string password, string? rol, string? returnUrl)
     {
+        static bool IsLocalUrl(string? url) => !string.IsNullOrEmpty(url) && url.StartsWith('/') && !url.StartsWith("//");
+
         var redirecciones = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "Administrador", "/gestion-de-citas/st-adm-01-dashboard" },
@@ -86,7 +82,7 @@ public class AccesoYSeguridadController : Controller
             rolNombre = rolDesdeBase;
         }
 
-        if (!redirecciones.ContainsKey(rolNombre))
+        if (!redirecciones.TryGetValue(rolNombre, out var redirectUrl))
         {
             ModelState.AddModelError("", "El usuario no tiene un rol válido asignado.");
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
@@ -109,7 +105,8 @@ public class AccesoYSeguridadController : Controller
         usuario.UltimoLogin = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        return Redirect(redirecciones[rolNombre]);
+         var destino = IsLocalUrl(returnUrl) ? returnUrl : redirectUrl;
+        return Redirect(destino!);
     }
 
     [HttpPost]

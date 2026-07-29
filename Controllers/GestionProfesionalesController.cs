@@ -2,27 +2,19 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.Entities;
 using SmileTrack_MVC.Models.Shared;
 using SmileTrack_MVC.Models.ViewModels;
 using System.Globalization;
-using System.Net;
 using System.Text.RegularExpressions;
 
 namespace SmileTrack_MVC.Controllers;
 
-public partial class GestionProfesionalesController : Controller
+public partial class GestionProfesionalesController(AppDbContext context, ILogger<GestionProfesionalesController> logger) : Controller
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<GestionProfesionalesController> _logger;
-
-    public GestionProfesionalesController(AppDbContext context, ILogger<GestionProfesionalesController> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
+    private readonly AppDbContext _context = context;
+    private readonly ILogger<GestionProfesionalesController> _logger = logger;
 
     private const string MensajeErrorFallback =
         "Ocurrió un error inesperado al cargar la página. Por favor intente nuevamente. Si el problema persiste, contacte al soporte.";
@@ -279,8 +271,8 @@ public partial class GestionProfesionalesController : Controller
             }
 
             var estado = string.IsNullOrWhiteSpace(model.Estado) ? "activo" : model.Estado;
-            var idUsuario = (model.IdUsuario == null || model.IdUsuario == 0) ? (int?)null : model.IdUsuario;
-            var idEspecialidad = model.IdEspecialidad.HasValue && model.IdEspecialidad.Value > 0 ? model.IdEspecialidad.Value : 0;
+            var idUsuario = model.IdUsuario is null or 0 ? (int?)null : model.IdUsuario;
+            var idEspecialidad = model.IdEspecialidad is > 0 ? model.IdEspecialidad.Value : 0;
 
             if (idEspecialidad > 0)
             {
@@ -292,7 +284,7 @@ public partial class GestionProfesionalesController : Controller
                 }
             }
 
-            using var tx = await _context.Database.BeginTransactionAsync(ct);
+            await using var tx = await _context.Database.BeginTransactionAsync(ct);
             Profesional? profesional;
 
             try
@@ -318,7 +310,7 @@ public partial class GestionProfesionalesController : Controller
                     profesional.Telefono = model.Telefono?.Trim();
                     profesional.Descripcion = model.Descripcion?.Trim();
                     profesional.Estado = estado;
-                    profesional.FechaIngreso = profesional.FechaIngreso ?? DateTime.Today;
+                    profesional.FechaIngreso ??= DateTime.Today;
 
                     _context.Profesionales.Update(profesional);
                 }
@@ -347,7 +339,7 @@ public partial class GestionProfesionalesController : Controller
                         .Where(pe => pe.IdProfesional == profesional.IdProfesional)
                         .ToListAsync(ct);
 
-                    if (relaciones.Any())
+                    if (relaciones.Count > 0)
                         _context.ProfesionalEspecialidades.RemoveRange(relaciones);
 
                     _context.ProfesionalEspecialidades.Add(new Profesional_Especialidad
@@ -544,21 +536,21 @@ public partial class GestionProfesionalesController : Controller
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var searchLower = search.Trim().ToLower();
+                var searchTerm = search.Trim();
                 citasQuery = citasQuery.Where(c =>
-                    (c.Paciente!.Nombres != null && c.Paciente.Nombres.ToLower().Contains(searchLower)) ||
-                    (c.Paciente.Apellidos != null && c.Paciente.Apellidos.ToLower().Contains(searchLower)) ||
-                    (c.Paciente.Documento != null && c.Paciente.Documento.ToLower().Contains(searchLower))
+                    (c.Paciente!.Nombres != null && c.Paciente.Nombres.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (c.Paciente.Apellidos != null && c.Paciente.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (c.Paciente.Documento != null && c.Paciente.Documento.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                 );
             }
 
             if (!string.IsNullOrWhiteSpace(profesional))
             {
-                var profLower = profesional.Trim().ToLower();
+                var profTerm = profesional.Trim();
                 citasQuery = citasQuery.Where(c =>
                     c.Profesional != null && (
-                        ((c.Profesional.Nombres ?? "") + " " + (c.Profesional.Apellidos ?? "")).ToLower().Contains(profLower) ||
-                        (c.Profesional.Usuario != null && ((c.Profesional.Usuario.Nombre ?? "") + " " + (c.Profesional.Usuario.Apellidos ?? "")).ToLower().Contains(profLower))
+                        ((c.Profesional.Nombres ?? "") + " " + (c.Profesional.Apellidos ?? "")).Contains(profTerm, StringComparison.OrdinalIgnoreCase) ||
+                        (c.Profesional.Usuario != null && ((c.Profesional.Usuario.Nombre ?? "") + " " + (c.Profesional.Usuario.Apellidos ?? "")).Contains(profTerm, StringComparison.OrdinalIgnoreCase))
                     )
                 );
             }
@@ -704,25 +696,25 @@ public partial class GestionProfesionalesController : Controller
 
             if (!string.IsNullOrWhiteSpace(pagination.Search))
             {
-                var searchTerm = pagination.Search.Trim().ToLower();
+                var searchTerm = pagination.Search.Trim();
                 profesionalesQuery = profesionalesQuery.Where(p =>
-                    (p.Usuario != null && ((p.Usuario.Nombre != null && p.Usuario.Nombre.ToLower().Contains(searchTerm)) || (p.Usuario.Apellidos != null && p.Usuario.Apellidos.ToLower().Contains(searchTerm)))) ||
-                    (p.Nombres != null && p.Nombres.ToLower().Contains(searchTerm)) ||
-                    (p.Apellidos != null && p.Apellidos.ToLower().Contains(searchTerm)) ||
-                    (p.RegistroMedico != null && p.RegistroMedico.ToLower().Contains(searchTerm)) ||
-                    (p.Especialidades.Any(pe => pe.Especialidad != null && pe.Especialidad.Nombre.ToLower().Contains(searchTerm))));
+                    (p.Usuario != null && ((p.Usuario.Nombre != null && p.Usuario.Nombre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) || (p.Usuario.Apellidos != null && p.Usuario.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))) ||
+                    (p.Nombres != null && p.Nombres.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (p.Apellidos != null && p.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (p.RegistroMedico != null && p.RegistroMedico.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (p.Especialidades.Any(pe => pe.Especialidad != null && pe.Especialidad.Nombre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))));
             }
 
             if (!string.IsNullOrWhiteSpace(pagination.Profesional))
             {
-                var especialidad = pagination.Profesional.Trim().ToLower();
-                profesionalesQuery = profesionalesQuery.Where(p => p.Especialidades.Any(pe => pe.Especialidad != null && pe.Especialidad.Nombre.ToLower() == especialidad));
+                var especialidad = pagination.Profesional.Trim();
+                profesionalesQuery = profesionalesQuery.Where(p => p.Especialidades.Any(pe => pe.Especialidad != null && pe.Especialidad.Nombre.Equals(especialidad, StringComparison.OrdinalIgnoreCase)));
             }
 
             if (!string.IsNullOrWhiteSpace(pagination.Estado))
             {
-                var estado = pagination.Estado.Trim().ToLower();
-                profesionalesQuery = profesionalesQuery.Where(p => p.Estado != null && p.Estado.ToLower() == estado);
+                var estado = pagination.Estado.Trim();
+                profesionalesQuery = profesionalesQuery.Where(p => p.Estado != null && p.Estado.Equals(estado, StringComparison.OrdinalIgnoreCase));
             }
 
             profesionalesQuery = profesionalesQuery.OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres);
@@ -744,7 +736,7 @@ public partial class GestionProfesionalesController : Controller
                 .ToListAsync(ct);
             ViewData["ReturnUrl"] = returnUrl;
 
-            if (editId.HasValue && editId.Value > 0)
+            if (editId is > 0)
             {
                 try
                 {

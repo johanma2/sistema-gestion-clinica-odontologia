@@ -51,7 +51,7 @@ namespace SmileTrack_MVC.Models.Entities
         [ForeignKey(nameof(IdUsuario))]
         public Usuario? Usuario { get; set; }
 
-        public ICollection<Profesional_Especialidad> Especialidades { get; set; } = new List<Profesional_Especialidad>();
+        public ICollection<Profesional_Especialidad> Especialidades { get; set; } = [];
 
         [NotMapped]
         public string NombreProfesional => Usuario != null ? $"{Usuario.Nombre} {Usuario.Apellidos}".Trim() : $"{Nombres} {Apellidos}".Trim();

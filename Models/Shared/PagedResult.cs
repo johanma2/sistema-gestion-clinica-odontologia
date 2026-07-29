@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace SmileTrack_MVC.Models.Shared;
 
@@ -9,7 +8,7 @@ public class PagedResult<T>
     public int PageSize { get; set; }
     public int TotalCount { get; set; }
     public int TotalPages => PageSize > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 0;
-    public IReadOnlyList<T> Items { get; set; } = Array.Empty<T>();
+    public IReadOnlyList<T> Items { get; set; } = [];
     public bool HasPreviousPage => Page > 1;
     public bool HasNextPage => Page < TotalPages;
 
@@ -18,7 +17,7 @@ public class PagedResult<T>
         Page = page < 1 ? 1 : page,
         PageSize = pageSize < 1 ? 10 : pageSize,
         TotalCount = 0,
-        Items = new List<T>()
+        Items = []
     };
 }
 
@@ -43,7 +42,7 @@ public static class PagedResultExtensions
             }
 
             var items = totalCount == 0
-                ? new List<T>()
+                ? []
                 : await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
 
             return new PagedResult<T>

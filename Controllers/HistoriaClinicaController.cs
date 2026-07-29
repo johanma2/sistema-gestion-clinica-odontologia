@@ -9,14 +9,9 @@ using SmileTrack_MVC.Models.ViewModels;
 
 namespace SmileTrack_MVC.Controllers;
 
-public class HistoriaClinicaController : Controller
+public class HistoriaClinicaController(AppDbContext context) : Controller
 {
-    private readonly AppDbContext _context;
-
-    public HistoriaClinicaController(AppDbContext context)
-    {
-        _context = context;
-    }
+    private readonly AppDbContext _context = context;
 
     [HttpGet]
     [Authorize(Roles = "Administrador")]
@@ -114,7 +109,7 @@ public async Task<IActionResult> Stpac02Historial()
 
         vm.GrupoSanguineo = string.IsNullOrWhiteSpace(paciente.GrupoSanguineo) ? "N/D" : paciente.GrupoSanguineo;
         vm.Alergias = string.IsNullOrWhiteSpace(paciente.Alergias)
-            ? new List<string>()
+            ? []
             : paciente.Alergias.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         vm.AntecedentesMedicos = string.IsNullOrWhiteSpace(paciente.AntecedentesMedicos)
             ? "Sin antecedentes registrados"

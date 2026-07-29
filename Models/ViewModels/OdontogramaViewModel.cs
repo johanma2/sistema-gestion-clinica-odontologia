@@ -16,14 +16,14 @@ public class OdontogramaViewModel
 public class OdontogramaGuardarRequest
 {
     public int? PacienteId { get; set; }
-    public Dictionary<string, OdontogramaRegistroPayload> Registros { get; set; } = new();
-    public Dictionary<string, string> MapeoFDI { get; set; } = new();
+    public Dictionary<string, OdontogramaRegistroPayload> Registros { get; set; } = [];
+    public Dictionary<string, string> MapeoFDI { get; set; } = [];
 }
 
 public class OdontogramaRegistroPayload
 {
     public string? NombrePieza { get; set; }
-    public List<OdontogramaTratamientoPayload> Tratamientos { get; set; } = new();
+    public List<OdontogramaTratamientoPayload> Tratamientos { get; set; } = [];
 }
 
 public class OdontogramaTratamientoPayload

@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.Entities;
+using System.Security.Claims;
+using System.Net;
+using System.Text.Json;
 
     var builder = WebApplication.CreateBuilder(args);
     builder.Host.UseSerilog(dispose: true);
@@ -18,8 +21,8 @@ using SmileTrack_MVC.Models.Entities;
 
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(3),
             errorNumbersToAdd: null)));
 
     builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -40,7 +43,7 @@ using SmileTrack_MVC.Models.Entities;
     app.UseSerilogRequestLogging(options =>
     {
         options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} respondio {StatusCode} en {Elapsed:0.0000} ms";
-        options.GetLevel = (ctx, dur, ex) =>
+        options.GetLevel = (_, dur, ex) =>
             ex != null ? Serilog.Events.LogEventLevel.Error :
             dur > 1000 ? Serilog.Events.LogEventLevel.Warning :
             Serilog.Events.LogEventLevel.Information;
@@ -90,7 +93,7 @@ using SmileTrack_MVC.Models.Entities;
                 }
 
                 var esApi = context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
-                          || (context.Request.Headers["Accept"].ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase));
+                          || (context.Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase));
 
                 context.Response.Clear();
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
@@ -107,7 +110,7 @@ using SmileTrack_MVC.Models.Entities;
                             ? $"Se presento un error inesperado. RequestId: {requestId}. Detalle: {ex.Message}"
                             : $"Se presento un error inesperado. Proporcione este codigo al soporte: {requestId}",
                         instance = context.Request.Path.Value,
-                        requestId = requestId
+                        requestId
                     };
                     await context.Response.WriteAsync(JsonSerializer.Serialize(problem, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
                 }
@@ -306,7 +309,7 @@ using (var scope = app.Services.CreateScope())
 
     // ─── Seed de Pacientes Reales ───────────────────────────────
     var fakePacientes = await db.Pacientes.Where(p => p.Nombres == "Paciente" && p.Apellidos == "Prueba").ToListAsync();
-    if (fakePacientes.Any())
+    if (fakePacientes.Count > 0)
     {
         db.Pacientes.RemoveRange(fakePacientes);
         await db.SaveChangesAsync();
@@ -325,7 +328,7 @@ using (var scope = app.Services.CreateScope())
 
     // ─── Seed de Profesionales Reales ────────────────────────────
     var fakeProfesionales = await db.Profesionales.Where(p => p.Nombres == "Doctor" && p.Apellidos == "Prueba").ToListAsync();
-    if (fakeProfesionales.Any())
+    if (fakeProfesionales.Count > 0)
     {
         db.Profesionales.RemoveRange(fakeProfesionales);
         await db.SaveChangesAsync();

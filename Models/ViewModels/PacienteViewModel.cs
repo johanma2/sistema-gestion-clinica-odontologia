@@ -9,9 +9,9 @@ public class PacienteViewModel
     public DateTime? LastVisit { get; set; }
     public string Diagnosis { get; set; } = string.Empty;
     public DateTime? NextVisit { get; set; }
-    public List<string> Allergies { get; set; } = new();
+    public List<string> Allergies { get; set; } = [];
     public string Color { get; set; } = "blue";
-    public List<PacienteHistorialViewModel> History { get; set; } = new();
+    public List<PacienteHistorialViewModel> History { get; set; } = [];
 }
 
 public class PacienteHistorialViewModel

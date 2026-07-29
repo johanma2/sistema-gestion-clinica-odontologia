@@ -11,16 +11,11 @@ using System.Net;
 
 namespace SmileTrack_MVC.Controllers;
 
-public class GestionCitasController : Controller
+public class GestionCitasController(AppDbContext context, ILogger<GestionCitasController> logger) : Controller
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<GestionCitasController> _logger;
-
-    public GestionCitasController(AppDbContext context, ILogger<GestionCitasController> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
+    private readonly AppDbContext _context = context;
+    private readonly ILogger<GestionCitasController> _logger = logger;
+    private static readonly char[] _separadorEspacio = [' '];
 
     private const string MensajeErrorFallback =
         "Ocurrió un error inesperado al cargar la página. Por favor intente nuevamente. Si el problema persiste, contacte al soporte.";
@@ -424,7 +419,7 @@ public class GestionCitasController : Controller
                 return Redirect(returnUrlSafe);
             }
 
-            if (model.IdCita.HasValue && model.IdCita.Value > 0)
+            if (model.IdCita is > 0)
             {
                 var cita = await _context.Citas.FindAsync([model.IdCita.Value], ct);
                 if (cita == null)
@@ -682,7 +677,7 @@ public class GestionCitasController : Controller
                         NumeroDia = fecha.Day.ToString(),
                         EsHoy = fecha.Date == hoy.Date,
                         Cerrado = fecha.DayOfWeek == DayOfWeek.Sunday,
-                        Citas = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaCitaViewModel>()
+                        Citas = []
                     });
                 }
             }
@@ -727,17 +722,17 @@ public class GestionCitasController : Controller
 
             if (!string.IsNullOrWhiteSpace(pagination.Search))
             {
-                var searchTerm = pagination.Search.Trim().ToLower();
+                var searchTerm = pagination.Search.Trim();
                 citasQuery = citasQuery.Where(c =>
-                    (c.Paciente != null && ((c.Paciente.Nombres != null && c.Paciente.Nombres.ToLower().Contains(searchTerm)) || (c.Paciente.Apellidos != null && c.Paciente.Apellidos.ToLower().Contains(searchTerm)))) ||
-                    (c.Profesional != null && c.Profesional.Usuario != null && ((c.Profesional.Usuario.Nombre != null && c.Profesional.Usuario.Nombre.ToLower().Contains(searchTerm)) || (c.Profesional.Usuario.Apellidos != null && c.Profesional.Usuario.Apellidos.ToLower().Contains(searchTerm)))) ||
-                    (c.Notas != null && c.Notas.ToLower().Contains(searchTerm)));
+                    (c.Paciente != null && ((c.Paciente.Nombres != null && c.Paciente.Nombres.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) || (c.Paciente.Apellidos != null && c.Paciente.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))) ||
+                    (c.Profesional != null && c.Profesional.Usuario != null && ((c.Profesional.Usuario.Nombre != null && c.Profesional.Usuario.Nombre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) || (c.Profesional.Usuario.Apellidos != null && c.Profesional.Usuario.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))) ||
+                    (c.Notas != null && c.Notas.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
             }
 
             if (!string.IsNullOrWhiteSpace(pagination.Estado))
             {
-                var estado = pagination.Estado.Trim().ToLower();
-                citasQuery = citasQuery.Where(c => c.Estado != null && c.Estado.ToLower() == estado);
+                var estado = pagination.Estado.Trim();
+                citasQuery = citasQuery.Where(c => c.Estado != null && c.Estado.Equals(estado, StringComparison.OrdinalIgnoreCase));
             }
 
             if (int.TryParse(pagination.Profesional, out var idProfesional) && idProfesional > 0)
@@ -966,7 +961,7 @@ public class GestionCitasController : Controller
             var userName = User.Identity?.Name ?? "Usuario SmileTrack";
             var emailClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
 
-            var partesNombre = userName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var partesNombre = userName.Split(_separadorEspacio, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var initials = string.Join("", partesNombre.Take(2).Select(p => char.ToUpperInvariant(p[0])));
             if (string.IsNullOrWhiteSpace(initials)) initials = "ST";
 

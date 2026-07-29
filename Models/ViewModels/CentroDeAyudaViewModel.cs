@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace SmileTrack_MVC.Models.ViewModels;
 
 public class GuiaPasoViewModel
@@ -11,16 +9,13 @@ public class GuiaPasoViewModel
 
 public class GuiaUsuarioViewModel
 {
-    // Datos del usuario autenticado 
-    
-    // Contenido del artículo
     public string Title { get; set; } = "Cómo programar una cita";
     public string Introduction { get; set; } = "Aprende paso a paso cómo agendar una nueva cita en SmileTrack de forma correcta, asignando paciente, profesional, consultorio y servicio.";
     public string VideoAltText { get; set; } = "Tutorial de cómo programar una cita";
     public string VideoThumbnailUrl { get; set; } = "/images/tutorial-cita-thumb.jpg";
-    public List<GuiaPasoViewModel> Steps { get; set; } = new();
-    public List<string> RelatedTopics { get; set; } = new();
-    public List<string> Tags { get; set; } = new();
+    public List<GuiaPasoViewModel> Steps { get; set; } = [];
+    public List<string> RelatedTopics { get; set; } = [];
+    public List<string> Tags { get; set; } = [];
 }
 
 // UsuarioViewModel 

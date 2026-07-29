@@ -3,9 +3,8 @@ using SmileTrack_MVC.Models.Entities;
 
 namespace SmileTrack_MVC.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Rol> Roles => Set<Rol>();
