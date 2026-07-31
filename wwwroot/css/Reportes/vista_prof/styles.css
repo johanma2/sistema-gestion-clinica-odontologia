@@ -1,0 +1,118 @@
+/* =============================================
+   SMILETRACK — REPORTES PROFESIONAL (styles.css)
+   Idéntico en dimensiones y tokens a st-odo-01-dashboard / vista_admin
+   ============================================= */
+
+@import url("../vista_admin/styles.css");
+
+/* Ancho del sidebar unificado a 220px (estándar de todos los módulos) */
+:root {
+  --sidebar-w: 220px !important;
+}
+
+.sidebar {
+  width: 220px !important;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #0f2057 0%, #1a3580 100%) !important;
+}
+
+.main {
+  margin-left: 220px !important;
+  padding: 24px 28px 40px !important;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Logo en el sidebar (estilo estándar integrado) */
+.sidebar .sidebar-logo,
+.sidebar-logo {
+  padding: 0 18px 20px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  margin: 0 0 10px 0 !important;
+  text-align: center !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.sidebar .sidebar-logo img.logo-img,
+.sidebar-logo .logo-img {
+  width: 100% !important;
+  max-width: 140px !important;
+  height: auto !important;
+  max-height: 55px !important;
+  object-fit: contain !important;
+  display: block !important;
+  margin: 0 auto !important;
+  border-radius: 8px !important;
+}
+
+/* Información de usuario en el pie del sidebar */
+.sidebar-user .user-role {
+  color: #e2e8f0 !important;
+  font-weight: 600 !important;
+}
+
+.sidebar-user .user-email {
+  color: #6a80a8 !important;
+}
+
+/* Grid de métricas */
+.stats-grid {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)) !important;
+  gap: 14px !important;
+}
+
+/* Barras de progreso de tratamientos */
+.prof-revenue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 6px 0;
+}
+
+.prof-revenue-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prof-revenue-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.prof-revenue-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.prof-revenue-value {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.progress-track {
+  height: 10px !important;
+  background: #e2e8f0 !important;
+  border-radius: 9999px !important;
+  overflow: hidden !important;
+}
+
+.progress-fill {
+  height: 100% !important;
+  background: linear-gradient(90deg, #1a56cc, #3b82f6) !important;
+  border-radius: 9999px !important;
+  transition: width 0.6s ease;
+}
+
+/* Responsive para dispositivos móviles */
+@media (max-width: 680px) {
+  .main {
+    margin-left: 0 !important;
+    padding: 58px 14px 32px !important;
+  }
+}
