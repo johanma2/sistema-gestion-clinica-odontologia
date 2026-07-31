@@ -57,15 +57,7 @@ public class AccesoYSeguridadController(AppDbContext context) : Controller
             .Include(u => u.Rol)
             .FirstOrDefaultAsync(u => u.Correo == correo && u.Estado == "activo");
 
-        var passwordValida = false;
-        if (usuario != null)
-        {
-            passwordValida = BCrypt.Net.BCrypt.Verify(password, usuario.Contrasena);
-            if (!passwordValida && string.Equals(password, "123456", StringComparison.Ordinal))
-            {
-                passwordValida = true;
-            }
-        }
+        var passwordValida = usuario != null && BCrypt.Net.BCrypt.Verify(password, usuario.Contrasena);
 
         if (usuario == null || !passwordValida)
         {
@@ -73,18 +65,23 @@ public class AccesoYSeguridadController(AppDbContext context) : Controller
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
         }
 
+        // El rol siempre se toma de la base de datos (fuente de verdad), nunca del botón que el
+        // usuario haya presionado en pantalla. Antes se confiaba en el valor enviado por el
+        // formulario, lo que permitía iniciar sesión con un rol distinto al asignado realmente
+        // y hacía que la información propia del rol correcto "desapareciera".
         var rolSeleccionado = NormalizarRol(rol);
-        var rolDesdeBase = NormalizarRol(usuario.Rol?.NombreRol);
-        var rolNombre = !string.IsNullOrWhiteSpace(rolSeleccionado) ? rolSeleccionado : rolDesdeBase;
-
-        if (!redirecciones.ContainsKey(rolNombre) && !string.IsNullOrWhiteSpace(rolDesdeBase))
-        {
-            rolNombre = rolDesdeBase;
-        }
+        var rolNombre = NormalizarRol(usuario.Rol?.NombreRol);
 
         if (!redirecciones.TryGetValue(rolNombre, out var redirectUrl))
         {
             ModelState.AddModelError("", "El usuario no tiene un rol válido asignado.");
+            return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
+        }
+
+        if (!string.IsNullOrWhiteSpace(rolSeleccionado) &&
+            !string.Equals(rolSeleccionado, rolNombre, StringComparison.OrdinalIgnoreCase))
+        {
+            ModelState.AddModelError("", $"Esta cuenta no tiene el rol '{rolSeleccionado}'. Ingresa seleccionando '{rolNombre}'.");
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
         }
 
@@ -95,6 +92,35 @@ public class AccesoYSeguridadController(AppDbContext context) : Controller
             new(ClaimTypes.Email, usuario.Correo),
             new(ClaimTypes.Role, rolNombre),
         };
+
+        // Se agrega el id de la ficha de Paciente/Profesional vinculada al usuario como claim,
+        // para que quede disponible en toda la sesión (Views, Controllers) sin tener que volver
+        // a buscarla por correo en cada pantalla. Esto evita que se "pierda" esa información al
+        // navegar entre las distintas vistas de un mismo rol.
+        if (string.Equals(rolNombre, "Paciente", StringComparison.OrdinalIgnoreCase))
+        {
+            var idPaciente = await _context.Pacientes
+                .Where(p => p.IdUsuario == usuario.IdUsuario)
+                .Select(p => (int?)p.IdPaciente)
+                .FirstOrDefaultAsync();
+
+            if (idPaciente.HasValue)
+            {
+                claims.Add(new Claim("IdPaciente", idPaciente.Value.ToString()));
+            }
+        }
+        else if (string.Equals(rolNombre, "Profesional", StringComparison.OrdinalIgnoreCase))
+        {
+            var idProfesional = await _context.Profesionales
+                .Where(p => p.IdUsuario == usuario.IdUsuario)
+                .Select(p => (int?)p.IdProfesional)
+                .FirstOrDefaultAsync();
+
+            if (idProfesional.HasValue)
+            {
+                claims.Add(new Claim("IdProfesional", idProfesional.Value.ToString()));
+            }
+        }
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);

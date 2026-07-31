@@ -1,4 +1,14 @@
-@{ Layout = null; }
+@{
+    Layout = null;
+    var mensajeErrorServidor = "";
+    foreach (var estadoModelo in ViewData.ModelState.Values)
+    {
+        foreach (var error in estadoModelo.Errors)
+        {
+            mensajeErrorServidor = error.ErrorMessage;
+        }
+    }
+}
 
 <!DOCTYPE html>
 <html lang="es">
@@ -93,9 +103,9 @@
           <a class="link-forgot" href="/acceso-y-seguridad/recover">¿Olvidaste tu contraseña?</a>
         </div>
 
-        <div id="errorMsg" class="error-box hidden" role="alert" aria-live="assertive">
+        <div id="errorMsg" class="error-box @(string.IsNullOrEmpty(mensajeErrorServidor) ? "hidden" : "")" role="alert" aria-live="assertive">
           <span class="material-symbols-outlined" aria-hidden="true">error</span>
-          <span id="errorText"></span>
+          <span id="errorText">@mensajeErrorServidor</span>
         </div>
 
         <button id="loginBtn" class="btn-login" type="submit" aria-busy="false">
