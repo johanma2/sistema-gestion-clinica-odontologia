@@ -1,6 +1,6 @@
 /**
  * SMILETRACK — SEGUIMIENTO TRATAMIENTOS (seguimiento.js)
- * API-ready + Accesibilidad + Persistencia fallback
+ * Versión con filtros avanzados, búsqueda y paginación
  */
 
 // ═══════════════════════════════════════════════════════════════════
@@ -12,14 +12,12 @@ const API_BASE = '/api';
 //  UTILIDADES GLOBALES
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene elemento del DOM con manejo seguro de null
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -28,7 +26,6 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -45,9 +42,8 @@ const showToast = (message, type = 'success') => {
 // ═══════════════════════════════════════════════════════════════════
 
 const seguimientoStorage = {
-  key: 'smiletrack_seguimiento_pedro_garcia',
+  key: 'smiletrack_seguimiento',
   
-  // Carga datos desde localStorage o usa datos de ejemplo
   load: () => {
     const stored = localStorage.getItem(seguimientoStorage.key);
     if (stored) {
@@ -57,47 +53,20 @@ const seguimientoStorage = {
         console.warn('Error al cargar seguimiento, usando datos de ejemplo');
       }
     }
-    // Datos de ejemplo iniciales
+    
+    // Datos de ejemplo actualizados
     return [
-      {
-        id: 1,
-        nombre: 'Ortodoncia',
-        paciente: 'Pedro García',
-        estado: 'en-curso',
-        progreso: 38,
-        inicio: '2026-02-15',
-        estimado: '2026-05-15',
-        sesiones: 3,
-        totalSesiones: 8,
-        nota: '',
-      },
-      {
-        id: 2,
-        nombre: 'Endodoncia pieza 23',
-        paciente: 'María López',
-        estado: 'completado',
-        progreso: 100,
-        inicio: null,
-        finalizado: '2026-03-20',
-        sesiones: 2,
-        totalSesiones: 2,
-        nota: '',
-      },
-      {
-        id: 3,
-        nombre: 'Blanqueamiento',
-        paciente: 'Ana Martínez',
-        estado: 'pausado',
-        progreso: 0,
-        inicio: null,
-        sesiones: 3,
-        totalSesiones: 8,
-        nota: 'Pausado por paciente',
-      },
+      { id: 1, nombre: 'Ortodoncia', tipo: 'Ortodoncia', paciente: 'Pedro García', cedula: '1020345678', odontologo: 'Dr. Carlos Méndez', estado: 'en-curso', progreso: 38, inicio: '2026-02-15', estimado: '2026-05-15', sesiones: 3, totalSesiones: 8, nota: '' },
+      { id: 2, nombre: 'Endodoncia pieza 23', tipo: 'Endodoncia', paciente: 'Laura Martínez', cedula: '1015678901', odontologo: 'Dra. Laura Torres', estado: 'completado', progreso: 100, inicio: '2026-02-01', finalizado: '2026-03-20', sesiones: 2, totalSesiones: 2, nota: '' },
+      { id: 3, nombre: 'Blanqueamiento', tipo: 'Estética', paciente: 'Carlos Ríos', cedula: '1098765432', odontologo: 'Dr. Andrés Ruiz', estado: 'pausado', progreso: 40, inicio: '2026-01-10', sesiones: 2, totalSesiones: 5, nota: 'Pausado por paciente' },
+      { id: 4, nombre: 'Limpieza dental', tipo: 'Profilaxis', paciente: 'Sofía Vargas', cedula: '1032109876', odontologo: 'Dra. Patricia Mora', estado: 'completado', progreso: 100, inicio: '2026-03-01', finalizado: '2026-03-10', sesiones: 1, totalSesiones: 1, nota: '' },
+      { id: 5, nombre: 'Extracción muela del juicio', tipo: 'Cirugía', paciente: 'Andrés Medina', cedula: '1056789012', odontologo: 'Dr. Felipe Silva', estado: 'en-curso', progreso: 60, inicio: '2026-03-05', estimado: '2026-03-25', sesiones: 2, totalSesiones: 3, nota: '' },
+      { id: 6, nombre: 'Ortodoncia invisible', tipo: 'Ortodoncia', paciente: 'María Ospina', cedula: '1067890123', odontologo: 'Dr. Carlos Méndez', estado: 'en-curso', progreso: 25, inicio: '2026-02-20', estimado: '2026-08-20', sesiones: 2, totalSesiones: 12, nota: '' },
+      { id: 7, nombre: 'Corona dental', tipo: 'Prótesis', paciente: 'Felipe Cano', cedula: '1078901234', odontologo: 'Dra. Laura Torres', estado: 'pausado', progreso: 50, inicio: '2026-02-01', sesiones: 1, totalSesiones: 3, nota: 'Esperando laboratorio' },
+      { id: 8, nombre: 'Tratamiento de encías', tipo: 'Periodoncia', paciente: 'Isabel Herrera', cedula: '1089012345', odontologo: 'Dr. Andrés Ruiz', estado: 'completado', progreso: 100, inicio: '2026-01-15', finalizado: '2026-02-28', sesiones: 4, totalSesiones: 4, nota: '' },
     ];
   },
   
-  // Guarda datos en localStorage
   save: (data) => {
     try {
       localStorage.setItem(seguimientoStorage.key, JSON.stringify(data));
@@ -108,7 +77,6 @@ const seguimientoStorage = {
     }
   },
   
-  // Actualiza estado de un tratamiento
   updateTratamiento: (id, updates) => {
     const data = seguimientoStorage.load();
     const idx = data.findIndex(t => t.id === id);
@@ -122,34 +90,22 @@ const seguimientoStorage = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  DATOS Y CONFIGURACIÓN
+//  DATOS Y CONFIGURACIÓN GLOBAL
 // ═══════════════════════════════════════════════════════════════════
 
-// Colores avatar
 const AVATAR_COLORS = ['#3b82f6','#22c55e','#f59e0b','#9333ea','#ef4444','#0ea5e9','#ec4899'];
 
-// Genera color consistente para avatar de paciente
 const avatarColor = (n) => {
   let h = 0;
   for (let i = 0; i < n.length; i++) h = n.charCodeAt(i) + ((h << 5) - h);
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 };
 
-// Genera iniciales para avatar
 const getInitials = (n) => {
   const p = n.trim().split(' ');
   return (p[0]?.[0] || '') + (p[1]?.[0] || '');
 };
 
-// Estado local
-let allTratamientos = [];
-let filtroActivo = 'en-curso';
-
-// ═══════════════════════════════════════════════════════════════════
-//  UTILIDADES DE FECHA
-// ═══════════════════════════════════════════════════════════════════
-
-// Formatea fecha ISO a formato legible
 const fmtFecha = (iso) => {
   if (!iso) return null;
   const [y, m, d] = iso.split('-');
@@ -157,21 +113,191 @@ const fmtFecha = (iso) => {
   return `${parseInt(d)} ${meses[parseInt(m)-1]} ${y}`;
 };
 
+// Estado global de la aplicación
+let allTratamientos = [];
+let tratamientosFiltrados = [];
+let paginaActual = 1;
+let tratamientosPorPagina = 10;
+
+// ═══════════════════════════════════════════════════════════════════
+//  ACTUALIZAR ESTADÍSTICAS
+// ═══════════════════════════════════════════════════════════════════
+
+const updateStats = (data) => {
+  const total = data.length;
+  const enCurso = data.filter(t => t.estado === 'en-curso').length;
+  const completado = data.filter(t => t.estado === 'completado').length;
+  const pausado = data.filter(t => t.estado === 'pausado').length;
+  
+  const statTotal = safeGetElement('statTotal');
+  const statEnCurso = safeGetElement('statEnCurso');
+  const statCompletado = safeGetElement('statCompletado');
+  const statPausado = safeGetElement('statPausado');
+  
+  if (statTotal) statTotal.textContent = total;
+  if (statEnCurso) statEnCurso.textContent = enCurso;
+  if (statCompletado) statCompletado.textContent = completado;
+  if (statPausado) statPausado.textContent = pausado;
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  POPULAR FILTROS DROPDOWN
+// ═══════════════════════════════════════════════════════════════════
+
+const populateFilters = (data) => {
+  const pacientes = [...new Set(data.map(t => t.paciente))].sort();
+  const tipos = [...new Set(data.map(t => t.tipo))].sort();
+  const odontologos = [...new Set(data.map(t => t.odontologo))].sort();
+  
+  const filterPaciente = safeGetElement('filterPaciente');
+  if (filterPaciente) {
+    const currentValue = filterPaciente.value;
+    filterPaciente.innerHTML = '<option value="">Todos los pacientes</option>';
+    pacientes.forEach(p => {
+      const option = document.createElement('option');
+      option.value = p;
+      option.textContent = p;
+      filterPaciente.appendChild(option);
+    });
+    filterPaciente.value = currentValue;
+  }
+  
+  const filterTipo = safeGetElement('filterTipo');
+  if (filterTipo) {
+    const currentValue = filterTipo.value;
+    filterTipo.innerHTML = '<option value="">Todos los tipos</option>';
+    tipos.forEach(t => {
+      const option = document.createElement('option');
+      option.value = t;
+      option.textContent = t;
+      filterTipo.appendChild(option);
+    });
+    filterTipo.value = currentValue;
+  }
+  
+  const filterOdontologo = safeGetElement('filterOdontologo');
+  if (filterOdontologo) {
+    const currentValue = filterOdontologo.value;
+    filterOdontologo.innerHTML = '<option value="">Todos los odontólogos</option>';
+    odontologos.forEach(o => {
+      const option = document.createElement('option');
+      option.value = o;
+      option.textContent = o;
+      filterOdontologo.appendChild(option);
+    });
+    filterOdontologo.value = currentValue;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  FILTRAR Y BUSCAR
+// ═══════════════════════════════════════════════════════════════════
+
+const aplicarFiltros = () => {
+  const searchInput = safeGetElement('searchInput');
+  const filterPaciente = safeGetElement('filterPaciente');
+  const filterEstado = safeGetElement('filterEstado');
+  const filterTipo = safeGetElement('filterTipo');
+  const filterOdontologo = safeGetElement('filterOdontologo');
+  
+  const searchTerm = searchInput?.value.toLowerCase().trim() || '';
+  const pacienteFilter = filterPaciente?.value || '';
+  const estadoFilter = filterEstado?.value || '';
+  const tipoFilter = filterTipo?.value || '';
+  const odontologoFilter = filterOdontologo?.value || '';
+  
+  tratamientosFiltrados = allTratamientos.filter(t => {
+    const matchSearch = !searchTerm || 
+      t.paciente.toLowerCase().includes(searchTerm) ||
+      t.nombre.toLowerCase().includes(searchTerm) ||
+      t.cedula.includes(searchTerm);
+    
+    const matchPaciente = !pacienteFilter || t.paciente === pacienteFilter;
+    const matchEstado = !estadoFilter || t.estado === estadoFilter;
+    const matchTipo = !tipoFilter || t.tipo === tipoFilter;
+    const matchOdontologo = !odontologoFilter || t.odontologo === odontologoFilter;
+    
+    return matchSearch && matchPaciente && matchEstado && matchTipo && matchOdontologo;
+  });
+  
+  paginaActual = 1;
+  renderizarTodo();
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  PAGINACIÓN
+// ═══════════════════════════════════════════════════════════════════
+
+const obtenerPaginaActual = () => {
+  const inicio = (paginaActual - 1) * tratamientosPorPagina;
+  const fin = inicio + tratamientosPorPagina;
+  return tratamientosFiltrados.slice(inicio, fin);
+};
+
+const getTotalPaginas = () => {
+  return Math.ceil(tratamientosFiltrados.length / tratamientosPorPagina);
+};
+
+const renderizarPaginacion = () => {
+  const pagination = safeGetElement('pagination');
+  const paginationNumbers = safeGetElement('paginationNumbers');
+  const btnFirst = safeGetElement('btnFirst');
+  const btnPrev = safeGetElement('btnPrev');
+  const btnNext = safeGetElement('btnNext');
+  const btnLast = safeGetElement('btnLast');
+  
+  if (!pagination || !paginationNumbers) return;
+  
+  const totalPaginas = getTotalPaginas();
+  
+  if (totalPaginas <= 1) {
+    pagination.style.display = 'none';
+    return;
+  }
+  
+  pagination.style.display = 'flex';
+  
+  if (btnFirst) btnFirst.disabled = paginaActual === 1;
+  if (btnPrev) btnPrev.disabled = paginaActual === 1;
+  if (btnNext) btnNext.disabled = paginaActual === totalPaginas;
+  if (btnLast) btnLast.disabled = paginaActual === totalPaginas;
+  
+  paginationNumbers.innerHTML = '';
+  
+  let startPage = Math.max(1, paginaActual - 2);
+  let endPage = Math.min(totalPaginas, startPage + 4);
+  
+  if (endPage - startPage < 4) {
+    startPage = Math.max(1, endPage - 4);
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    const btn = document.createElement('button');
+    btn.className = `pagination-btn ${i === paginaActual ? 'active' : ''}`;
+    btn.textContent = i;
+    btn.setAttribute('aria-label', `Página ${i}`);
+    btn.setAttribute('aria-current', i === paginaActual ? 'page' : 'false');
+    btn.addEventListener('click', () => {
+      paginaActual = i;
+      renderizarTodo();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    paginationNumbers.appendChild(btn);
+  }
+};
+
 // ═══════════════════════════════════════════════════════════════════
 //  RENDER: LISTA DE TRATAMIENTOS
 // ═══════════════════════════════════════════════════════════════════
 
-// Renderiza lista de tratamientos con accesibilidad
-const renderLista = (data) => {
+const renderLista = () => {
   const list = safeGetElement('tratamientosList');
   const empty = safeGetElement('emptyState');
   if (!list) return;
 
-  const filtrados = filtroActivo === 'todos'
-    ? data
-    : data.filter(t => t.estado === filtroActivo);
+  const tratamientosPagina = obtenerPaginaActual();
 
-  if (!filtrados.length) {
+  if (!tratamientosPagina.length) {
     list.innerHTML = '';
     if (empty) {
       empty.style.display = 'block';
@@ -185,9 +311,8 @@ const renderLista = (data) => {
     empty.setAttribute('aria-hidden', 'true');
   }
 
-  list.innerHTML = filtrados.map(t => buildCard(t)).join('');
+  list.innerHTML = tratamientosPagina.map(t => buildCard(t)).join('');
 
-  // Animar barras después del render con requestAnimationFrame
   requestAnimationFrame(() => {
     document.querySelectorAll('.prog-bar[data-width]').forEach(bar => {
       bar.style.width = bar.dataset.width + '%';
@@ -195,12 +320,10 @@ const renderLista = (data) => {
   });
 };
 
-// Construye HTML de una card de tratamiento con accesibilidad
 const buildCard = (t) => {
   const color = avatarColor(t.paciente);
   const inits = getInitials(t.paciente);
 
-  // Badge
   const badgeMap = {
     'en-curso':   { cls: 'badge-en-curso', label: 'En curso' },
     'completado': { cls: 'badge-completado', label: 'Completado' },
@@ -208,12 +331,10 @@ const buildCard = (t) => {
   };
   const badge = badgeMap[t.estado] || badgeMap['pausado'];
 
-  // Barra de progreso
   let barClass = 'bar-orange', pctClass = 'pct-orange';
   if (t.estado === 'completado') { barClass = 'bar-green'; pctClass = 'pct-green'; }
   if (t.estado === 'pausado')    { barClass = 'bar-red'; pctClass = 'pct-red'; }
 
-  // Footer según estado
   let footer = '';
   if (t.estado === 'en-curso') {
     footer = `
@@ -228,7 +349,7 @@ const buildCard = (t) => {
     `;
   } else if (t.estado === 'pausado') {
     footer = `
-      <span class="trat-meta pausado-note">${t.nota || 'Pausado'} · ${t.sesiones} de ${t.sesiones} sesiones</span>
+      <span class="trat-meta pausado-note">${t.nota || 'Pausado'}</span>
       <span class="trat-meta" style="margin-left:auto">Sesiones: <strong>${t.sesiones} de ${t.totalSesiones}</strong></span>
     `;
   }
@@ -236,12 +357,18 @@ const buildCard = (t) => {
   return `
     <div class="trat-card estado-${t.estado}" role="listitem" aria-labelledby="trat-title-${t.id}" tabindex="0">
       <div class="trat-header">
-        <span class="trat-nombre" id="trat-title-${t.id}">${t.nombre}</span>
+        <div>
+          <span class="trat-nombre" id="trat-title-${t.id}">${t.nombre}</span>
+          <span class="trat-tipo">${t.tipo}</span>
+        </div>
         <span class="badge-estado ${badge.cls}" role="status" aria-label="Estado: ${badge.label}">${badge.label}</span>
       </div>
       <div class="trat-paciente">
         <div class="p-chip" style="background:${color}" aria-hidden="true">${inits}</div>
-        <span class="p-chip-name">${t.paciente}</span>
+        <div class="p-info">
+          <span class="p-chip-name">${t.paciente}</span>
+          <span class="p-odontologo">${t.odontologo}</span>
+        </div>
       </div>
       <div class="trat-progress-row">
         <span class="prog-pct ${pctClass}" aria-label="Progreso: ${t.progreso}%">${t.progreso}%</span>
@@ -255,70 +382,86 @@ const buildCard = (t) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  ACTUALIZAR CONTADORES DE FILTROS
+//  ACTUALIZAR CONTADOR DE RESULTADOS
 // ═══════════════════════════════════════════════════════════════════
 
-// Actualiza contadores de filtros
-const updateCounts = (data) => {
-  const cntCurso = safeGetElement('cntCurso');
-  const cntCompletado = safeGetElement('cntCompletado');
-  const cntPausado = safeGetElement('cntPausado');
+const actualizarContador = () => {
+  const resultsCount = safeGetElement('resultsCount');
+  if (!resultsCount) return;
   
-  if (cntCurso) cntCurso.textContent = data.filter(t => t.estado === 'en-curso').length;
-  if (cntCompletado) cntCompletado.textContent = data.filter(t => t.estado === 'completado').length;
-  if (cntPausado) cntPausado.textContent = data.filter(t => t.estado === 'pausado').length;
+  const total = tratamientosFiltrados.length;
+  if (total === 0) {
+    resultsCount.textContent = 'Mostrando 0 tratamientos';
+  } else {
+    const inicio = (paginaActual - 1) * tratamientosPorPagina + 1;
+    const fin = Math.min(paginaActual * tratamientosPorPagina, total);
+    resultsCount.textContent = `Mostrando ${inicio}-${fin} de ${total} tratamientos`;
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  FILTROS DE ESTADO
+//  RENDERIZAR TODO (Orquestador)
 // ═══════════════════════════════════════════════════════════════════
 
-// Inicializa tabs de filtros con accesibilidad
-const initFilterTabs = () => {
-  const filterTabs = safeGetElement('filterTabs');
-  if (!filterTabs) return;
+const renderizarTodo = () => {
+  renderLista();
+  renderizarPaginacion();
+  actualizarContador();
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  INICIALIZAR EVENTOS
+// ═══════════════════════════════════════════════════════════════════
+
+const initEventos = () => {
+  const searchInput = safeGetElement('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(aplicarFiltros, 300));
+  }
   
-  filterTabs.addEventListener('click', function(e) {
-    const btn = e.target.closest('.ftab');
-    if (!btn) return;
-    
-    // Actualizar estado visual de tabs
-    document.querySelectorAll('.ftab').forEach(b => {
-      b.classList.remove('active');
-      b.setAttribute('aria-selected', 'false');
-    });
-    btn.classList.add('active');
-    btn.setAttribute('aria-selected', 'true');
-    
-    // Actualizar filtro y renderizar
-    filtroActivo = btn.dataset.filter;
-    renderLista(allTratamientos);
-  });
-  
-  // Soporte para teclado en tabs
-  filterTabs.addEventListener('keydown', (e) => {
-    const tabs = Array.from(filterTabs.querySelectorAll('.ftab'));
-    const currentIndex = tabs.findIndex(t => t.classList.contains('active'));
-    
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      const nextIndex = (currentIndex + 1) % tabs.length;
-      tabs[nextIndex]?.click();
-      tabs[nextIndex]?.focus();
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-      tabs[prevIndex]?.click();
-      tabs[prevIndex]?.focus();
+  ['filterPaciente', 'filterEstado', 'filterTipo', 'filterOdontologo'].forEach(id => {
+    const filter = safeGetElement(id);
+    if (filter) {
+      filter.addEventListener('change', aplicarFiltros);
     }
   });
+  
+  const filterPorPagina = safeGetElement('filterPorPagina');
+  if (filterPorPagina) {
+    filterPorPagina.addEventListener('change', (e) => {
+      tratamientosPorPagina = parseInt(e.target.value);
+      paginaActual = 1;
+      renderizarTodo();
+    });
+  }
+  
+  const btnFirst = safeGetElement('btnFirst');
+  const btnPrev = safeGetElement('btnPrev');
+  const btnNext = safeGetElement('btnNext');
+  const btnLast = safeGetElement('btnLast');
+  
+  if (btnFirst) btnFirst.addEventListener('click', () => { paginaActual = 1; renderizarTodo(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  if (btnPrev) btnPrev.addEventListener('click', () => { if (paginaActual > 1) { paginaActual--; renderizarTodo(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+  if (btnNext) btnNext.addEventListener('click', () => { if (paginaActual < getTotalPaginas()) { paginaActual++; renderizarTodo(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+  if (btnLast) btnLast.addEventListener('click', () => { paginaActual = getTotalPaginas(); renderizarTodo(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  
+  const btnClearFilters = safeGetElement('btnClearFilters');
+  if (btnClearFilters) {
+    btnClearFilters.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      const fp = safeGetElement('filterPaciente'); if (fp) fp.value = '';
+      const fe = safeGetElement('filterEstado'); if (fe) fe.value = '';
+      const ft = safeGetElement('filterTipo'); if (ft) ft.value = '';
+      const fo = safeGetElement('filterOdontologo'); if (fo) fo.value = '';
+      aplicarFiltros();
+    });
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  SIDEBAR MÓVIL CON GESTIÓN DE FOCO Y ARIA
+//  SIDEBAR MÓVIL
 // ═══════════════════════════════════════════════════════════════════
 
-// Inicializa sidebar móvil con gestión de foco y ARIA
 const initSidebar = () => {
   const ham = safeGetElement('hamburger');
   const sb = safeGetElement('sidebar');
@@ -343,16 +486,12 @@ const initSidebar = () => {
   ham.addEventListener('click', () => toggleMenu(true));
   ov.addEventListener('click', () => toggleMenu(false));
 
-  // ✅ Navegación: cerrar menú en móvil, SIN bloquear enlaces
   sb.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
-      if (window.innerWidth <= 680) {
-        toggleMenu(false);
-      }
+      if (window.innerWidth <= 680) toggleMenu(false);
     });
   });
 
-  // Escape cierra sidebar
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && sb.classList.contains('open')) {
       e.preventDefault();
@@ -362,18 +501,16 @@ const initSidebar = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  API CALLS (Listas para conectar al backend C#)
+//  API CALLS
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene tratamientos desde API
 async function fetchTratamientos() {
   try {
-    // En producción: fetch real a API
-    // const res = await fetch(`${API_BASE}/patients/1/tratamientos`);
+    // En producción: descomentar fetch real a API
+    // const res = await fetch(`${API_BASE}/patients/tratamientos`);
     // if (!res.ok) throw new Error('API error');
     // return await res.json();
     
-    // Simulación con fallback a localStorage
     return seguimientoStorage.load();
   } catch (error) {
     console.warn('Fallback a datos locales:', error);
@@ -381,44 +518,20 @@ async function fetchTratamientos() {
   }
 }
 
-// Actualiza tratamiento en API
-async function updateTratamientoAPI(id, updates) {
-  try {
-    // En producción: PATCH real a API
-    // await fetch(`${API_BASE}/patients/tratamientos/${id}`, {
-    //   method: 'PATCH',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(updates),
-    // });
-    
-    // Simulación: actualizar localStorage
-    seguimientoStorage.updateTratamiento(id, updates);
-  } catch (error) {
-    console.warn('Error al actualizar tratamiento en API:', error);
-  }
-}
-
 // ═══════════════════════════════════════════════════════════════════
-//  FUNCIÓN PRINCIPAL DE INICIALIZACIÓN
+//  FUNCIÓN PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════
 
 const init = async () => {
-  // Inicializar componentes de UI
   initSidebar();
-  initFilterTabs();
+  initEventos();
   
-  // Cargar datos (API con fallback a localStorage)
   allTratamientos = await fetchTratamientos();
+  tratamientosFiltrados = [...allTratamientos];
   
-  // Actualizar contadores y renderizar lista
-  updateCounts(allTratamientos);
-  renderLista(allTratamientos);
-  
-  // Limpieza al unload para evitar memory leaks
-  window.addEventListener('beforeunload', () => {
-    // Remover listeners en implementación SPA real
-  });
+  populateFilters(allTratamientos);
+  updateStats(allTratamientos);
+  renderizarTodo();
 };
 
-// Ejecutar al cargar DOM
 document.addEventListener('DOMContentLoaded', init);

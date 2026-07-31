@@ -197,6 +197,24 @@ _ = Task.Run(async () =>
             await db.Consultorios.AnyAsync())
         {
             logger.LogInformation("✅ BD ya inicializada, seed omitido");
+            
+            // Corregir asociación incorrecta de profesionales si la semilla ya se ejecutó con el ID equivocado
+            var profUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "prof@smiletrack.co");
+            var adminUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "admin@smiletrack.co");
+            if (profUser != null && adminUser != null)
+            {
+                var incorrectlyMappedProfs = await db.Profesionales.Where(p => p.IdUsuario == adminUser.IdUsuario).ToListAsync();
+                if (incorrectlyMappedProfs.Any())
+                {
+                    logger.LogInformation("🛠️ Detectada mala asociación de profesionales en la base de datos existente. Corrigiendo...");
+                    foreach (var prof in incorrectlyMappedProfs)
+                    {
+                        prof.IdUsuario = profUser.IdUsuario;
+                    }
+                    await db.SaveChangesAsync();
+                    logger.LogInformation("✅ Profesionales reasociados correctamente a prof@smiletrack.co");
+                }
+            }
             return;
         }
 
@@ -338,7 +356,7 @@ _ = Task.Run(async () =>
 
     if (!await db.Profesionales.AnyAsync())
     {
-        var profRoleUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "doc@smiletrack.co");
+        var profRoleUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "prof@smiletrack.co");
         var espGen = await db.Especialidades.FirstOrDefaultAsync(e => e.Nombre == "Odontología General");
         var espOrt = await db.Especialidades.FirstOrDefaultAsync(e => e.Nombre == "Ortodoncia");
 

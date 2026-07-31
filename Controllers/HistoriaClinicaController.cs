@@ -57,8 +57,10 @@ public class HistoriaClinicaController(AppDbContext context) : Controller
         }
 
         var pacienteId = request.PacienteId ?? await ObtenerPacientePredeterminadoAsync();
+        if (pacienteId is null)
+            return Json(new { success = false, message = "No hay pacientes registrados en el sistema." });
         var historia = await _context.HistoriasClinicas.FirstOrDefaultAsync(h => h.IdPaciente == pacienteId && h.Activa)
-            ?? await CrearHistoriaClinicaAsync(pacienteId);
+        ?? await CrearHistoriaClinicaAsync(pacienteId.Value);
 
         historia.ObservacionesGenerales = JsonSerializer.Serialize(new
         {
@@ -164,20 +166,20 @@ private static string InferirTipoServicio(string? nombreServicio)
         var paciente = await _context.Pacientes.FirstOrDefaultAsync(p => p.IdPaciente == pacienteId)
             ?? await _context.Pacientes.OrderBy(p => p.IdPaciente).FirstOrDefaultAsync();
 
+        // Si no hay pacientes aún (seed en background puede estar en progreso), retornar ViewModel seguro
         if (paciente is null)
         {
-            paciente = new Paciente
+            return new OdontogramaViewModel
             {
-                TipoDocumento = "CC",
-                Documento = "0000000",
-                Nombres = "Paciente",
-                Apellidos = "Demo",
-                FechaNacimiento = new DateTime(1990, 1, 1),
-                Estado = "activo"
+                PacienteId = null,
+                HistoriaId = null,
+                PacienteNombre = "Sin paciente asignado",
+                CodigoHC = "HC-SIN-ASIGNAR",
+                FechaNacimiento = string.Empty,
+                ProfesionalNombre = User.FindFirst(ClaimTypes.Name)?.Value ?? "Profesional",
+                ProfesionalCorreo = User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty,
+                ObservacionesGenerales = null
             };
-
-            _context.Pacientes.Add(paciente);
-            await _context.SaveChangesAsync();
         }
 
         var historia = await _context.HistoriasClinicas.FirstOrDefaultAsync(h => h.IdHistoria == historiaId)
@@ -221,26 +223,9 @@ private static string InferirTipoServicio(string? nombreServicio)
         return historia;
     }
 
-    private async Task<int> ObtenerPacientePredeterminadoAsync()
+    private async Task<int?> ObtenerPacientePredeterminadoAsync()
     {
         var paciente = await _context.Pacientes.OrderBy(p => p.IdPaciente).FirstOrDefaultAsync();
-        if (paciente is not null)
-        {
-            return paciente.IdPaciente;
-        }
-
-        var nuevoPaciente = new Paciente
-        {
-            TipoDocumento = "CC",
-            Documento = "0000000",
-            Nombres = "Paciente",
-            Apellidos = "Demo",
-            FechaNacimiento = new DateTime(1990, 1, 1),
-            Estado = "activo"
-        };
-
-        _context.Pacientes.Add(nuevoPaciente);
-        await _context.SaveChangesAsync();
-        return nuevoPaciente.IdPaciente;
+        return paciente?.IdPaciente;
     }
 }

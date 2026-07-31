@@ -10,20 +10,16 @@
   <meta name="description" content="Seguimiento de tratamientos dentales en curso, completados y pausados." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Historia_Clinica/st-odo-07-seguimiento-tratamiento/tratamientos.css")" />
 </head>
 
 <body>
 
-  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
   @{ await Html.RenderPartialAsync("_SidebarProfesional"); }
 
-  <!-- ═════ HAMBURGER (móvil) ═════ -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
@@ -31,7 +27,6 @@
   </button>
   <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <!-- ═════ MAIN ═════ -->
   <main class="main" id="main-content">
 
     <!-- Header -->
@@ -43,39 +38,130 @@
           <span class="bc-active">Seguimiento de Tratamientos</span>
         </nav>
         <h1 class="page-title">Historia Clínica</h1>
-        <p class="page-subtitle" id="pageSub" aria-live="polite">
+        <p class="page-subtitle" id="pageSub">
           Pedro García · CC 1045678901 · 34 años · O+
         </p>
       </div>
     </header>
 
-    <!-- Sección de tratamientos -->
-    <section class="section" aria-labelledby="tratamientosTitle">
-      <h2 class="section-title" id="tratamientosTitle">Historial de tratamientos</h2>
+    <!-- ═════ TARJETAS DE ESTADÍSTICAS ═════ -->
+    <section class="stats-grid" aria-label="Estadísticas de tratamientos">
+      <div class="stat-card stat-total">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <span class="stat-number" id="statTotal">0</span>
+          <span class="stat-label">Total de tratamientos</span>
+        </div>
+      </div>
+      
+      <div class="stat-card stat-en-curso">
+        <div class="stat-icon">🔄</div>
+        <div class="stat-content">
+          <span class="stat-number" id="statEnCurso">0</span>
+          <span class="stat-label">En curso</span>
+        </div>
+      </div>
+      
+      <div class="stat-card stat-completado">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <span class="stat-number" id="statCompletado">0</span>
+          <span class="stat-label">Completados</span>
+        </div>
+      </div>
+      
+      <div class="stat-card stat-pausado">
+        <div class="stat-icon">⏸️</div>
+        <div class="stat-content">
+          <span class="stat-number" id="statPausado">0</span>
+          <span class="stat-label">Pausados</span>
+        </div>
+      </div>
+    </section>
 
-      <!-- Filtros de estado con role tablist para accesibilidad -->
-      <div class="filter-tabs" id="filterTabs" role="tablist" aria-label="Filtrar tratamientos por estado">
-        <button class="ftab active" data-filter="en-curso" role="tab" aria-selected="true"
-          aria-controls="tratamientosList">
-          En curso (<span id="cntCurso" aria-live="polite">0</span>)
-        </button>
-        <button class="ftab" data-filter="completado" role="tab" aria-selected="false" aria-controls="tratamientosList">
-          Completado (<span id="cntCompletado" aria-live="polite">0</span>)
-        </button>
-        <button class="ftab" data-filter="pausado" role="tab" aria-selected="false" aria-controls="tratamientosList">
-          Pausado (<span id="cntPausado" aria-live="polite">0</span>)
-        </button>
+    <!-- ═════ FILTROS Y BUSCADOR ═════ -->
+    <section class="filters-section" aria-label="Filtros de búsqueda">
+      <div class="search-box">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre de paciente..." aria-label="Buscar paciente" />
+      </div>
+      
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label for="filterPaciente" class="filter-label">Paciente</label>
+          <select id="filterPaciente" class="filter-select">
+            <option value="">Todos los pacientes</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="filterEstado" class="filter-label">Estado</label>
+          <select id="filterEstado" class="filter-select">
+            <option value="">Todos los estados</option>
+            <option value="en-curso">En curso</option>
+            <option value="completado">Completado</option>
+            <option value="pausado">Pausado</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="filterTipo" class="filter-label">Tipo de tratamiento</label>
+          <select id="filterTipo" class="filter-select">
+            <option value="">Todos los tipos</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="filterOdontologo" class="filter-label">Odontólogo</label>
+          <select id="filterOdontologo" class="filter-select">
+            <option value="">Todos los odontólogos</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="filterPorPagina" class="filter-label">Por página</label>
+          <select id="filterPorPagina" class="filter-select">
+            <option value="5">5 por página</option>
+            <option value="10" selected>10 por página</option>
+            <option value="15">15 por página</option>
+            <option value="20">20 por página</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════ LISTA DE TRATAMIENTOS ═════ -->
+    <section class="section" aria-labelledby="tratamientosTitle">
+      <div class="section-header">
+        <h2 class="section-title" id="tratamientosTitle">Tratamientos registrados</h2>
+        <span class="results-count" id="resultsCount" aria-live="polite">Mostrando 0 de 0 tratamientos</span>
       </div>
 
-      <!-- Lista de tratamientos con aria-live para actualizaciones -->
       <div id="tratamientosList" aria-live="polite" role="list" aria-label="Lista de tratamientos">
         <!-- JS renderiza aquí -->
       </div>
 
-      <!-- Estado vacío accesible -->
       <div class="empty-state" id="emptyState" style="display:none" role="status" aria-live="polite" aria-hidden="true">
-        Sin tratamientos en esta categoría.
+        <div class="empty-icon"></div>
+        <p>No se encontraron tratamientos con los filtros seleccionados.</p>
+        <button class="btn-clear-filters" id="btnClearFilters">Limpiar filtros</button>
       </div>
+
+      <!-- ═════ PAGINACIÓN ════ -->
+      <nav class="pagination" id="pagination" aria-label="Paginación de tratamientos" style="display:none">
+        <button class="pagination-btn" id="btnFirst" aria-label="Primera página">««</button>
+        <button class="pagination-btn" id="btnPrev" aria-label="Página anterior">«</button>
+        
+        <div class="pagination-numbers" id="paginationNumbers">
+          <!-- Números de página generados por JS -->
+        </div>
+        
+        <button class="pagination-btn" id="btnNext" aria-label="Página siguiente">»</button>
+        <button class="pagination-btn" id="btnLast" aria-label="Última página">»»</button>
+      </nav>
     </section>
 
   </main>
@@ -83,11 +169,11 @@
   <!-- Mobile bottom nav -->
   <nav class="mobile-nav" aria-label="Navegación móvil">
     <a href="/gestion-de-profesionales/st-odo-01-dashboard" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">🏠</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Dashboard</span>
     </a>
     <a href="/gestion-de-citas/st-odo-02-agenda" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Agenda</span>
     </a>
     <a href="/historia-clinica/st-odo-06-pacientes" class="mobile-nav-item">
@@ -98,9 +184,8 @@
       <span class="mobile-nav-icon" aria-hidden="true">📋</span>
       <span>Historial</span>
     </a>
-    <a href="/gestion-de-profesionales/st-odo-09-perfil-profesional"
-      class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+    <a href="/gestion-de-profesionales/st-odo-09-perfil-profesional" class="mobile-nav-item">
+      <span class="mobile-nav-icon" aria-hidden="true"></span>
       <span>Perfil</span>
     </a>
   </nav>
@@ -108,7 +193,6 @@
   <!-- Toast -->
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Estilos para screen readers -->
   <style>
     .skip-link {
       position: absolute;
@@ -120,13 +204,11 @@
       z-index: 1000;
       transition: top var(--tr);
     }
-
     .skip-link:focus {
       top: 0;
       outline: 2px solid #fff;
       outline-offset: 2px;
     }
-
     .visually-hidden {
       position: absolute;
       width: 1px;
@@ -139,11 +221,12 @@
       border: 0;
     }
   </style>
+  
   <script src="@Url.Content("~/js/Historia_Clinica/st-odo-07-seguimiento-tratamiento/tratamientos.js")"></script>
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
+      <span style="font-size:1rem;"></span>
       <p>© 2025 Smile Track. Todos los derechos reservados.</p>
     </div>
     <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
@@ -151,39 +234,5 @@
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
 
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
-  });
-</script>
-
 </body>
-
 </html>
