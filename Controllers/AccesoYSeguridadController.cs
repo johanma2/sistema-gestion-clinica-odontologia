@@ -5,12 +5,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
+using SmileTrack_MVC.Models.ViewModels;
+using SmileTrack_MVC.Services;
 
 namespace SmileTrack_MVC.Controllers;
 
-public class AccesoYSeguridadController(AppDbContext context) : Controller
+public class AccesoYSeguridadController(AppDbContext context, IAuthService authService) : Controller
 {
        private readonly AppDbContext _context = context;
+       private readonly IAuthService _authService = authService;
 
     [HttpGet]
     [Route("acceso-y-seguridad/login")]
@@ -55,11 +58,9 @@ public class AccesoYSeguridadController(AppDbContext context) : Controller
         var correo = email.Trim();
         var usuario = await _context.Usuarios
             .Include(u => u.Rol)
-            .FirstOrDefaultAsync(u => u.Correo == correo && u.Estado == "activo");
+            .FirstOrDefaultAsync(u => u.Correo == correo);
 
-        var passwordValida = usuario != null && BCrypt.Net.BCrypt.Verify(password, usuario.Contrasena);
-
-        if (usuario == null || !passwordValida)
+        if (usuario == null)
         {
             ModelState.AddModelError("", "Correo o contraseña incorrectos.");
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
@@ -82,6 +83,22 @@ public class AccesoYSeguridadController(AppDbContext context) : Controller
             !string.Equals(rolSeleccionado, rolNombre, StringComparison.OrdinalIgnoreCase))
         {
             ModelState.AddModelError("", $"Esta cuenta no tiene el rol '{rolSeleccionado}'. Ingresa seleccionando '{rolNombre}'.");
+            return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
+        }
+
+        // La contraseña, el estado de la cuenta (activo/inactivo) y el registro de auditoría del
+        // intento de inicio de sesión quedan a cargo de AuthService, que ya centraliza ese manejo
+        // (incluye manejo de errores de BD y logging) en vez de duplicarlo aquí.
+        var authResult = await _authService.LoginAsync(new LoginRequest
+        {
+            Correo = correo,
+            Contrasena = password,
+            Rol = rolNombre,
+        });
+
+        if (!authResult.Success)
+        {
+            ModelState.AddModelError("", authResult.Message);
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
         }
 
@@ -127,9 +144,6 @@ public class AccesoYSeguridadController(AppDbContext context) : Controller
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties { IsPersistent = true });
-
-        usuario.UltimoLogin = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
 
         var destino = (IsLocalUrl(returnUrl) && !returnUrl.StartsWith("/acceso-y-seguridad/login", StringComparison.OrdinalIgnoreCase))
             ? returnUrl
