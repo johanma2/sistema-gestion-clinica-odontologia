@@ -31,22 +31,26 @@ public class EmailService(IOptions<EmailServiceOptions> options, ILogger<EmailSe
             throw new InvalidOperationException("La configuracion SMTP no esta completa en appsettings.Local.json.");
         }
 
-        var message = new MimeMessage();
-        message.From.Add(new MailboxAddress("SmileTrack", _options.Username));
-        message.To.Add(new MailboxAddress(recipientEmail, recipientEmail));
-        message.Subject = "SmileTrack — Código para restablecer tu contraseña";
-        var codigoSeguro = WebUtility.HtmlEncode(code.Trim());
+            var finalRecipient = string.IsNullOrWhiteSpace(_options.RecipientOverride)
+                ? recipientEmail
+                : _options.RecipientOverride.Trim();
 
-        var bodyBuilder = new BodyBuilder
-        {
-            TextBody = $"""
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress("SmileTrack", _options.Username));
+            message.To.Add(new MailboxAddress(finalRecipient, finalRecipient));
+            message.Subject = "SmileTrack — Código para restablecer tu contraseña";
+            var codigoSeguro = WebUtility.HtmlEncode(code.Trim());
+
+            var bodyBuilder = new BodyBuilder
+            {
+                TextBody = $"""
 Hola,
 
 Recibimos una solicitud para restablecer la contraseña de tu cuenta en SmileTrack.
 
 Tu codigo de verificacion es:
 
-{code}
+{codigoSeguro}
 
 Este codigo es valido durante 15 minutos a partir de este momento. Ingresalo en la pantalla de recuperacion de contrasena para continuar con el proceso.
 
@@ -57,46 +61,46 @@ Por tu seguridad, nunca compartas este codigo con nadie, ni siquiera con persona
 SmileTrack | Sistema de Gestion Odontologica
 Este es un mensaje automatico, por favor no respondas a este correo.
 """,
-            HtmlBody = $"""
+                HtmlBody = $"""
 <html>
   <body style="margin:0;padding:24px;background-color:#f4f7fb;font-family:Arial,sans-serif;color:#1f2937;">
     <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
       <div style="padding:24px 24px 12px 24px;background:#0f766e;color:#ffffff;">
         <h1 style="margin:0;font-size:22px;">SmileTrack</h1>
-        <p style="margin:8px 0 0 0;font-size:14px;">Codigo para restablecer tu contrasena</p>
+        <p style="margin:8px 0 0 0;font-size:14px;">Código para restablecer tu contraseña</p>
       </div>
       <div style="padding:24px;">
         <p style="margin:0 0 16px 0;">Hola,</p>
         <p style="margin:0 0 16px 0;">
-          Recibimos una solicitud para restablecer la contrasena de tu cuenta en SmileTrack.
+          Recibimos una solicitud para restablecer la contraseña de tu cuenta en SmileTrack.
         </p>
-        <p style="margin:0 0 12px 0;">Tu codigo de verificacion es:</p>
+        <p style="margin:0 0 12px 0;">Tu código de verificación es:</p>
         <div style="margin:0 0 20px 0;padding:16px;text-align:center;font-size:32px;font-weight:700;letter-spacing:8px;background:#f8fafc;border:1px dashed #94a3b8;border-radius:10px;">
           {codigoSeguro}
         </div>
         <p style="margin:0 0 16px 0;">
-          Este codigo es valido durante <strong>15 minutos</strong> a partir de este momento.
-          Ingresalo en la pantalla de recuperacion de contrasena para continuar con el proceso.
+          Este código es válido durante <strong>15 minutos</strong> a partir de este momento.
+          Ingrésalo en la pantalla de recuperación de contraseña para continuar con el proceso.
         </p>
         <p style="margin:0 0 16px 0;">
-          Si tu no solicitaste este cambio, puedes ignorar este correo con tranquilidad; tu contrasena actual seguira funcionando sin cambios.
-          Sin embargo, si esto ocurre repetidamente, te recomendamos cambiar tu contrasena por precaucion.
+          Si tú no solicitaste este cambio, puedes ignorar este correo con tranquilidad; tu contraseña actual seguirá funcionando sin cambios.
+          Sin embargo, si esto ocurre repetidamente, te recomendamos cambiar tu contraseña por precaución.
         </p>
         <p style="margin:0 0 16px 0;">
-          Por tu seguridad, nunca compartas este codigo con nadie, ni siquiera con personal de SmileTrack.
+          Por tu seguridad, nunca compartas este código con nadie, ni siquiera con personal de SmileTrack.
         </p>
       </div>
       <div style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;">
-        SmileTrack | Sistema de Gestion Odontologica<br />
-        Este es un mensaje automatico, por favor no respondas a este correo.
+        SmileTrack | Sistema de Gestión Odontológica<br />
+        Este es un mensaje automático, por favor no respondas a este correo.
       </div>
     </div>
   </body>
 </html>
 """
-        };
+            };
 
-        message.Body = bodyBuilder.ToMessageBody();
+            message.Body = bodyBuilder.ToMessageBody();
 
         using var client = new SmtpClient();
         await client.ConnectAsync(_options.Host, _options.Port, _options.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None, cancellationToken);
@@ -113,4 +117,5 @@ public class EmailServiceOptions
     public bool EnableSsl { get; set; } = true;
     public string Username { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+    public string? RecipientOverride { get; set; }
 }

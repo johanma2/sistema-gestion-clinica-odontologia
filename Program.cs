@@ -307,6 +307,8 @@ a{{color:#0f766e;text-decoration:none;font-weight:600;}}
                     Secure = context.Request.IsHttps
                 });
             }
+
+            context.Items["AntiforgeryRequestToken"] = tokens.RequestToken;
         }
 
         await next();
