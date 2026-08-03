@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace SmileTrack_MVC.Models.ViewModels;
 
 public class OdontogramaViewModel

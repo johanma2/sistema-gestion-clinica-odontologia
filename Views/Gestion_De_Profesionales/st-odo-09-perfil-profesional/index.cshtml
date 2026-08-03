@@ -1,3 +1,26 @@
+@* ============================================
+SmileTrack — Perfil Profesional (st-odo-09-perfil-profesional)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista que permite al profesional de la salud visualizar sus datos personales, especialidades asociadas, estado de su agenda, y actualizar información de contacto de manera segura.
+
+FUNCIONALIDADES PRINCIPALES:
+- Visualización de datos de perfil del odontólogo logueado (nombres, especialidades, registro médico)
+- Formulario interactivo para actualización de información personal y de contacto
+- Sección de seguridad para cambio de contraseña y credenciales de acceso
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController (ViewData: LoggedProfesional)
+- CSS: ~/css/Gestion_De_Profesionales/st-odo-09-perfil-profesional/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil.js
+- Partial / Otros: Sidebar unificado
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ *@
 @{
   Layout = null;
   var loggedProfesional = ViewData["LoggedProfesional"] as SmileTrack_MVC.Models.Entities.Profesional;

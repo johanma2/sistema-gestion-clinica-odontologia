@@ -5,10 +5,11 @@ namespace SmileTrack_MVC.Models.ViewModels
     public class LoginRequest
     {
         [Required(ErrorMessage = "El correo es obligatorio")]
-        [EmailAddress(ErrorMessage = "Formato de correo inválido")]
+        [EmailAddress(ErrorMessage = "Correo no válido")]
         public string Correo { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La contraseña es obligatoria")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "La contraseña debe tener al menos 8 caracteres")]
         [DataType(DataType.Password)]
         public string Contrasena { get; set; } = string.Empty;
 
@@ -21,14 +22,16 @@ namespace SmileTrack_MVC.Models.ViewModels
     public class RegisterRequest
     {
         [Required(ErrorMessage = "El correo es obligatorio")]
-        [EmailAddress(ErrorMessage = "Formato de correo inválido")]
+        [EmailAddress(ErrorMessage = "Correo no válido")]
         public string Correo { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La contraseña es obligatoria")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "La contraseña debe tener al menos 8 caracteres")]
         [DataType(DataType.Password)]
         public string Contrasena { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El nombre es obligatorio")]
+        [StringLength(100, MinimumLength = 2, ErrorMessage = "El nombre debe tener entre 2 y 100 caracteres")]
         public string Nombre { get; set; } = string.Empty;
 
         public string Rol { get; set; } = string.Empty;
@@ -55,6 +58,24 @@ namespace SmileTrack_MVC.Models.ViewModels
 
         [Required(ErrorMessage = "La nueva contraseña es obligatoria")]
         public string NuevaContrasena { get; set; } = string.Empty;
+    }
+
+    public class ChangePasswordRequest
+    {
+        [Required(ErrorMessage = "La contraseña actual es obligatoria")]
+        [DataType(DataType.Password)]
+        public string ContrasenaActual { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La nueva contraseña es obligatoria")]
+        [DataType(DataType.Password)]
+        public string NuevaContrasena { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Confirma tu nueva contraseña")]
+        [DataType(DataType.Password)]
+        public string ConfirmarContrasena { get; set; } = string.Empty;
+
+        [Required]
+        public int IdUsuario { get; set; }
     }
 
     public class AuthResponse

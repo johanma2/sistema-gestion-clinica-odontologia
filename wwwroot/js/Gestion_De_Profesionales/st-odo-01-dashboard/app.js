@@ -1,7 +1,28 @@
-/**
- * SMILETRACK — DASHBOARD ADMINISTRADOR (app.js)
- * API-ready + Accesibilidad + Performance optimizada
- */
+/* ============================================
+SmileTrack — Dashboard del Odontólogo (st-odo-01-dashboard)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Gestiona la interactividad del dashboard del odontólogo: animación de contadores de KPIs, dismissal de notificaciones, sidebar móvil accesible y actualización de los indicadores del día al cargar la página.
+
+FUNCIONALIDADES PRINCIPALES:
+- Animación de conteo progresivo en tarjetas de KPIs al montar la vista
+- Dismissal individual de notificaciones con animación de salida y limpieza del DOM
+- Sidebar móvil con gestión de foco y atributos ARIA para accesibilidad keyboard-first
+- Nav-group colapsable con animación de flecha y persistencia de estado de expansión
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController o DashboardOdontologoController
+- CSS: ~/css/Gestion_De_Profesionales/st-odo-01-dashboard/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-odo-01-dashboard/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La animación de KPIs se ejecuta en DOMContentLoaded en lugar de en scroll para que sea visible al cargar sin scroll adicional.
+============================================ */
 
 // ═══════════════════════════════════════════════════════════════════
 //  CONFIGURACIÓN API

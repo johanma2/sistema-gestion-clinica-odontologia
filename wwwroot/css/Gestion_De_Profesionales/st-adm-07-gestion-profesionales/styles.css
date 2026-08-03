@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — GESTIÓN PROFESIONALES (styles.css)
-   Base unificada + componentes específicos de admin
-   ============================================= */
+/* ============================================
+SmileTrack — Gestión de Profesionales (st-adm-07-gestion-profesionales)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la vista de gestión de profesionales que define la tabla de listado, los modales de CRUD, los badges de especialidad y los contadores de métricas del panel administrativo.
+
+FUNCIONALIDADES PRINCIPALES:
+- Tabla de profesionales con hover, badges de especialidad coloreados y acciones por fila
+- Modales de creación/edición de profesionales con layout de formulario de dos columnas
+- Tarjetas de métricas del panel con iconos y animación de conteo
+- Diseño responsive que colapsa la tabla a tarjetas en pantallas pequeñas
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController (ViewBag: Especialidades, Usuarios, Profesionales)
+- CSS: ~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Los badges de especialidad usan colores asignados por índice para diferenciación visual sin requerir configuración adicional.
+============================================ */
 
 :root {
   /* === VARIABLES BASE (IDÉNTICAS A st-odo-01) === */

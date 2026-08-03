@@ -1,10 +1,28 @@
-/**
- * SMILETRACK — GESTIÓN PROFESIONALES
- *
- * NOTA: Este archivo contiene lógica de fallback.
- * La renderización principal es server-side (Razor),
- * el JS solo maneja: modales, sidebar móvil y animaciones de contadores.
- */
+/* ============================================
+SmileTrack — Gestión de Profesionales (st-adm-07-gestion-profesionales)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Gestiona la interactividad del módulo de administración de profesionales: apertura/cierre de modales de CRUD, animación de contadores de métricas, búsqueda en la tabla y validación de formularios en cliente antes de enviar al servidor.
+
+FUNCIONALIDADES PRINCIPALES:
+- Modales de creación y edición de profesionales con llenado dinámico de campos desde Razor
+- Animación de conteo progresivo en los contadores del panel de métricas (total, activos, especialidades)
+- Búsqueda en tiempo real sobre la tabla de profesionales filtrado por nombre, especialidad y estado
+- Validación de formularios en cliente (campos requeridos, formato de email y teléfono)
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController (ViewBag: Especialidades, Usuarios, Profesionales)
+- CSS: ~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La renderización principal es server-side (Razor). Este JS solo maneja modales, sidebar móvil y animaciones de UI.
+============================================ */
 
 // Base URL para futuras migraciones a API REST (actualmente no se usa en producción)
 const API_BASE = '/gestion-de-profesionales';

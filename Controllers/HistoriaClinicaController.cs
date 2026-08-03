@@ -47,6 +47,7 @@ public class HistoriaClinicaController(AppDbContext context) : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Authorize(Roles = "Profesional")]
     [Route("historia-clinica/st-odo-04-odontograma/guardar")]
     public async Task<IActionResult> GuardarOdontograma([FromBody] OdontogramaGuardarRequest request)

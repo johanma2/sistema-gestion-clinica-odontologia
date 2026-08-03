@@ -1,6 +1,29 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Mis Citas Paciente (st-pac-01-mis-citas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-﻿<!DOCTYPE html>
+DESCRIPCIÓN:
+Vista orientada al paciente que permite consultar el historial de citas clínicas, ver el estado de las citas programadas y solicitar agendamiento o cancelaciones de manera interactiva.
+
+FUNCIONALIDADES PRINCIPALES:
+- Visualización del listado de citas programadas e historial clínico del paciente
+- Cancelación o reprogramación de citas pendientes sujetas a validación horaria
+- Resumen interactivo (atendidas, programadas, canceladas) del paciente
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y CitasPaciente
+- CSS: ~/css/Gestion_De_Citas/st-pac-01-mis-citas/styles.css
+- JS: ~/js/Gestion_De_Citas/st-pac-01-mis-citas/mis-citas.js
+- Partial / Otros: Menú del paciente
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ *@
+@{ Layout = null; }
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -49,20 +72,20 @@
     <!-- Stats Grid (usando clases unificadas + IDs para animación) -->
     <section class="stats-grid" aria-label="Resumen de actividad del día">
       <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="cnt-citas-hoy">24</span>
-        <span class="stat-label">Citas hoy</span>
+        <span class="stat-number" id="cnt-total">0</span>
+        <span class="stat-label">Total citas</span>
       </div>
       <div class="stat-card" data-color="green">
-        <span class="stat-number" id="cnt-confirmadas">18</span>
-        <span class="stat-label">Confirmadas</span>
+        <span class="stat-number" id="cnt-completadas">0</span>
+        <span class="stat-label">Completadas</span>
       </div>
       <div class="stat-card" data-color="orange">
-        <span class="stat-number" id="cnt-pendientes">3</span>
+        <span class="stat-number" id="cnt-pendientes">0</span>
         <span class="stat-label">Pendientes</span>
       </div>
-      <div class="stat-card" data-color="purple">
-        <span class="stat-number" id="cnt-facturas">$645k</span>
-        <span class="stat-label">Facturas pendientes</span>
+      <div class="stat-card" data-color="red">
+        <span class="stat-number" id="cnt-canceladas">0</span>
+        <span class="stat-label">Canceladas</span>
       </div>
     </section>
 

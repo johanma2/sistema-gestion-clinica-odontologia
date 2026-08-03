@@ -1,7 +1,26 @@
-/* =============================================
-   SMILETRACK — MIS CITAS PACIENTE (styles.css)
-   Estilos de la vista de citas del paciente con diseño responsivo y accesible
-   ============================================= */
+/* ============================================
+SmileTrack — Mis Citas Paciente (st-pac-01-mis-citas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la sección de citas del paciente que definen las tarjetas de citas, historial y estados de agendamiento.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño responsive para tarjetas de citas en formato grilla o lista
+- Badges de color para los diferentes estados (atendida, programada, cancelada)
+- Adaptabilidad para smartphones y tablets del paciente
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y CitasPaciente
+- CSS: ~/css/Gestion_De_Citas/st-pac-01-mis-citas/styles.css
+- JS: ~/js/Gestion_De_Citas/st-pac-01-mis-citas/mis-citas.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 
 /* ── VARIABLES GLOBALES (NO MODIFICAR VALORES VISUALES) ── */
 :root {

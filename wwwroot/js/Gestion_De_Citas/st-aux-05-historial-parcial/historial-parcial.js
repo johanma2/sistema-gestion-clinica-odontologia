@@ -1,16 +1,37 @@
-﻿/**
- * SMILETRACK — HISTORIA PARCIAL DEL PACIENTE (app.js)
- * Lógica con datos mockeados, persistencia y accesibilidad
- */
+﻿/* ============================================
+SmileTrack — Historial Clínico Parcial (st-aux-05-historial-parcial)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-// Obtiene elemento del DOM con manejo seguro de null
+DESCRIPCIÓN:
+Maneja la lógica interactiva del historial parcial del paciente: consulta de alertas, renderizado de la tabla de consultas anteriores con remoción de skeleton loaders, y accesibilidad ARIA.
+
+FUNCIONALIDADES PRINCIPALES:
+- Consulta asíncrona simulada de datos demográficos y antecedentes del paciente
+- Renderizado interactivo de la tarjeta de alertas de alergias con indicadores visuales
+- Poblamiento de la tabla de consultas con remoción dinámica de skeleton loaders
+- Soporte para lectores de pantalla con actualización de etiquetas aria-live y descriptivas
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.css
+- JS: ~/js/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.js
+- Partial / Otros: historial-parcial.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- El controlador limita estrictamente las consultas a un máximo de 3 filas para mantener el perfil "parcial" por seguridad.
+============================================ */
+
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes de input
+// WHY: Debounce evita saturar la API con peticiones redundantes ante cambios veloces del usuario
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -19,7 +40,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre y cleanup de timeout
+// WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin entorpecer el flujo de trabajo
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -72,12 +93,12 @@ class HistoriaParcialController {
     ];
   }
 
-  // Devuelve datos del paciente para mostrar en header y alertas
+  // WHY: Devuelve el objeto paciente simulando una respuesta asíncrona de base de datos
   async getPaciente() {
     return { ...this._paciente };
   }
 
-  // Devuelve alertas médicas formateadas para la UI
+  // WHY: Estructura la información médica crítica separadamente de los datos personales
   async getAlertas() {
     return {
       alergias: [...this._paciente.alergias],
@@ -86,12 +107,12 @@ class HistoriaParcialController {
     };
   }
 
-  // Devuelve consultas limitadas para la tabla de historial
+  // WHY: Limita a 3 el historial para cumplir las restricciones visuales y de negocio del panel auxiliar
   async getConsultas() {
     return this._historial.slice(0, this._limite);
   }
 
-  // Genera string de metadatos para el header del paciente
+  // WHY: Genera un texto consolidado de identificación para ubicar rápidamente la información
   getMetaString() {
     const p = this._paciente;
     return `${p.nombre} · ${p.tipoDoc} ${p.documento} · Últimas ${this._limite} consultas · Acceso parcial · Actualizado: ${p.ultimaActualizacion}`;
@@ -153,7 +174,7 @@ const initMobileMenu = () => {
 //  RENDER: Alerta médica con actualización dinámica
 // ═══════════════════════════════════════════════════════════════════
 const renderAlerta = (alertas) => {
-  // Función auxiliar para actualizar elementos por ID
+  // WHY: Actualiza nodos del DOM e inyecta etiquetas ARIA descriptivas para lectores de pantalla
   const updateElement = (id, value) => {
     const el = safeGetElement(id);
     if (el) {
@@ -168,7 +189,7 @@ const renderAlerta = (alertas) => {
   updateElement('medicamentos', alertas.medicamentos.join(', ') || 'Ninguno');
   updateElement('grupoSang', alertas.grupoSanguineo || '—');
 
-  // Ajusta opacidad si no hay alertas relevantes
+  // WHY: Reduce el impacto visual si no hay alertas críticas, evitando falsas alarmas
   const card = safeGetElement('alertaMedica');
   if (card && !alertas.alergias.length && !alertas.medicamentos.length) {
     card.style.opacity = '.6';
@@ -191,7 +212,7 @@ const renderTabla = (filas) => {
     return;
   }
 
-  // Remueve skeleton loader y renderiza filas reales
+  // WHY: Reemplaza las celdas de carga (skeleton cells) por las de datos reales una vez completada la llamada asíncrona
   tbody.innerHTML = filas.map(f => `
     <tr>
       <td class="td-fecha" data-label="Fecha">${f.fecha}</td>
@@ -209,7 +230,7 @@ const init = async () => {
     // Inicializar componentes de UI
     initMobileMenu();
 
-    // Cargar datos del paciente y historial en paralelo
+    // WHY: Promise.all permite disparar peticiones concurrentes reduciendo el tiempo total de bloqueo de la UI
     const [alertas, consultas] = await Promise.all([
       hpCtrl.getAlertas(),
       hpCtrl.getConsultas(),

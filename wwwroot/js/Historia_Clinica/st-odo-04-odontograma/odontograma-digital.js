@@ -120,7 +120,11 @@ async function persistirEstado({ mostrarToast: shouldShowToast = true } = {}) {
     try {
         const response = await fetch('/historia-clinica/st-odo-04-odontograma/guardar', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getAntiForgeryToken()
+            },
+            credentials: 'same-origin',
             body: JSON.stringify({
                 pacienteId: paciente.id,
                 registros: baseDatosTratamientos,

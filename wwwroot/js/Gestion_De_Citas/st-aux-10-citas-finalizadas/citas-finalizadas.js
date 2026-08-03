@@ -1,16 +1,37 @@
-﻿/**
- * SMILETRACK — CITAS FINALIZADAS (app.js)
- * Lógica con persistencia, exportación y accesibilidad
- */
+﻿/* ============================================
+SmileTrack — Citas Finalizadas (st-aux-10-citas-finalizadas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-// Obtiene elemento del DOM con manejo seguro de null
+DESCRIPCIÓN:
+Gestiona el renderizado dinámico de la tabla de citas finalizadas, el cálculo de métricas por estado, la animación de contadores y la exportación del resumen diario a CSV sin depender del servidor.
+
+FUNCIONALIDADES PRINCIPALES:
+- Renderizado dinámico de filas de tabla desde LocalStorage con badges de estado accesibles
+- Exportación a CSV generada en el cliente (Blob + createObjectURL) sin petición al servidor
+- Animación de conteo progresivo en tarjetas de métricas para reflejar el resumen visual de la jornada
+- Clave de LocalStorage con fecha para evitar colisiones entre jornadas en el mismo dispositivo
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.css
+- JS: ~/js/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.js
+- Partial / Otros: citas-finalizadas.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La exportación usa Blob en lugar de llamar al servidor para no requerir autorización adicional y funcionar offline.
+============================================ */
+
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes de input
+// WHY: Debounce protege contra eventos de input repetitivos que podrían generar exportaciones o escrituras redundantes
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -19,7 +40,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre y cleanup de timeout
+// WHY: Las notificaciones no bloqueantes informan el resultado de la exportación sin interrumpir la revisión del resumen
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -31,11 +52,11 @@ const showToast = (message, type = 'success') => {
   toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
 };
 
-// Gestiona persistencia de citas finalizadas con localStorage
+// WHY: La clave incluye la fecha para que los datos del día no contaminen ni se mezclen con los de jornadas anteriores
 const finalizedStorage = {
   key: 'smiletrack_finalized_20260320',
   
-  // Carga citas desde localStorage o usa datos de ejemplo
+  // WHY: Carga desde LocalStorage para que el resumen sea persistente entre refrescos de página durante la jornada
   load: () => {
     const stored = localStorage.getItem(finalizedStorage.key);
     if (stored) {
@@ -56,7 +77,7 @@ const finalizedStorage = {
     ];
   },
   
-  // Guarda citas en localStorage
+  // WHY: Persiste las citas para garantizar que el resumen no se pierda ante refrescos accidentales del navegador
   save: (citas) => {
     try {
       localStorage.setItem(finalizedStorage.key, JSON.stringify(citas));
@@ -67,7 +88,7 @@ const finalizedStorage = {
     }
   },
   
-  // Calcula contadores por estado
+  // WHY: Centraliza el cálculo de contadores para no duplicar la lógica de filtrado entre la tabla y las tarjetas de resumen
   getCounts: (citas) => {
     return {
       atendidas: citas.filter(c => c.estado === 'Atendida').length,
@@ -77,7 +98,7 @@ const finalizedStorage = {
   }
 };
 
-// Formatea fecha para exportación
+// WHY: Formatea la fecha en español para que el CSV exportado sea legible sin conversión manual por parte del auxiliar
 const formatDateForExport = () => {
   const now = new Date();
   const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -127,7 +148,7 @@ const initMobileMenu = () => {
   });
 };
 
-// Renderiza tabla de citas con atributos ARIA
+// WHY: Renderiza la tabla dinámicamente para poder asignar clases y aria-labels de estado sin lógica duplicada en Razor
 const renderAppointments = (data) => {
   const tbody = safeGetElement('appointmentsBody');
   if (!tbody) return;
@@ -137,8 +158,8 @@ const renderAppointments = (data) => {
     return;
   }
 
+  // WHY: Mapea el estado de la cita a una clase CSS semántica para que el color refleje el resultado clínico del turno
   tbody.innerHTML = data.map(apt => {
-    // Determina clase y label de estado para accesibilidad
     const statusClass = apt.estado === 'Atendida' ? 'atendida' : 
                        apt.estado === 'Cancelada' ? 'cancelada' : 'no-asistio';
     const statusLabel = `Estado: ${apt.estado}`;
@@ -155,7 +176,7 @@ const renderAppointments = (data) => {
   }).join('');
 };
 
-// Actualiza tarjetas de resumen con animación suave
+// WHY: La animación de conteo progresivo hace que el auxiliar note el cambio sin leer texto, facilitando el scan rápido
 const updateSummary = () => {
   const citas = finalizedStorage.load();
   const counts = finalizedStorage.getCounts(citas);
@@ -186,7 +207,7 @@ const updateSummary = () => {
   });
 };
 
-// Inicializa botón de exportación con generación de CSV
+// WHY: El CSV se genera en el cliente con Blob para que la exportación funcione sin autenticación adicional ni latencia de red
 const initExportButton = () => {
   const btn = safeGetElement('btnExport');
   if (!btn) return;
@@ -227,6 +248,7 @@ const initExportButton = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      // WHY: URL.revokeObjectURL libera la memoria del Blob inmediatamente después de la descarga para evitar memory leaks
       URL.revokeObjectURL(url);
       
       // Feedback visual

@@ -1,6 +1,31 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Historial Clínico Parcial (st-aux-05-historial-parcial)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-﻿<!DOCTYPE html>
+DESCRIPCIÓN:
+Vista que permite al auxiliar odontológico consultar de manera rápida y en modo lectura los antecedentes médicos de un paciente, alertas de alergias y las últimas consultas odontológicas.
+
+FUNCIONALIDADES PRINCIPALES:
+- Visualización destacada de la tarjeta de Alerta Médica (alergias críticas, medicamentos activos y tipo de sangre)
+- Listado tabular de historial clínico (fecha, profesional a cargo, diagnóstico y procedimiento realizado)
+- Skeleton loaders para feedback visual óptimo durante tiempos de carga asíncrona
+- Restricción de visibilidad a las últimas 3 consultas por motivos de seguridad y privacidad de datos
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.css
+- JS: ~/js/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.js
+- Partial / Otros: _SidebarAuxiliar.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La alerta médica utiliza atributos role="alert" y aria-live="assertive" para notificaciones urgentes e inmediatas en tecnologías de asistencia.
+============================================ *@
+@{ Layout = null; }
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>

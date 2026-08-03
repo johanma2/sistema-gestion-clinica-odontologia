@@ -1,16 +1,37 @@
-/**
- * SMILETRACK — PANEL OPERATIVO AUXILIAR (app.js)
- * Lógica con datos mockeados, persistencia y accesibilidad
- */
+/* ============================================
+SmileTrack — Panel Operativo (st-aux-01-panel-operativo)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-// Obtiene elemento del DOM con manejo seguro de null
+DESCRIPCIÓN:
+Maneja el comportamiento interactivo del panel de auxiliar: renderizado de KPIs, visualización detallada del expediente del paciente en ventana modal y descarga simulada del resumen operativo.
+
+FUNCIONALIDADES PRINCIPALES:
+- Renderizado interactivo de métricas (KPIs), alerta de próxima cita y barra de progreso de asistencia
+- Event delegation para la apertura de modales de paciente con visualización de antecedentes médicos y alergias
+- Gestión de modales accesibles (focus trap, Escape key y bloqueo de scroll)
+- Descarga asíncrona simulada de reporte operativo en formato PDF con retroalimentación visual
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.css
+- JS: ~/js/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.js
+- Partial / Otros: panel-operativo.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La clase PanelController mockea los datos de pacientes y alertas del día con fines ilustrativos.
+============================================ */
+
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes de input
+// WHY: Debounce evita saturar la API con peticiones redundantes ante cambios veloces del usuario
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -19,7 +40,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre y cleanup de timeout
+// WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin entorpecer el flujo de trabajo
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -31,7 +52,7 @@ const showToast = (message, type = 'success') => {
   toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
 };
 
-// Gestiona apertura y cierre de modales con accesibilidad
+// WHY: modalManager centraliza la lógica de visualización de diálogos garantizando que se cumplan criterios de accesibilidad WCAG
 const modalManager = {
   open: (modalId) => {
     const modal = safeGetElement(modalId);
@@ -41,11 +62,11 @@ const modalManager = {
     modal.setAttribute('aria-hidden', 'false');
     modal.removeAttribute('inert');
     
-    // Enfocar primer elemento interactivo para accesibilidad
+    // WHY: El traslado del foco evita que la navegación por teclado se quede atrapada detrás del diálogo modal
     const focusable = modal.querySelector('button, [href], input, select, textarea');
     if (focusable) focusable.focus();
     
-    // Bloquear scroll del body mientras el modal está abierto
+    // WHY: Bloquear el scroll previene la navegación accidental del contenido de fondo (scrollbar bleeding)
     document.body.style.overflow = 'hidden';
   },
   
@@ -57,13 +78,13 @@ const modalManager = {
     modal.setAttribute('aria-hidden', 'true');
     modal.setAttribute('inert', '');
     
-    // Restaurar scroll del body
+    // WHY: Devuelve el scroll al body al salir del diálogo
     document.body.style.overflow = '';
   }
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  PANEL CONTROLLER (datos mockeados para demostración)
+// WHY: Clase que encapsula el acceso a datos para desacoplar la lógica de presentación de la capa de API
 // ═══════════════════════════════════════════════════════════════════
 class PanelController {
   constructor() {
@@ -339,7 +360,7 @@ const verPaciente = async (id) => {
 
   const initials = p.paciente.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-  // Llena campos del modal con datos del paciente
+  // WHY: Mapeo dinámico de datos del paciente hacia nodos del DOM para evitar repetición de código y errores manuales
   const fields = {
     modalAvatar: initials,
     modalName: p.paciente,
@@ -360,7 +381,7 @@ const verPaciente = async (id) => {
     if (el) el.textContent = value;
   });
 
-  // Alergias con estado visual
+  // WHY: Destaca en color rojo las alergias críticas para mitigar riesgos en la atención clínica
   const alergiaEl = safeGetElement('modalAlergias');
   if (alergiaEl) {
     if (p.alergia) {
@@ -374,7 +395,7 @@ const verPaciente = async (id) => {
     }
   }
 
-  // Medicamentos como lista de tags
+  // WHY: Muestra medicamentos como etiquetas visuales dinámicas para lectura rápida
   const mediEl = safeGetElement('modalMedicamentos');
   if (mediEl) {
     if (p.medicamentos?.length) {
@@ -399,7 +420,7 @@ const initTableActions = () => {
   const tbody = safeGetElement('citasBody');
   if (!tbody) return;
 
-  // Event delegation para botones de acción en tabla
+  // WHY: Event delegation permite capturar clics en filas agregadas dinámicamente de forma eficiente
   tbody.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
@@ -412,7 +433,7 @@ const initTableActions = () => {
     }
   });
 
-  // Soporte para teclado en botones de acción
+  // WHY: Permite disparar la acción mediante teclado para usuarios de tecnologías de asistencia
   tbody.addEventListener('keydown', (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-action]')) {
       e.preventDefault();

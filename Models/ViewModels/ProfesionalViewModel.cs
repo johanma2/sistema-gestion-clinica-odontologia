@@ -9,11 +9,11 @@ namespace SmileTrack_MVC.Models.ViewModels
         public int? IdUsuario { get; set; }
 
         [Required(ErrorMessage = "El nombre es obligatorio")]
-        [StringLength(100, ErrorMessage = "El nombre no puede superar los 100 caracteres")]
+        [StringLength(100, MinimumLength = 2, ErrorMessage = "El nombre debe tener entre 2 y 100 caracteres")]
         public string Nombres { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Los apellidos son obligatorios")]
-        [StringLength(100, ErrorMessage = "Los apellidos no pueden superar los 100 caracteres")]
+        [StringLength(100, MinimumLength = 2, ErrorMessage = "Los apellidos deben tener entre 2 y 100 caracteres")]
         public string Apellidos { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El registro médico es obligatorio")]
@@ -24,6 +24,7 @@ namespace SmileTrack_MVC.Models.ViewModels
         [StringLength(100, ErrorMessage = "La categoría no puede superar los 100 caracteres")]
         public string? Categoria { get; set; }
 
+        [Phone(ErrorMessage = "Teléfono inválido")]
         [StringLength(20, ErrorMessage = "El teléfono no puede superar los 20 caracteres")]
         public string? Telefono { get; set; }
 

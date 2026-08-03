@@ -1,4 +1,29 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Asistencia en Procedimiento (st-aux-06-asistencia-procedi)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista de seguimiento en tiempo real del procedimiento odontológico activo, mostrando el cronómetro, los datos de la cita, las alertas médicas del paciente y el panel de control de etapas del procedimiento.
+
+FUNCIONALIDADES PRINCIPALES:
+- Timer circular del tiempo transcurrido del procedimiento con persistencia en LocalStorage
+- Panel de alertas médicas críticas del paciente con role="alert" para accesibilidad inmediata
+- Píldoras de control interactivo de etapas del procedimiento (limpieza, esterilización, equipos)
+- Datos de la cita activa (paciente, profesional, servicio y consultorio) en tarjeta dedicada
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.css
+- JS: ~/js/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.js
+- Partial / Otros: _SidebarAuxiliar.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- El banner de alerta médica usa role="alert" con aria-live="assertive" para lectura inmediata en tecnologías de asistencia.
+============================================ *@
+@{ Layout = null; }
 
 ﻿<!DOCTYPE html>
 <html lang="es">

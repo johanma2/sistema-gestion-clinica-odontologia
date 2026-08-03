@@ -1,6 +1,32 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Panel Operativo (st-aux-01-panel-operativo)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-﻿<!DOCTYPE html>
+DESCRIPCIÓN:
+Vista principal del panel operativo del auxiliar odontológico que muestra un resumen en tiempo real de las citas del día, alertas relevantes y detalles de pacientes.
+
+FUNCIONALIDADES PRINCIPALES:
+- Barra de alerta de próxima cita con temporizador integrado
+- Grilla de métricas clave (KPIs) en tiempo real
+- Barra de progreso interactiva del volumen de citas atendidas
+- Listado tabular de citas del día con detalle de alergias y estados
+- Visualización modal de la información médica detallada del paciente
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.css
+- JS: ~/js/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.js
+- Partial / Otros: _SidebarAuxiliar.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Se incorporan roles de accesibilidad (role status, progressbar) para soporte a lectores de pantalla (WCAG).
+============================================ *@
+@{ Layout = null; }
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>

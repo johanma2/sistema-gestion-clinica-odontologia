@@ -1,7 +1,26 @@
-/* =============================================
-   SMILETRACK — NOTIFICACIONES PACIENTE (styles.css)
-   [MEJORA]: Base unificada con st-pac-01 + componentes específicos
-   ============================================= */
+/* ============================================
+SmileTrack — Notificaciones Paciente (st-pac-03-notificaciones)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para el panel de notificaciones del paciente que definen las tarjetas de alerta, estados (leído/no leído) y diseño visual responsive.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño de tarjetas de notificación interactivas con estados de leídos
+- Badges de color para clasificar tipos de notificación
+- Estilos responsive para adaptar la lista de notificaciones en smartphones
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y NotificacionesPaciente
+- CSS: ~/css/Gestion_De_Citas/st-pac-03-notificaciones/styles.css
+- JS: ~/js/Gestion_De_Citas/st-pac-03-notificaciones/notificaciones.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 
 /* ── VARIABLES GLOBALES (CONSISTENTES CON st-pac-01) ── */
 :root {

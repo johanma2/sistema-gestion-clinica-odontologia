@@ -1,3 +1,28 @@
+@* ============================================
+SmileTrack — Reportes Clínicos (st-adm-14-reportes-clinicos)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista de administración de reportes clínicos que permite al administrador consultar, filtrar y paginar los reportes generados por los odontólogos, con acceso al detalle de cada procedimiento realizado.
+
+FUNCIONALIDADES PRINCIPALES:
+- Tabla paginada de reportes clínicos renderizada server-side con Razor desde PagedResult
+- Filtros por profesional, rango de fechas y estado del reporte
+- Detalle del reporte expandible con datos del procedimiento, diagnóstico y observaciones
+- Exportación del listado de reportes a CSV desde el cliente
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController (ViewData: ProfesionalesReportes, ReportesClinicos, ReportesClinicosPage)
+- CSS: ~/css/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/reportes.js
+- Partial / Otros: Layout o Layout=null (verificar)
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La vista usa PagedResult para no cargar todos los reportes en memoria y mantener tiempos de respuesta aceptables.
+============================================ *@
 @{
     var profesionales = ViewData["ProfesionalesReportes"] as List<string> ?? new();
     var reportes = ViewData["ReportesClinicos"] as List<SmileTrack_MVC.Models.ViewModels.ReporteClinicoViewModel> ?? new();

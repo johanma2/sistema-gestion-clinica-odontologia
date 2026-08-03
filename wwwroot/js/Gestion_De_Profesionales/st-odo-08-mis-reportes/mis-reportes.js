@@ -1,4 +1,26 @@
-// SMILETRACK – REPORTES.JS
+/* ============================================
+SmileTrack — Mis Reportes (st-odo-08-mis-reportes)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Controla la carga de estadísticas de productividad del profesional, el filtro reactivo de reportes por mes y la visualización interactiva de la tabla de reportes clínicos del odontólogo.
+
+FUNCIONALIDADES PRINCIPALES:
+- Carga y filtrado reactivo de reportes usando fetch a la API base
+- Gestión de menú colapsable (sidebar) en resoluciones móviles
+- Formateo dinámico de fechas de reportes y visualización amigable de métricas
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController
+- CSS: ~/css/Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.css
+- JS: ~/js/Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.js
+- Partial / Otros: mis-reportes.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 const API_BASE = '/api';
 
 const MESES_LABELS = {

@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — ASISTENCIA EN PROCEDIMIENTO (styles.css)
-   Base unificada con vistas de auxiliar + componentes específicos
-   ============================================= */
+/* ============================================
+SmileTrack — Asistencia en Procedimiento (st-aux-06-asistencia-procedi)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la vista de asistencia en procedimiento que definen el cronómetro circular, el layout en columnas del panel de datos y alertas, y los estilos interactivos de las píldoras de etapas.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño del timer circular con gradiente azul y tipografía display para legibilidad rápida durante el procedimiento
+- Estilos interactivos de las píldoras de etapas con estados completado/pendiente y transiciones fluidas
+- Banner de alerta médica con coloración de advertencia naranja/ámbar de alta visibilidad clínica
+- Layout responsive de dos columnas (timer+datos / alertas+etapas) optimizado para tablets de consultorio
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.css
+- JS: ~/js/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.js
+- Partial / Otros: asistencia-proc.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La animación del timer está deshabilitada en modo prefers-reduced-motion para usuarios con sensibilidad al movimiento.
+============================================ */
 
 /* Variables globales consistentes con el sistema SmileTrack */
 :root {

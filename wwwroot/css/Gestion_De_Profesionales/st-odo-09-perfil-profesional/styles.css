@@ -1,7 +1,27 @@
-/* =============================================
-   SMILETRACK — PERFIL PROFESIONAL (styles.css)
-   Base unificada + componentes específicos de perfil
-   ============================================= */
+/* ============================================
+SmileTrack — Perfil Profesional (st-odo-09-perfil-profesional)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la vista de perfil del odontólogo que define el layout de perfil, la tarjeta de avatar del profesional, los formularios de edición de datos y las secciones de configuración de seguridad.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño de la tarjeta de presentación con avatar dinámico e iniciales del profesional
+- Formulario de configuración de perfil estructurado en secciones con alineación consistente
+- Estilos para inputs deshabilitados y estados de focus-visible accesibles
+- Diseño responsive para adaptar la tarjeta de avatar y los formularios en pantallas pequeñas
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController
+- CSS: ~/css/Gestion_De_Profesionales/st-odo-09-perfil-profesional/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 
 :root {
   /* === VARIABLES BASE (IDÉNTICAS A st-odo-01) === */

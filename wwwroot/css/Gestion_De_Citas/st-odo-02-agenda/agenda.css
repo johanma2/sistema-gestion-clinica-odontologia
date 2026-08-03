@@ -1,7 +1,26 @@
-/* =============================================
-   SMILETRACK — MI AGENDA ODONTÓLOGO (styles.css)
-   Base unificada + componentes específicos de agenda
-   ============================================= */
+/* ============================================
+SmileTrack — Mi Agenda Odontólogo (st-odo-02-agenda)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la agenda personal del odontólogo que definen el diseño del calendario interactivo diario, las horas y la visualización de tarjetas de cita.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño de la grilla de horas de la agenda
+- Badges coloreados por tipo y estado de consulta
+- Adaptabilidad responsive para el colapso del calendario en smartphones
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y CitasOdontologo
+- CSS: ~/css/Gestion_De_Citas/st-odo-02-agenda/agenda.css
+- JS: ~/js/Gestion_De_Citas/st-odo-02-agenda/agenda.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 
 :root {
   /* === VARIABLES BASE (IDÉNTICAS A st-odo-01) === */

@@ -72,6 +72,8 @@ BEGIN
         ultimo_login DATETIME NULL,
         codigo_recuperacion VARCHAR(10) NULL,
         fecha_expiracion_codigo DATETIME NULL,
+        intentos_fallidos INT NOT NULL DEFAULT 0,
+        ultimo_logout DATETIME NULL,
         CONSTRAINT FK_Usuario_Rol FOREIGN KEY (id_rol) REFERENCES Rol(id_rol),
         CONSTRAINT FK_Usuario_Creador FOREIGN KEY (creado_por) REFERENCES Usuario(id_usuario)
     );
@@ -87,6 +89,18 @@ GO
 IF COL_LENGTH(N'dbo.Usuario', N'fecha_expiracion_codigo') IS NULL
 BEGIN
     ALTER TABLE Usuario ADD fecha_expiracion_codigo DATETIME NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.Usuario', N'intentos_fallidos') IS NULL
+BEGIN
+    ALTER TABLE Usuario ADD intentos_fallidos INT NOT NULL DEFAULT 0;
+END
+GO
+
+IF COL_LENGTH(N'dbo.Usuario', N'ultimo_logout') IS NULL
+BEGIN
+    ALTER TABLE Usuario ADD ultimo_logout DATETIME NULL;
 END
 GO
 

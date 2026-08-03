@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — CITAS FINALIZADAS (styles.css)
-   Base unificada + componentes de citas finalizadas
-   ============================================= */
+/* ============================================
+SmileTrack — Citas Finalizadas (st-aux-10-citas-finalizadas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la vista de citas finalizadas que definen la tabla accesible de citas, los badges de estado coloreados por resultado y las tarjetas de métricas del resumen de jornada.
+
+FUNCIONALIDADES PRINCIPALES:
+- Badges de estado con colores semánticos (verde=atendida, rojo=cancelada, amarillo=no asistió)
+- Tarjetas de resumen con números destacados para lectura rápida del rendimiento del día
+- Tabla con hover y striping alternado para facilitar el seguimiento visual de cada fila
+- Botón de exportación diferenciado del flujo principal mediante posición en el header
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.css
+- JS: ~/js/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.js
+- Partial / Otros: citas-finalizadas.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Los colores de los badges se definen como variables independientes para facilitar cambios sin afectar el resto del sistema.
+============================================ */
 
 /* Variables globales consistentes con el sistema SmileTrack */
 :root {

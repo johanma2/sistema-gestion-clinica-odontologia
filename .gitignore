@@ -70,3 +70,6 @@ coverage/
 
 ## Archivos de pruebas
 TestResults/
+
+# Carpeta temporal de build local (evitar commits accidentales desde herramientas de CI locales)
+build_temp/

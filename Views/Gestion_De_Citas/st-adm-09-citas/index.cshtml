@@ -1,3 +1,29 @@
+@* ============================================
+SmileTrack — Gestión Integral de Citas (st-adm-09-citas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista principal de administración de citas que permite listar, filtrar, buscar, y gestionar (crear, editar, eliminar) el historial completo de citas.
+
+FUNCIONALIDADES PRINCIPALES:
+- Visualización de la grilla de citas con paginación server-side
+- Filtros avanzados y dinámicos por paciente, estado, profesional y fecha
+- Modal de edición y creación de citas integrada con validación CSRF (AntiForgeryToken)
+- Cambio rápido del estado de citas directo en la tabla con recarga y persistencia
+- Panel resumen informativo del total de citas según su estado
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css
+- JS: ~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js
+- Partial / Otros: _SidebarAdmin.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- El formulario modal reutiliza los elementos de ViewData enviados desde el backend para poblar selectores.
+============================================ *@
 @{ Layout = null;
   var pacientes = ViewData["Pacientes"] as List<SmileTrack_MVC.Models.Entities.Paciente> ?? new();
   var profesionales = ViewData["Profesionales"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();

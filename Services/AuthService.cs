@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -21,7 +22,8 @@ namespace SmileTrack_MVC.Services
     public class AuthService : IAuthService
     {
         private const string MensajeErrorSeguridad = "No fue posible completar la operación. Por favor intente nuevamente en unos momentos.";
-        private const string MensajeCredencialesInvalidas = "Correo, contraseña o rol incorrectos. Verifique sus credenciales.";
+        private const string MensajeCredencialesInvalidas = "Correo o contraseña incorrectos";
+        private const string MensajeCuentaBloqueada = "Cuenta bloqueada por 5 intentos fallidos. Contacta al administrador para reactivarla.";
         private const string MensajeUsuarioNoDisponible = "El acceso no está disponible en este momento. Intente nuevamente más tarde.";
 
         private readonly IConfiguration _configuration;
@@ -54,14 +56,13 @@ namespace SmileTrack_MVC.Services
 
                 if (request is null ||
                     string.IsNullOrWhiteSpace(request.Correo) ||
-                    string.IsNullOrWhiteSpace(request.Contrasena) ||
-                    string.IsNullOrWhiteSpace(request.Rol))
+                    string.IsNullOrWhiteSpace(request.Contrasena))
                 {
                     _logger.LogWarning("Login fallido: campos obligatorios vacíos. IpCliente={IpCliente}", ipCliente);
                     return new AuthResponse
                     {
                         Success = false,
-                        Message = "Correo, contraseña y rol son obligatorios."
+                        Message = "Correo y contraseña son obligatorios."
                     };
                 }
 
@@ -71,7 +72,7 @@ namespace SmileTrack_MVC.Services
                     user = await _context.Usuarios
                         .Include(u => u.Rol)
                         .AsNoTracking()
-                        .FirstOrDefaultAsync(u => u.Correo == request.Correo && u.Rol.NombreRol == request.Rol, ct);
+                        .FirstOrDefaultAsync(u => u.Correo == request.Correo, ct);
                 }
                 catch (SqlException sqlEx)
                 {
@@ -80,9 +81,9 @@ namespace SmileTrack_MVC.Services
                     return new AuthResponse { Success = false, Message = MensajeUsuarioNoDisponible };
                 }
 
-                if (user == null)
+                if (user == null || user.Rol == null)
                 {
-                    _logger.LogWarning("Login fallido: usuario+rol no encontrado. Correo={Correo}, Rol={Rol}, IpCliente={IpCliente}",
+                    _logger.LogWarning("Login fallido: usuario no encontrado. Correo={Correo}, RolSolicitadoUI={Rol}, IpCliente={IpCliente}",
                         correoNormalizado, rolSolicitado, ipCliente);
                     return new AuthResponse
                     {
@@ -91,10 +92,30 @@ namespace SmileTrack_MVC.Services
                     };
                 }
 
+                // Si el flujo superior envía un Rol por request (usado para logging y compatibilidad),
+                // no se usa para filtrar la búsqueda, solo se valida coincidencia y se loguea.
+                if (!string.IsNullOrWhiteSpace(rolSolicitado) &&
+                    !string.Equals(rolSolicitado, user.Rol.NombreRol, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Login: el usuario seleccionó el rol '{RolSolicitado}' en UI pero su cuenta tiene '{RolReal}'. " +
+                        "Se continúa el login con el rol real asignado. IdUsuario={IdUsuario}, Correo={Correo}",
+                        rolSolicitado, user.Rol.NombreRol, user.IdUsuario, correoNormalizado);
+                }
+
                 if (!string.Equals(user.Estado, "activo", StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogWarning("Login fallido: usuario inactivo. IdUsuario={IdUsuario}, Correo={Correo}, Estado={Estado}, IpCliente={IpCliente}",
                         user.IdUsuario, correoNormalizado, user.Estado, ipCliente);
+
+                    if (user.IntentosFallidos >= 5)
+                    {
+                        return new AuthResponse
+                        {
+                            Success = false,
+                            Message = MensajeCuentaBloqueada
+                        };
+                    }
+
                     return new AuthResponse
                     {
                         Success = false,
@@ -122,20 +143,50 @@ namespace SmileTrack_MVC.Services
 
                 if (!isPasswordValid)
                 {
+                    var usuarioActualizar = await _context.Usuarios.FindAsync(new object[] { user.IdUsuario }, ct);
+                    var estaBloqueada = false;
+                    if (usuarioActualizar != null)
+                    {
+                        usuarioActualizar.IntentosFallidos += 1;
+                        if (usuarioActualizar.IntentosFallidos >= 5)
+                        {
+                            usuarioActualizar.Estado = "inactivo";
+                            estaBloqueada = true;
+                            _logger.LogWarning("Cuenta bloqueada por intentos fallidos. IdUsuario={IdUsuario}, Correo={Correo}, IntentosFallidos={IntentosFallidos}, IpCliente={IpCliente}",
+                                user.IdUsuario, correoNormalizado, usuarioActualizar.IntentosFallidos, ipCliente);
+                        }
+                        _context.Usuarios.Update(usuarioActualizar);
+                        try
+                        {
+                            await _context.SaveChangesAsync(ct);
+                        }
+                        catch (DbUpdateConcurrencyException)
+                        {
+                            _logger.LogWarning("Login: concurrencia al actualizar intentos fallidos. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
+                                user.IdUsuario, correoNormalizado, ipCliente);
+                        }
+                        catch (SqlException sqlEx)
+                        {
+                            _logger.LogError(sqlEx, "Login: SQL error actualizando intentos fallidos. IdUsuario={IdUsuario}, NumeroError={NumError}",
+                                user.IdUsuario, sqlEx.Number);
+                        }
+                    }
+
                     _logger.LogWarning("Login fallido: contraseña incorrecta. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
                         user.IdUsuario, correoNormalizado, ipCliente);
                     return new AuthResponse
                     {
                         Success = false,
-                        Message = MensajeCredencialesInvalidas
+                        Message = estaBloqueada ? MensajeCuentaBloqueada : MensajeCredencialesInvalidas
                     };
                 }
 
-                var usuarioActualizar = await _context.Usuarios.FindAsync(new object[] { user.IdUsuario }, ct);
-                if (usuarioActualizar != null)
+                var usuarioLogin = await _context.Usuarios.FindAsync(new object[] { user.IdUsuario }, ct);
+                if (usuarioLogin != null)
                 {
-                    usuarioActualizar.UltimoLogin = DateTime.UtcNow;
-                    _context.Usuarios.Update(usuarioActualizar);
+                    usuarioLogin.UltimoLogin = DateTime.UtcNow;
+                    usuarioLogin.IntentosFallidos = 0;
+                    _context.Usuarios.Update(usuarioLogin);
                     try
                     {
                         await _context.SaveChangesAsync(ct);
@@ -434,7 +485,7 @@ namespace SmileTrack_MVC.Services
                     };
                 }
 
-                var code = new Random().Next(100000, 999999).ToString();
+                var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
                 user.CodigoRecuperacion = code;
                 user.FechaExpiracionCodigo = DateTime.UtcNow.AddMinutes(15);
 
@@ -578,6 +629,101 @@ namespace SmileTrack_MVC.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error inesperado en ResetPasswordAsync. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
+                return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
+            }
+        }
+
+        public async Task<AuthResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default)
+        {
+            string ipCliente = ObtenerIpCliente();
+            string correoNormalizado = request?.ContrasenaActual?.Trim() ?? string.Empty;
+
+            try
+            {
+                _logger.LogInformation("Solicitud de cambio de contraseña. IdUsuario={IdUsuario}, IpCliente={IpCliente}", request?.IdUsuario, ipCliente);
+
+                if (request is null ||
+                    request.IdUsuario <= 0 ||
+                    string.IsNullOrWhiteSpace(request.ContrasenaActual) ||
+                    string.IsNullOrWhiteSpace(request.NuevaContrasena) ||
+                    string.IsNullOrWhiteSpace(request.ConfirmarContrasena))
+                {
+                    return new AuthResponse { Success = false, Message = "Todos los campos son obligatorios." };
+                }
+
+                if (!string.Equals(request.NuevaContrasena, request.ConfirmarContrasena, StringComparison.Ordinal))
+                {
+                    return new AuthResponse { Success = false, Message = "Las contraseñas no coinciden." };
+                }
+
+                if (request.NuevaContrasena.Length < 8)
+                {
+                    return new AuthResponse { Success = false, Message = "La nueva contraseña debe tener al menos 8 caracteres." };
+                }
+
+                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == request.IdUsuario, ct);
+                if (user == null)
+                {
+                    return new AuthResponse { Success = false, Message = "Usuario no encontrado." };
+                }
+
+                if (!string.Equals(user.Estado, "activo", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new AuthResponse { Success = false, Message = "La cuenta no está activa." };
+                }
+
+                var isCurrentPasswordValid = BCrypt.Net.BCrypt.Verify(request.ContrasenaActual, user.Contrasena);
+                if (!isCurrentPasswordValid)
+                {
+                    _logger.LogWarning("Cambio de contraseña fallido: contraseña actual incorrecta. IdUsuario={IdUsuario}, IpCliente={IpCliente}",
+                        user.IdUsuario, ipCliente);
+                    return new AuthResponse { Success = false, Message = "La contraseña actual es incorrecta." };
+                }
+
+                if (BCrypt.Net.BCrypt.Verify(request.NuevaContrasena, user.Contrasena))
+                {
+                    return new AuthResponse { Success = false, Message = "La nueva contraseña no puede ser igual a la anterior." };
+                }
+
+                string nuevoHash;
+                try
+                {
+                    nuevoHash = BCrypt.Net.BCrypt.HashPassword(request.NuevaContrasena, workFactor: 11);
+                }
+                catch (Exception bcEx)
+                {
+                    _logger.LogError(bcEx, "Error al generar hash BCrypt en cambio de contraseña. IdUsuario={IdUsuario}, IpCliente={IpCliente}",
+                        user.IdUsuario, ipCliente);
+                    return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
+                }
+
+                user.Contrasena = nuevoHash;
+                user.IntentosFallidos = 0;
+                user.CodigoRecuperacion = null;
+                _context.Usuarios.Update(user);
+
+                try
+                {
+                    await _context.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateConcurrencyException concEx)
+                {
+                    _logger.LogWarning(concEx, "Cambio de contraseña: concurrencia. IdUsuario={IdUsuario}, IpCliente={IpCliente}", user.IdUsuario, ipCliente);
+                    return new AuthResponse { Success = false, Message = "Conflicto temporal, intente nuevamente." };
+                }
+                catch (SqlException sqlEx)
+                {
+                    _logger.LogError(sqlEx, "Cambio de contraseña: SQL error. IdUsuario={IdUsuario}, NumError={NumError}, IpCliente={IpCliente}",
+                        user.IdUsuario, sqlEx.Number, ipCliente);
+                    return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
+                }
+
+                _logger.LogInformation("Cambio de contraseña exitoso. IdUsuario={IdUsuario}, IpCliente={IpCliente}", user.IdUsuario, ipCliente);
+                return new AuthResponse { Success = true, Message = "Contraseña actualizada correctamente." };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado en ChangePasswordAsync. IdUsuario={IdUsuario}, IpCliente={IpCliente}", request?.IdUsuario, ipCliente);
                 return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
             }
         }

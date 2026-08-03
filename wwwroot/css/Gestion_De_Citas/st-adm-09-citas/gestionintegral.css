@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — GESTIÓN DE CITAS (styles.css)
-   Base unificada + componentes específicos de citas
-   ============================================= */
+/* ============================================
+SmileTrack — Gestión Integral de Citas (st-adm-09-citas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la gestión integral de citas, que regulan la presentación visual de la tabla de listado, las insignias de estado (badges), los controles del formulario modal y adaptaciones responsive.
+
+FUNCIONALIDADES PRINCIPALES:
+- Maquetación fluida y adaptable (Flexbox/Grid) para visualización en tabletas y móviles
+- Estilos para insignias de estado de la cita (.programada, .confirmada, .atendida, .cancelada)
+- Estilización de controles del formulario, campos de búsqueda e inputs de fecha
+- Reglas para optimización de impresión física y reducción de animaciones para accesibilidad
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css
+- JS: ~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Se definen variables locales de color en :root para mantener uniformidad con los demás submódulos de administración.
+============================================ */
 
 :root {
   /* === VARIABLES BASE (IDÉNTICAS A st-odo-01) === */

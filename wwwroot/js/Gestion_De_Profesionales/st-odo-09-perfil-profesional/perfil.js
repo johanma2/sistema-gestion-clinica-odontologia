@@ -1,7 +1,27 @@
-/**
- * SMILETRACK — PERFIL PROFESIONAL (perfil.js)
- * API-ready + Accesibilidad + Persistencia fallback
- */
+/* ============================================
+SmileTrack — Perfil Profesional (st-odo-09-perfil-profesional)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Gestiona la lógica interactiva del perfil del profesional logueado: guardado de datos mediante API fetch o LocalStorage fallback, cambio de pestañas de navegación interna y validaciones de seguridad en los formularios.
+
+FUNCIONALIDADES PRINCIPALES:
+- Guardado asíncrono (fetch) de datos personales y credenciales de seguridad con feedback visual
+- Navegación interactiva por pestañas (Datos Personales / Configuración de Seguridad)
+- Validaciones en cliente para contraseñas seguras y campos de contacto correctos
+- Gestión de alertas y notificaciones del sistema con dismiss automático
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController
+- CSS: ~/css/Gestion_De_Profesionales/st-odo-09-perfil-profesional/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-odo-09-perfil-profesional/perfil.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 
 // ═══════════════════════════════════════════════════════════════════
 //  CONFIGURACIÓN API

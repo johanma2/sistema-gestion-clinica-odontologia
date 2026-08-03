@@ -1,7 +1,28 @@
-/**
- * SMILETRACK — AGENDA GENERAL (agenda.js)
- * API-ready + Accesibilidad + Persistencia fallback
- */
+/* ============================================
+SmileTrack — Agenda General (st-adm-08-agenda)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Maneja la lógica y las interacciones del calendario semanal, carga de citas desde la API, filtrado dinámico por profesional y consultorio, navegación de fechas y despliegue de formularios modales.
+
+FUNCIONALIDADES PRINCIPALES:
+- Carga y renderizado dinámico de citas por día con soporte de teclado para accesibilidad
+- Navegación interactiva de semanas (Siguiente, Anterior, Hoy) y formateo de fechas localizadas
+- Modales para ver el detalle de una cita agendada y para crear nuevas citas
+- Envío asíncrono del formulario de nueva cita mediante llamadas seguras a la API
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm08Agenda
+- CSS: ~/css/Gestion_De_Citas/st-adm-08-agenda/agendageneral.css
+- JS: ~/js/Gestion_De_Citas/st-adm-08-agenda/agendageneral.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- El debounce en los selectores de filtro previene saturación de peticiones ante cambios rápidos.
+============================================ */
 
 // ═══════════════════════════════════════════════════════════════════
 //  CONFIGURACIÓN API
@@ -12,14 +33,14 @@ const API_BASE = '/api';
 //  UTILIDADES GLOBALES
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene elemento del DOM con manejo seguro de null
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM de la vista
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes
+// WHY: Debounce evita saturar la API con peticiones redundantes ante cambios veloces del usuario
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -28,7 +49,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre
+// WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin entorpecer el flujo de trabajo
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -41,7 +62,7 @@ const showToast = (message, type = 'success') => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  DATOS DE EJEMPLO (Fallback si API falla)
+// WHY: Fallback a datos locales ficticios garantiza que la interfaz siga operativa y testeable si la conexión con la base de datos se interrumpe
 // ═══════════════════════════════════════════════════════════════════
 const SAMPLE_APPOINTMENTS = [
   { id: 1, date: '2026-05-19', time: '09:00', patient: 'Carlos Ruiz', service: 'Limpieza', office: 'Box 01', status: 'confirmed', professional: 'Dr. Javier Méndez' },
@@ -65,20 +86,20 @@ let currentWeekStart = (window.APP_CONFIG && window.APP_CONFIG.WeekStart) ? new 
 //  FUNCIONES DE RENDERIZADO
 // ═══════════════════════════════════════════════════════════════════
 
-// Formatea fecha para mostrar
+// WHY: Se formatea la fecha manualmente para asegurar consistencia regional y legibilidad sin dependencias externas pesadas
 const fmtDate = (date) => {
   const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
 };
 
-// Obtiene clase CSS para estado de cita
+// WHY: Mapeo centralizado para facilitar cambios en las clases de estado visual en la hoja de estilos
 const getStatusClass = (status) => {
   const map = { confirmed: 'confirmed', attended: 'attended', cancelled: 'cancelled', available: 'available', reserved: 'reserved' };
   return map[status] || 'available';
 };
 
-// Renderiza calendario con accesibilidad
+// WHY: Se reconstruye la grilla dinámicamente inyectando atributos ARIA para cumplir estándares de lectores de pantalla (WCAG 2.1)
 const renderCalendar = (weekStart) => {
   const days = document.querySelectorAll('.calendar-day');
   const headers = document.querySelectorAll('.calendar-day-header');
@@ -107,7 +128,7 @@ const renderCalendar = (weekStart) => {
       day.innerHTML = '';
       day.setAttribute('aria-labelledby', `day-${i}`);
       
-      // Mostrar estado cerrado para domingos
+      // WHY: Validación de regla de negocio que previene el agendamiento y visualización de espacios los domingos
       if (date.getDay() === 0) {
         day.classList.add('closed');
         day.innerHTML = `<div class="day-closed"><span aria-hidden="true">🏥</span><span>CERRADO</span></div>`;
@@ -115,7 +136,7 @@ const renderCalendar = (weekStart) => {
       }
       day.classList.remove('closed');
       
-      // Filtrar citas por fecha y filtros activos
+      // WHY: Filtrado en memoria de cliente para proveer una respuesta de interfaz instantánea antes de consultar a la API
       const dateStr = date.toISOString().split('T')[0];
       const filtered = appointments.filter(a => 
         a.date === dateStr && 
@@ -172,14 +193,14 @@ const renderCalendar = (weekStart) => {
   }
 };
 
-// Construye etiqueta accesible para cita
+// WHY: Provee descripciones contextuales ricas para lectores de pantalla que describen completamente el estado de la cita
 const buildApptLabel = (appt) => {
   if (appt.available) return `Espacio disponible: ${appt.time}`;
   if (appt.reserved) return `Reservado para urgencias: ${appt.time}`;
   return `Cita ${appt.status}: ${appt.patient}, ${appt.time}, ${appt.service}, ${appt.office}`;
 };
 
-// Verifica si fecha es hoy
+// WHY: Permite destacar visualmente el día actual para orientar rápidamente al usuario
 const isToday = (date) => {
   const today = new Date();
   return date.toDateString() === today.toDateString();
@@ -189,7 +210,7 @@ const isToday = (date) => {
 //  MODAL: DETALLE DE CITA
 // ═══════════════════════════════════════════════════════════════════
 
-// Abre modal de detalle de cita
+// WHY: Uso de modales previene la pérdida de contexto del calendario principal al consultar detalles
 const openAppointmentModal = (appt) => {
   const content = safeGetElement('modalApptContent');
   const title = safeGetElement('modalApptTitle');
@@ -269,7 +290,7 @@ const openNewAppointmentModal = (dateStr = '', timeStr = '') => {
   const modal = safeGetElement('modalNewAppointment');
   if (!modal) return;
   
-  // Pre-llenar campos si vienen en el contexto
+  // WHY: Pre-llenar el formulario mejora la eficiencia del agendamiento al reducir la escritura repetitiva
   if (dateStr) {
     const dateInput = safeGetElement('newApptDate');
     if (dateInput) dateInput.value = dateStr;
@@ -277,7 +298,7 @@ const openNewAppointmentModal = (dateStr = '', timeStr = '') => {
   if (timeStr) {
     const startTimeInput = safeGetElement('newApptStartTime');
     if (startTimeInput) startTimeInput.value = timeStr;
-    // Sugerir +30 min para HoraFin
+    // WHY: Sugerir una duración predeterminada de 30 minutos agiliza el flujo de creación para el personal administrativo
     const endTimeInput = safeGetElement('newApptEndTime');
     if (endTimeInput) {
       const [h, m] = timeStr.split(':').map(Number);
@@ -311,7 +332,7 @@ const closeNewAppointmentModal = () => {
 //  NAVEGACIÓN SEMANAL
 // ═══════════════════════════════════════════════════════════════════
 
-// Obtiene inicio de semana (lunes) para una fecha
+// WHY: Normaliza la navegación semanal comenzando rigurosamente los días lunes
 const getWeekStart = (date) => {
   const d = new Date(date);
   const day = d.getDay();
@@ -346,7 +367,7 @@ const goToToday = () => {
 let selectedProfessional = '';
 let selectedOffice = '';
 
-// Aplica filtros
+// WHY: Actualiza las variables de estado locales antes de disparar el re-renderizado del calendario
 const applyFilters = () => {
   selectedProfessional = safeGetElement('filterProfessional')?.value || '';
   selectedOffice = safeGetElement('filterOffice')?.value || '';
@@ -421,7 +442,7 @@ async function updateAppointmentAPI(id, updates) {
 //  INICIALIZACIÓN DE COMPONENTES
 // ═══════════════════════════════════════════════════════════════════
 
-// Inicializa sidebar móvil con gestión de foco y ARIA
+// WHY: Gestión de foco (focus trap) y Escape key cumplen estándares de accesibilidad para evitar trampas de teclado en dispositivos móviles
 const initSidebar = () => {
   const hamburger = safeGetElement('hamburger');
   const sidebar = safeGetElement('sidebar');
@@ -446,7 +467,7 @@ const initSidebar = () => {
   hamburger.addEventListener('click', () => toggleMenu(true));
   overlay.addEventListener('click', () => toggleMenu(false));
 
-  // ✅ Navegación: cerrar menú en móvil, SIN bloquear enlaces
+  // WHY: Evita que el sidebar móvil quede abierto y tape la pantalla después de hacer clic en un enlace de navegación
   sidebar.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
       if (window.innerWidth <= 680) {
@@ -497,7 +518,7 @@ const initAppointmentModal = () => {
     if (e.target === e.currentTarget) closeAppointmentModal();
   });
   
-  // Soporte para teclado en modal
+  // WHY: Captura de tecla Escape para cerrar modales de manera intuitiva y accesible
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modal?.classList.contains('open')) {
       e.preventDefault();

@@ -121,17 +121,17 @@ class PasswordRecovery {
         this.setLoading(this.form1.querySelector('button'), true);
         
         try {
-            // Simular envío de código
-            await this.sendVerificationCode(email);
+            const response = await this.sendRecoveryCode(email);
+            if (!response.success) {
+                this.showError(this.emailError, response.message || 'Error al enviar el código. Intenta de nuevo.');
+                return;
+            }
+
             this.userEmail = email;
             this.maskedEmail.textContent = this.maskEmail(email);
-            this.verificationCode = this.generateCode(); // En producción: recibir del backend
-            console.log('🔐 Código simulado:', this.verificationCode); // Para testing
-            
-            this.showToast('Código enviado a tu correo', 'success');
+            this.showToast(response.message || 'Código enviado a tu correo', 'success');
             this.goToStep(2);
             this.codeInput.focus();
-            
         } catch (error) {
             this.showError(this.emailError, 'Error al enviar código. Intenta de nuevo.');
         } finally {
@@ -172,7 +172,6 @@ class PasswordRecovery {
         
         setTimeout(() => {
             this.verificationCode = this.generateCode();
-            console.log('🔁 Nuevo código:', this.verificationCode);
             this.showToast('Nuevo código enviado', 'info');
             this.resendBtn.disabled = false;
             this.resendBtn.textContent = '¿No recibiste el código? Reenviar';
@@ -228,20 +227,35 @@ class PasswordRecovery {
             return;
         }
         
+        if (!this.userEmail) {
+            this.showToast('Ocurrió un error. Regresa al paso anterior.', 'error');
+            return;
+        }
+
+        const codigo = this.codeInput.value.trim();
+        if (codigo.length !== 6 || !/^[0-9]{6}$/.test(codigo)) {
+            this.showError(this.codeError, 'Ingresa un código válido de 6 dígitos');
+            this.goToStep(2);
+            return;
+        }
+        
         this.setLoading(this.resetBtn, true);
         
         try {
-            // Simular actualización de contraseña
-            await this.updatePassword(this.userEmail, this.newPassInput.value);
-            
-            // Mostrar éxito
+            const response = await this.resetPassword(this.userEmail, codigo, this.newPassInput.value);
+            if (!response.success) {
+                this.showToast(response.message || 'Error al restablecer. Intenta de nuevo.', 'error');
+                this.goToStep(2);
+                return;
+            }
+
             Object.values(this.steps).forEach(s => s?.classList.add('hidden'));
             this.steps.success?.classList.remove('hidden');
             this.stepDesc.textContent = 'Tu contraseña ha sido actualizada exitosamente.';
-            this.showToast('¡Contraseña restablecida!', 'success');
-            
+            this.showToast(response.message || '¡Contraseña restablecida!', 'success');
         } catch (error) {
             this.showToast('Error al restablecer. Intenta de nuevo.', 'error');
+            this.goToStep(2);
         } finally {
             this.setLoading(this.resetBtn, false);
         }
@@ -297,6 +311,11 @@ class PasswordRecovery {
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
+    getCsrfToken() {
+        const match = document.cookie.match(/(^|; )XSRF-TOKEN=([^;]+)/);
+        return match ? decodeURIComponent(match[2]) : null;
+    }
+
     showToast(message, type = 'info') {
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
@@ -305,7 +324,6 @@ class PasswordRecovery {
         
         const icons = { success: 'check_circle', error: 'error', info: 'info' };
         toast.innerHTML = `
-            <span class="material-symbols-outlined text-lg" aria-hidden="true">${icons[type]}</span>
             <span>${message}</span>
             <button class="toast-close" aria-label="Cerrar">&times;</button>
         `;
@@ -325,18 +343,44 @@ class PasswordRecovery {
     }
 
     // ── SIMULACIONES DE API (Reemplazar en producción) ─
-    async sendVerificationCode(email) {
-        return new Promise(resolve => setTimeout(resolve, 1500));
+    async sendRecoveryCode(email) {
+        const response = await fetch('/acceso-y-seguridad/recover/send-code', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': this.getCsrfToken()
+            },
+            body: JSON.stringify({ correo: email })
+        });
+
+        if (!response.ok) {
+            return { success: false, message: 'No se pudo enviar el código. Intenta más tarde.' };
+        }
+
+        return response.json();
     }
 
-    async verifyCode(code) {
-        return new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    async resetPassword(email, code, newPassword) {
+        const response = await fetch('/acceso-y-seguridad/recover/reset-password', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': this.getCsrfToken()
+            },
+            body: JSON.stringify({ correo: email, codigo: code, nuevaContrasena: newPassword })
+        });
 
-    async updatePassword(email, newPassword) {
-        return new Promise(resolve => setTimeout(resolve, 2000));
+        if (!response.ok) {
+            const body = await response.json().catch(() => null);
+            return { success: false, message: body?.message ?? 'No se pudo restablecer la contraseña.' };
+        }
+
+        return response.json();
     }
 }
+
 
 // ════════════════════════════════════════════════════════
 // INICIALIZACIÓN

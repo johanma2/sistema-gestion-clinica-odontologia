@@ -57,6 +57,12 @@ namespace SmileTrack_MVC.Models.Entities
         [Column("fecha_expiracion_codigo")]
         public DateTime? FechaExpiracionCodigo { get; set; }
 
+        [Column("intentos_fallidos")]
+        public int IntentosFallidos { get; set; } = 0;
+
+        [Column("ultimo_logout")]
+        public DateTime? UltimoLogout { get; set; }
+
         [ForeignKey("IdRol")]
         public Rol Rol { get; set; } = null!;
     }

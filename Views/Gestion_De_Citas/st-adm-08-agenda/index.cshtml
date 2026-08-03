@@ -1,4 +1,30 @@
-﻿@{ Layout = null; var agendaDias = ViewData["AgendaDias"] as List<SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel> ?? new(); var semanaLabel = ViewData["SemanaLabel"] ?? string.Empty; }
+﻿@* ============================================
+SmileTrack — Agenda General (st-adm-08-agenda)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista que muestra el calendario semanal interactivo para la gestión de citas de profesionales y consultorios.
+
+FUNCIONALIDADES PRINCIPALES:
+- Visualización del calendario semanal con grilla de días y citas
+- Navegación por semanas y botón para regresar al día actual (Hoy)
+- Formulario modal para crear y agendar nuevas citas
+- Detalle modal de las citas agendadas con opción de edición rápida
+- Filtros dinámicos por Profesional y por Consultorio
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm08Agenda
+- CSS: ~/css/Gestion_De_Citas/st-adm-08-agenda/agendageneral.css
+- JS: ~/js/Gestion_De_Citas/st-adm-08-agenda/agendageneral.js
+- Partial / Otros: _SidebarAdmin.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Se utiliza AntiForgeryToken para mitigar riesgos de CSRF al enviar el formulario.
+============================================ *@
+@{ Layout = null; var agendaDias = ViewData["AgendaDias"] as List<SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel> ?? new(); var semanaLabel = ViewData["SemanaLabel"] ?? string.Empty; }
 
 <!DOCTYPE html>
 <html lang="es">

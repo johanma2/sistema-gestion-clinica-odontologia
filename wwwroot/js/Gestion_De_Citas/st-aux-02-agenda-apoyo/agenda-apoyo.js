@@ -1,16 +1,37 @@
-/**
- * SMILETRACK — AGENDA DE APOYO (app.js)
- * Lógica con persistencia, filtros accesibles y validaciones
- */
+/* ============================================
+SmileTrack — Agenda de Apoyo Clínico (st-aux-02-agenda-apoyo)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-// Obtiene elemento del DOM con manejo seguro de null
+DESCRIPCIÓN:
+Maneja el comportamiento interactivo de la agenda de apoyo del auxiliar: filtrado combinado por profesional y tipo de cita, renderizado de badges, y soporte de teclado para navegación del dropdown.
+
+FUNCIONALIDADES PRINCIPALES:
+- Carga de citas y almacenamiento temporal mediante controlador
+- Filtrado combinado dinámico (profesional + tipo de cita) con actualizaciones inmediatas de la interfaz
+- Despliegue interactivo y accesible del menú de selección de profesionales (soporte de flechas y Escape)
+- Renderizado de badges temáticos de alergias críticas y estado de la cita odontológica
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm08Agenda
+- CSS: ~/css/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.css
+- JS: ~/js/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.js
+- Partial / Otros: agenda-apoyo.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- El dropdown de selección de profesionales implementa un patrón completo de focus trap y navegación por teclado ARIA.
+============================================ */
+
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes de input
+// WHY: Debounce evita saturar la API con peticiones redundantes ante cambios veloces del usuario
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -19,7 +40,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre y cleanup de timeout
+// WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin entorpecer el flujo de trabajo
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -48,7 +69,7 @@ class AgendaController {
     this._filtroTipo = 'todos';
   }
 
-  // Carga citas desde localStorage o usa datos base
+  // WHY: Carga de LocalStorage para simular persistencia de datos en entorno de desarrollo o llamadas a API
   async getCitas(profesional = 'todos', tipo = 'todos') {
     // En producción: llamada real a API
     // Aquí usamos datos mockeados con posible persistencia
@@ -132,7 +153,7 @@ const renderTabla = (citas) => {
   }
   if (empty) empty.style.display = 'none';
 
-  // Funciones auxiliares para badges con aria-label
+  // WHY: Funciones auxiliares para aislar la lógica de renderizado de insignias y asegurar la inyección de atributos de accesibilidad
   const badgeTipo = (tipo) => {
     const map = {
       consulta: ['badge-consulta', 'Consulta'],
@@ -175,7 +196,7 @@ const aplicarFiltros = async () => {
   renderTabla(citas);
 };
 
-// Inicializa filtros de tipo con role radio y persistencia
+// WHY: Los filtros tipo radio simulan un comportamiento excluyente, garantizando una única selección activa a la vez
 const initTipoFiltros = () => {
   const buttons = document.querySelectorAll('.filter-btn[data-value]');
   
@@ -199,7 +220,7 @@ const initTipoFiltros = () => {
       showToast(`Filtro aplicado: ${btn.textContent.trim()}`, 'info');
     });
     
-    // Soporte para teclado
+    // WHY: Habilita activación mediante Enter o Barra Espaciadora para usuarios sin ratón
     btn.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -209,7 +230,7 @@ const initTipoFiltros = () => {
   });
 };
 
-// Inicializa dropdown de profesional con accesibilidad keyboard
+// WHY: Habilita el control por teclado en el menú desplegable (focusing, ArrowDown, ArrowUp, Escape) para cumplir normas WCAG 2.1 AA
 const initProfesionalDropdown = () => {
   const btn = safeGetElement('btnProfesional');
   const menu = safeGetElement('dropdownMenu');
@@ -308,7 +329,7 @@ const init = async () => {
     metaEl.setAttribute('aria-label', `Información: ${metaEl.textContent}`);
   }
   
-  // Cargar y renderizar citas iniciales
+  // WHY: Dispara la primera carga de datos al iniciar el módulo
   const citas = await agendaCtrl.getCitas();
   renderTabla(citas);
   

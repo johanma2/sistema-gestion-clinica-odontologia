@@ -1,3 +1,28 @@
+@* ============================================
+SmileTrack — Dashboard del Odontólogo (st-odo-01-dashboard)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista de dashboard personal del odontólogo que muestra un resumen del día: próximas citas, procedimientos pendientes, estadísticas de la jornada y accesos directos a las funciones más usadas.
+
+FUNCIONALIDADES PRINCIPALES:
+- Tarjetas de métricas de la jornada (citas atendidas, pendientes, canceladas) con animación de conteo
+- Lista de próximas citas del día con estado visual por color de badge
+- Panel de accesos rápidos a agenda, reportes y perfil del profesional
+- Notificaciones activas del sistema con capacidad de dismissal individual
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController o DashboardOdontologoController
+- CSS: ~/css/Gestion_De_Profesionales/st-odo-01-dashboard/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-odo-01-dashboard/app.js
+- Partial / Otros: Layout = null (standalone)
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Los contadores de métricas se animan al cargar la vista para atraer la atención del profesional hacia los KPIs del día.
+============================================ *@
 @{ Layout = null; }
 
 ﻿<!DOCTYPE html>

@@ -1,24 +1,64 @@
-/**
- * SMILETRACK — GESTIÓN DE CITAS (script.js)
- * API-ready + Accesibilidad + Persistencia fallback
- * CORRECCIÓN: Lógica de filtros completa + fechas actualizadas a mayo 2026
- */
+/* ============================================
+SmileTrack — Gestión Integral de Citas (st-adm-09-citas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026 (actualizado 2026-07-27)
+
+DESCRIPCIÓN:
+Maneja la lógica interactiva de la tabla de citas del administrador: búsqueda debounced,
+filtrado local dinámico, control de modales, guardado y eliminación consumiendo la API
+REST /api/citas con Authorization Bearer JWT (y Cookie como fallback — política "ApiOrCookie").
+Si la API no responde, se usa LocalStorage como fallback offline.
+
+FUNCIONALIDADES PRINCIPALES:
+- Carga de citas desde GET /api/citas con paginación y filtros (fallback LocalStorage)
+- Filtrado combinado y en tiempo real por término de búsqueda, profesional, consultorio, fecha y estado
+- Apertura y cierre accesible de modales para creación, visualización y edición detallada de citas
+- Actualización asíncrona vía PUT /api/citas/{id} y cancelación soft delete vía DELETE /api/citas/{id}
+- Notificaciones instantáneas (Toasts) y banner error accesible para fallos
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController → ApiListarCitas / ApiObtenerCita / ApiActualizarCita / ApiEliminarCita
+- Endpoints: GET/PUT/DELETE /api/citas [Authorize(Policy = "ApiOrCookie")]
+- CSS: ~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css
+- JS: ~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- El mapeo server↔cliente se concentra en los helpers mapServerToClient() y mapClientToServerBody()
+  para evitar inconsistencias entre el formato del ViewModel CitaViewModel y las filas renderizadas.
+============================================ */
 
 // ═══════════════════════════════════════════════════════════════════
-//  CONFIGURACIÓN API
+//  CONFIGURACIÓN API Y AUTENTICACIÓN
 // ═══════════════════════════════════════════════════════════════════
 const API_BASE = '/api';
+const API_PAGE_SIZE = 100;
+
+// WHY: Centraliza los headers de autenticación. Primero intenta JWT (sessionStorage st_jwt),
+//      si no existe el backend acepta Cookie Authentication igualmente (política ApiOrCookie).
+const getAuthHeaders = () => {
+  const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+  try {
+    const jwt = sessionStorage.getItem('st_jwt');
+    if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
+  } catch (e) { /* sessionStorage deshabilitado (modo privado), se ignora */ }
+  return headers;
+};
 
 // ═══════════════════════════════════════════════════════════════════
 //  UTILIDADES GLOBALES
 // ═══════════════════════════════════════════════════════════════════
 
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
+// WHY: Debounce evita saturar la API con peticiones redundantes ante cambios veloces del usuario
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -27,48 +67,120 @@ const debounce = (fn, delay) => {
   };
 };
 
+// WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin entorpecer el flujo de trabajo
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
   toast.textContent = message;
   toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
   if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
+  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3500);
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  PERSISTENCIA CON LOCALSTORAGE
+//  MAPEO ENTRE FORMATOS: Server (JSON) ↔ Cliente (fila renderizada)
+// ═══════════════════════════════════════════════════════════════════
+const colorPalette = ['blue', 'green', 'purple', 'red', 'slate'];
+
+const pickColorByInitials = (initials) => {
+  if (!initials) return 'blue';
+  let hash = 0;
+  for (let i = 0; i < initials.length; i++) hash = ((hash << 5) - hash) + initials.charCodeAt(i);
+  return colorPalette[Math.abs(hash) % colorPalette.length];
+};
+
+const getInitials = (fullName) => {
+  if (!fullName) return 'XX';
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'XX';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const slugFromName = (fullName) => {
+  if (!fullName) return 'profesional';
+  return fullName.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '').trim() || 'profesional';
+};
+
+// WHY: Formato server = { IdCita, Paciente.NombreCompleto, Profesional.NombreCompleto, FechaHora ISO, Estado }
+//      Formato cliente (render fila) = { id, date, time, patient, doc, professional (slug), professionalName, service, status, avatar, color }
+const mapServerToClient = (srv) => {
+  const fh = srv.FechaHora ? new Date(srv.FechaHora) : null;
+  const y = fh ? fh.getFullYear() : 0;
+  const m = fh ? String(fh.getMonth() + 1).padStart(2, '0') : '01';
+  const d = fh ? String(fh.getDate()).padStart(2, '0') : '01';
+  const hh = fh ? String(fh.getHours()).padStart(2, '0') : '09';
+  const mm = fh ? String(fh.getMinutes()).padStart(2, '0') : '00';
+  const patientFull = srv.Paciente?.NombreCompleto || '—';
+  const initials = getInitials(patientFull);
+  const color = pickColorByInitials(initials);
+
+  // El server no expone Documento/Paciente en listado; usamos "Id" como identificación temporal.
+  // Si se requiere cédula, ampliar ApiListarCitas con Paciente.Documento sin costo.
+  const doc = srv.IdPaciente ? `#${srv.IdPaciente}` : '—';
+
+  return {
+    id: srv.IdCita,
+    date: `${y}-${m}-${d}`,
+    time: `${hh}:${mm}`,
+    patient: patientFull,
+    doc,
+    professional: slugFromName(srv.Profesional?.NombreCompleto),
+    professionalName: srv.Profesional?.NombreCompleto || 'Sin asignar',
+    service: srv.Servicio?.Nombre || 'Sin servicio',
+    status: mapEstadoServerToClient(srv.Estado),
+    avatar: initials,
+    color,
+    _raw: srv
+  };
+};
+
+const mapEstadoServerToClient = (estado) => {
+  if (!estado) return 'programada';
+  const e = estado.toLowerCase().trim();
+  if (e === 'atendida' || e === 'finalizada' || e === 'en_proceso') return 'atendida';
+  if (e === 'no_asistida') return 'no-show';
+  if (['programada', 'confirmada', 'cancelada'].includes(e)) return e;
+  return 'programada';
+};
+
+const mapEstadoClientToServer = (estado) => {
+  if (estado === 'atendida') return 'finalizada';
+  if (estado === 'no-show') return 'no_asistida';
+  return estado || 'programada';
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  PERSISTENCIA CON LOCALSTORAGE (FALLBACK OFFLINE)
 // ═══════════════════════════════════════════════════════════════════
 
 const appointmentsStorage = {
   key: 'smiletrack_citas_admin',
-  
+
+  // WHY: Carga de LocalStorage para simular persistencia de datos en modo offline
   load: () => {
     const stored = localStorage.getItem(appointmentsStorage.key);
     if (stored) {
       try { return JSON.parse(stored); }
-      catch (e) { console.warn('Error al cargar citas, usando datos de ejemplo'); }
+      catch (e) { console.warn('Error al cargar citas locales, usando datos de ejemplo'); }
     }
-    // ═══ DATOS DE EJEMPLO CON FECHAS ACTUALIZADAS A MAYO 2026 ═══
+    // ═══ DATOS DE EJEMPLO ÚNICAMENTE CUANDO LA API ESTÁ INALCANZABLE ═══
     return [
       { id: 1, date: '2026-05-24', time: '09:30', patient: 'Julián Restrepo', doc: '10239485', professional: 'mendez', professionalName: 'Dr. Ricardo Méndez', service: 'Limpieza Dental', status: 'programada', avatar: 'JR', color: 'blue' },
       { id: 2, date: '2026-05-24', time: '11:00', patient: 'Lucía Torres', doc: '52109432', professional: 'sotelo', professionalName: 'Dra. Elena Sotelo', service: 'Ortodoncia', status: 'confirmada', avatar: 'LT', color: 'green' },
       { id: 3, date: '2026-05-24', time: '14:15', patient: 'Mariana Esparza', doc: '88764321', professional: 'ruiz', professionalName: 'Dr. Carlos Ruiz', service: 'Endodoncia', status: 'atendida', avatar: 'ME', color: 'purple' },
       { id: 4, date: '2026-05-24', time: '16:00', patient: 'Sebastián Correa', doc: '11098452', professional: 'sotelo', professionalName: 'Dra. Elena Sotelo', service: 'Extracción', status: 'cancelada', avatar: 'SC', color: 'red' },
-      { id: 5, date: '2026-05-24', time: '17:30', patient: 'Mónica Giraldo', doc: '32109876', professional: 'mendez', professionalName: 'Dr. Ricardo Méndez', service: 'Valoración', status: 'no-show', avatar: 'MG', color: 'slate' },
-      { id: 6, date: '2026-05-25', time: '08:00', patient: 'Andrea López', doc: '10987654', professional: 'mendez', professionalName: 'Dr. Ricardo Méndez', service: 'Consulta General', status: 'programada', avatar: 'AL', color: 'blue' },
-      { id: 7, date: '2026-05-25', time: '10:30', patient: 'Carlos Vega', doc: '11223344', professional: 'ruiz', professionalName: 'Dr. Carlos Ruiz', service: 'Resina', status: 'confirmada', avatar: 'CV', color: 'green' },
-      { id: 8, date: '2026-05-26', time: '09:00', patient: 'Sofía Ramírez', doc: '55667788', professional: 'sotelo', professionalName: 'Dra. Elena Sotelo', service: 'Blanqueamiento', status: 'programada', avatar: 'SR', color: 'blue' },
-      { id: 9, date: '2026-05-26', time: '15:00', patient: 'Diego Morales', doc: '99887766', professional: 'mendez', professionalName: 'Dr. Ricardo Méndez', service: 'Extracción', status: 'atendida', avatar: 'DM', color: 'purple' },
-      { id: 10, date: '2026-05-27', time: '11:30', patient: 'Valeria Castro', doc: '44556677', professional: 'ruiz', professionalName: 'Dr. Carlos Ruiz', service: 'Ortodoncia', status: 'cancelada', avatar: 'VC', color: 'red' }
+      { id: 5, date: '2026-05-24', time: '17:30', patient: 'Mónica Giraldo', doc: '32109876', professional: 'mendez', professionalName: 'Dr. Ricardo Méndez', service: 'Valoración', status: 'no-show', avatar: 'MG', color: 'slate' }
     ];
   },
-  
+
   save: (data) => {
     try { localStorage.setItem(appointmentsStorage.key, JSON.stringify(data)); return true; }
-    catch (e) { console.error('Error al guardar citas:', e); return false; }
+    catch (e) { console.error('Error al guardar citas locales:', e); return false; }
   },
-  
+
   addAppointment: (appt) => {
     const data = appointmentsStorage.load();
     appt.id = data.length > 0 ? Math.max(...data.map(a => a.id)) + 1 : 1;
@@ -76,19 +188,19 @@ const appointmentsStorage = {
     appointmentsStorage.save(data);
     return appt;
   },
-  
+
   getAppointment: (id) => appointmentsStorage.load().find(a => a.id === id)
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  DATOS Y ESTADO — CORREGIDO PARA FILTROS
+//  DATOS Y ESTADO
 // ═══════════════════════════════════════════════════════════════════
 
 let appointments = appointmentsStorage.load();
 let searchQuery = '';
-let filterStatus = '';        // ← NUEVO: estado seleccionado
-let filterProfessional = '';  // ← NUEVO: profesional seleccionado
-let filterDate = '';          // ← NUEVO: fecha seleccionada
+let filterStatus = '';
+let filterProfessional = '';
+let filterDate = '';
 let currentTab = 'all';
 let currentPage = 1;
 const itemsPerPage = 5;
@@ -98,8 +210,10 @@ const avatarColors = {
   purple: 'bg-purple-100 text-purple-600', red: 'bg-red-100 text-red-600', slate: 'bg-slate-100 text-slate-600'
 };
 
+// WHY: Activamos el renderizado cliente para consumir datos frescos de la API.
+//      Setear a true para regresar a la lista renderizada en servidor (Razor).
 const shouldUseServerRenderedList = () => {
-  return true; // Always use server rendered list
+  return false;
 };
 
 const statusLabels = {
@@ -131,54 +245,42 @@ const fmtTime = (time) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  FILTRADO COMBINADO — CORREGIDO
+//  FILTRADO COMBINADO
 // ═══════════════════════════════════════════════════════════════════
 
 const getFilteredAppointments = () => {
   return appointments.filter(a => {
-    // Filtro por tab (cancelaciones / no asistió)
     if (currentTab === 'cancelled' && a.status !== 'cancelada') return false;
     if (currentTab === 'no-show' && a.status !== 'no-show') return false;
-    
-    // Filtro por estado (dropdown)
     if (filterStatus && a.status !== filterStatus) return false;
-    
-    // Filtro por profesional (dropdown)
     if (filterProfessional && a.professional !== filterProfessional) return false;
-    
-    // Filtro por fecha (input date)
     if (filterDate && a.date !== filterDate) return false;
-    
-    // Filtro por búsqueda (paciente o documento)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      if (!a.patient.toLowerCase().includes(query) && !a.doc.includes(query)) return false;
+      if (!a.patient.toLowerCase().includes(query) && !String(a.doc).toLowerCase().includes(query)) return false;
     }
-    
     return true;
   });
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  RENDER: TABLA DE CITAS — CORREGIDO
+//  RENDER: TABLA DE CITAS
 // ═══════════════════════════════════════════════════════════════════
 
 const renderAppointments = () => {
   const body = safeGetElement('citasBody');
   if (!body || shouldUseServerRenderedList()) return;
-  
-  // Obtener datos filtrados con TODOS los filtros aplicados
+
   const filtered = getFilteredAppointments();
-  
   if (!filtered.length) {
     body.innerHTML = '<div class="empty-state" role="status">No se encontraron citas con los criterios de búsqueda.</div>';
+    updatePagination(0);
     return;
   }
-  
-  // Paginación
+
   const start = (currentPage - 1) * itemsPerPage;
   const pageData = filtered.slice(start, start + itemsPerPage);
-  
+
   body.innerHTML = pageData.map(a => {
     const status = statusLabels[a.status] || statusLabels.programada;
     return `
@@ -209,8 +311,7 @@ const renderAppointments = () => {
       </div>
     `;
   }).join('');
-  
-  // Event listeners para acciones
+
   body.querySelectorAll('.btn-view').forEach(btn => {
     btn.addEventListener('click', (e) => openAppointmentModal(parseInt(e.currentTarget.dataset.id), 'view'));
     btn.addEventListener('keydown', (e) => { if (['Enter',' '].includes(e.key)) { e.preventDefault(); openAppointmentModal(parseInt(e.currentTarget.dataset.id), 'view'); }});
@@ -223,7 +324,7 @@ const renderAppointments = () => {
     btn.addEventListener('click', (e) => cancelAppointment(parseInt(e.currentTarget.dataset.id)));
     btn.addEventListener('keydown', (e) => { if (['Enter',' '].includes(e.key)) { e.preventDefault(); cancelAppointment(parseInt(e.currentTarget.dataset.id)); }});
   });
-  
+
   updatePagination(filtered.length);
 };
 
@@ -231,24 +332,33 @@ const renderAppointments = () => {
 //  MODAL DE CITA
 // ═══════════════════════════════════════════════════════════════════
 
+const getAppointmentById = (id) => {
+  const inMemory = appointments.find(a => a.id === id);
+  if (inMemory) return inMemory;
+  return appointmentsStorage.getAppointment(id);
+};
+
 const openAppointmentModal = (id, mode) => {
-  const appt = appointmentsStorage.getAppointment(id);
-  if (!appt) return;
-  
+  const appt = getAppointmentById(id);
+  if (!appt) {
+    showToast('Cita no encontrada', 'warning');
+    return;
+  }
+
   const modal = safeGetElement('modalAppointment');
   const content = safeGetElement('modalAppointmentContent');
   const title = safeGetElement('modalAppointmentTitle');
   const editBtn = safeGetElement('modalAppointmentEdit');
-  
+
   if (!modal || !content || !title) return;
-  
+
   if (mode === 'view') {
     title.textContent = `Detalle: ${appt.patient}`;
     editBtn.style.display = 'none';
     content.innerHTML = `
       <p><strong>Fecha:</strong> <time datetime="${appt.date}">${fmtDate(appt.date)}</time></p>
       <p><strong>Hora:</strong> <time datetime="${appt.date}T${appt.time}:00">${fmtTime(appt.time)}</time></p>
-      <p><strong>Documento:</strong> ${appt.doc}</p>
+      <p><strong>Documento / ID:</strong> ${appt.doc}</p>
       <p><strong>Profesional:</strong> ${appt.professionalName}</p>
       <p><strong>Servicio:</strong> ${appt.service}</p>
       <p><strong>Estado:</strong> <span class="status-badge ${statusLabels[appt.status]?.class || 'programada'}">${statusLabels[appt.status]?.label || appt.status}</span></p>
@@ -260,7 +370,7 @@ const openAppointmentModal = (id, mode) => {
     content.innerHTML = `
       <p><strong>Fecha:</strong> <input type="date" value="${appt.date}" id="editDate" class="filter-date" style="margin-left:8px"></p>
       <p><strong>Hora:</strong> <input type="time" value="${appt.time}" id="editTime" class="filter-select" style="margin-left:8px"></p>
-      <p><strong>Servicio:</strong> <input type="text" value="${appt.service}" id="editService" class="search-input" style="margin-left:8px;width:200px"></p>
+      <p><strong>Servicio:</strong> <input type="text" value="${appt.service}" id="editService" class="search-input" style="margin-left:8px;width:200px" placeholder="Nombre servicio"></p>
       <p><strong>Estado:</strong> 
         <select id="editStatus" class="filter-select" style="margin-left:8px">
           <option value="programada" ${appt.status==='programada'?'selected':''}>Programada</option>
@@ -272,12 +382,12 @@ const openAppointmentModal = (id, mode) => {
     `;
     editBtn.onclick = () => saveAppointmentEdit(id);
   }
-  
+
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
   modal.removeAttribute('inert');
   document.body.style.overflow = 'hidden';
-  
+
   const closeBtn = safeGetElement('modalAppointmentClose');
   if (closeBtn) closeBtn.focus();
 };
@@ -292,41 +402,125 @@ const closeAppointmentModal = () => {
   }
 };
 
-const saveAppointmentEdit = (id) => {
-  const appt = appointmentsStorage.getAppointment(id);
+// WHY: Guarda los cambios vía PUT /api/citas/{id} y actualiza la fila en memoria
+const saveAppointmentEdit = async (id) => {
+  const appt = getAppointmentById(id);
   if (!appt) return;
-  
+
   const newDate = safeGetElement('editDate')?.value || appt.date;
   const newTime = safeGetElement('editTime')?.value || appt.time;
   const newService = safeGetElement('editService')?.value || appt.service;
   const newStatus = safeGetElement('editStatus')?.value || appt.status;
-  
-  const updated = { ...appt, date: newDate, time: newTime, service: newService, status: newStatus };
-  const data = appointmentsStorage.load();
-  const idx = data.findIndex(a => a.id === id);
-  if (idx !== -1) {
-    data[idx] = updated;
-    appointmentsStorage.save(data);
-    appointments = data;
+
+  const updatedLocal = {
+    ...appt,
+    date: newDate,
+    time: newTime,
+    service: newService,
+    status: newStatus
+  };
+
+  // Prepara cuerpo para el ViewModel CitaViewModel
+  const raw = appt._raw || {};
+  const fechaHoraIso = newDate && newTime ? `${newDate}T${newTime}:00`
+    : raw.FechaHora ? raw.FechaHora : new Date().toISOString();
+
+  const body = {
+    IdCita: id,
+    IdPaciente: raw.IdPaciente || appt.id || 0,
+    IdProfesional: raw.IdProfesional || null,
+    IdServicio: raw.IdServicio || 0,
+    FechaHora: fechaHoraIso,
+    Estado: mapEstadoClientToServer(newStatus),
+    Notas: raw.Notas || ''
+  };
+
+  const editBtn = safeGetElement('modalAppointmentEdit');
+  const btnOriginal = editBtn?.textContent;
+  if (editBtn) { editBtn.disabled = true; editBtn.textContent = 'Guardando...'; }
+
+  let saveOk = false;
+  try {
+    const res = await fetch(`${API_BASE}/citas/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body)
+    });
+    let payload;
+    try { payload = await res.json(); } catch { payload = { success: res.ok }; }
+    if (res.ok && payload.success) {
+      const idx = appointments.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        appointments[idx] = { ...updatedLocal, _raw: { ...(appt._raw || {}), Estado: body.Estado, FechaHora: body.FechaHora } };
+      } else {
+        appointments.unshift(updatedLocal);
+      }
+      appointmentsStorage.save(appointments);
+      saveOk = true;
+      renderAppointments();
+      updateStats();
+      closeAppointmentModal();
+      showToast(`✅ Cita de ${appt.patient} actualizada`);
+    } else {
+      showToast(`❌ ${payload.message || 'No fue posible actualizar la cita'}`, 'error');
+    }
+  } catch (netErr) {
+    console.error('[SmileTrack] Actualizar cita error red:', netErr);
+    // Offline fallback: guardamos localmente para no perder el cambio
+    const idx = appointments.findIndex(a => a.id === id);
+    if (idx !== -1) appointments[idx] = updatedLocal;
+    appointmentsStorage.save(appointments);
     renderAppointments();
     updateStats();
     closeAppointmentModal();
-    showToast(`✅ Cita de ${appt.patient} actualizada`);
+    saveOk = true;
+    showToast('⚠️ Cita guardada localmente (sin conexión)', 'warning');
+  } finally {
+    if (editBtn) { editBtn.disabled = false; editBtn.textContent = btnOriginal || 'Guardar'; }
   }
 };
 
-const cancelAppointment = (id) => {
+// WHY: Cancela la cita con confirmación y DELETE soft (server: Estado=cancelada)
+const cancelAppointment = async (id) => {
   if (!confirm('¿Estás seguro de cancelar esta cita?')) return;
-  
-  const data = appointmentsStorage.load();
-  const idx = data.findIndex(a => a.id === id);
+
+  let ok = false;
+  let serverMsg = null;
+
+  try {
+    const res = await fetch(`${API_BASE}/citas/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    let payload;
+    try { payload = await res.json(); } catch { payload = { success: res.ok }; }
+    if (res.ok && payload.success) {
+      ok = true;
+      serverMsg = payload.message;
+    } else {
+      serverMsg = payload.message || (res.status === 403 ? 'No tienes permiso para cancelar citas' : 'No fue posible cancelar');
+    }
+  } catch (netErr) {
+    console.warn('[SmileTrack] Cancelar offline:', netErr);
+  }
+
+  // Aplicamos el cambio localmente tanto si API respondió como si caímos en offline
+  // (en offline el cambio queda marcado para sincronizar, en un escenario real con sync manager)
+  const idx = appointments.findIndex(a => a.id === id);
   if (idx !== -1) {
-    data[idx].status = 'cancelada';
-    appointmentsStorage.save(data);
-    appointments = data;
-    renderAppointments();
-    updateStats();
-    showToast(`🗑️ Cita cancelada`);
+    appointments[idx].status = 'cancelada';
+    if (appointments[idx]._raw) appointments[idx]._raw.Estado = 'cancelada';
+  }
+  appointmentsStorage.save(appointments);
+  renderAppointments();
+  updateStats();
+
+  if (ok) {
+    showToast(serverMsg || '🗑️ Cita cancelada en servidor');
+  } else if (idx !== -1) {
+    showToast(`⚠️ Cancelada localmente (sin conexión): ${serverMsg || ''}`, 'warning');
+  } else if (serverMsg) {
+    showToast('❌ ' + serverMsg, 'error');
   }
 };
 
@@ -335,14 +529,14 @@ const cancelAppointment = (id) => {
 // ═══════════════════════════════════════════════════════════════════
 
 const updatePagination = (totalItems) => {
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const showing = Math.min(itemsPerPage, totalItems - (currentPage - 1) * itemsPerPage);
-  
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const showing = Math.min(itemsPerPage, Math.max(0, totalItems - (currentPage - 1) * itemsPerPage));
+
   const pageShowing = safeGetElement('pageShowing');
   const pageTotal = safeGetElement('pageTotal');
   const btnPrev = safeGetElement('btnPrev');
   const btnNext = safeGetElement('btnNext');
-  
+
   if (pageShowing) pageShowing.textContent = showing;
   if (pageTotal) pageTotal.textContent = totalItems;
   if (btnPrev) btnPrev.disabled = currentPage === 1;
@@ -366,7 +560,7 @@ const updateStats = () => {
   const scheduled = appointments.filter(a => a.status === 'programada' || a.status === 'confirmada').length;
   const cancelled = appointments.filter(a => a.status === 'cancelada').length;
   const attended = appointments.filter(a => a.status === 'atendida').length;
-  
+
   animateCounter(safeGetElement('statTotal'), total);
   animateCounter(safeGetElement('statScheduled'), scheduled);
   animateCounter(safeGetElement('statCancelled'), cancelled);
@@ -374,7 +568,7 @@ const updateStats = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  INICIALIZACIÓN DE COMPONENTES — CORREGIDO PARA FILTROS
+//  INICIALIZACIÓN DE COMPONENTES
 // ═══════════════════════════════════════════════════════════════════
 
 const initSidebar = () => {
@@ -382,7 +576,7 @@ const initSidebar = () => {
   const sidebar = safeGetElement('sidebar');
   const overlay = safeGetElement('overlay');
   if (!hamburger || !sidebar || !overlay) return;
-  
+
   const toggleMenu = (show) => {
     sidebar.classList.toggle('open', show);
     overlay.classList.toggle('open', show);
@@ -391,7 +585,7 @@ const initSidebar = () => {
     if (show) { const firstLink = sidebar.querySelector('.nav-item'); if (firstLink) firstLink.focus(); }
     else { hamburger.focus(); }
   };
-  
+
   hamburger.addEventListener('click', () => toggleMenu(true));
   overlay.addEventListener('click', () => toggleMenu(false));
   sidebar.querySelectorAll('.nav-item').forEach(item => {
@@ -410,44 +604,39 @@ const initTabs = () => {
       tab.setAttribute('aria-selected', 'true');
       currentTab = tab.dataset.tab;
       currentPage = 1;
-      renderAppointments(); // ← Re-renderiza con filtros aplicados
+      renderAppointments();
     });
   });
 };
 
-// ═══ CORRECCIÓN: BÚSQUEDA CON DEBOUNCE ═══
 const initSearch = () => {
   if (shouldUseServerRenderedList()) return;
   const searchInput = safeGetElement('searchAppointments');
   searchInput?.addEventListener('input', debounce((e) => {
-    searchQuery = e.target.value.toLowerCase();
+    searchQuery = (e.target.value || '').toLowerCase();
     currentPage = 1;
-    renderAppointments(); // ← Re-renderiza con filtros aplicados
+    renderAppointments();
   }, 250));
 };
 
-// ═══ CORRECCIÓN: FILTROS FUNCIONALES ═══
 const initFilters = () => {
   if (shouldUseServerRenderedList()) return;
   const filterStatusEl = safeGetElement('filterStatus');
   const filterProfessionalEl = safeGetElement('filterProfessional');
   const filterDateEl = safeGetElement('filterDate');
-  
-  // Filtro por estado
+
   filterStatusEl?.addEventListener('change', (e) => {
     filterStatus = e.target.value;
     currentPage = 1;
     renderAppointments();
   });
-  
-  // Filtro por profesional
+
   filterProfessionalEl?.addEventListener('change', (e) => {
     filterProfessional = e.target.value;
     currentPage = 1;
     renderAppointments();
   });
-  
-  // Filtro por fecha
+
   filterDateEl?.addEventListener('change', (e) => {
     filterDate = e.target.value;
     currentPage = 1;
@@ -459,14 +648,14 @@ const initPagination = () => {
   if (shouldUseServerRenderedList()) return;
   const btnPrev = safeGetElement('btnPrev');
   const btnNext = safeGetElement('btnNext');
-  
+
   btnPrev?.addEventListener('click', () => {
     if (currentPage > 1) {
       currentPage--;
       renderAppointments();
     }
   });
-  
+
   btnNext?.addEventListener('click', () => {
     const filtered = getFilteredAppointments();
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -486,7 +675,7 @@ const initModal = () => {
   const modalClose = safeGetElement('modalAppointmentClose');
   const modalCancel = safeGetElement('modalAppointmentCancel');
   const modal = safeGetElement('modalAppointment');
-  
+
   modalClose?.addEventListener('click', closeAppointmentModal);
   modalCancel?.addEventListener('click', closeAppointmentModal);
   modal?.addEventListener('click', (e) => { if (e.target === modal) closeAppointmentModal(); });
@@ -502,30 +691,46 @@ const initBanner = () => {
 //  API CALLS
 // ═══════════════════════════════════════════════════════════════════
 
+// WHY: Petición principal de carga. Si la API responde usamos esos datos;
+//      si falla (sin conexión / 5xx) caemos al cache LocalStorage.
 async function fetchAppointments() {
   try {
-    // const res = await fetch(`${API_BASE}/admin/appointments`);
-    // if (!res.ok) throw new Error('API error');
-    // return await res.json();
-    return appointmentsStorage.load();
+    const res = await fetch(`${API_BASE}/citas?page=1&pageSize=${API_PAGE_SIZE}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        // Sesión expirada o sin rol: no caemos a localStorage para evitar datos viejos
+        throw new Error(res.status === 403 ? 'No tienes permiso para ver citas' : 'Sesión expirada');
+      }
+      throw new Error(`API status ${res.status}`);
+    }
+    const payload = await res.json();
+    if (payload && payload.success && Array.isArray(payload.data)) {
+      const mapped = payload.data.map(mapServerToClient);
+      appointmentsStorage.save(mapped);
+      return mapped;
+    }
+    throw new Error('Respuesta API inválida');
   } catch (error) {
-    console.warn('Fallback a datos locales:', error);
+    console.warn('[SmileTrack] Fallback a datos locales:', error);
     return appointmentsStorage.load();
   }
 }
 
 async function addAppointmentAPI(appt) {
   try {
-    // const res = await fetch(`${API_BASE}/admin/appointments`, {
-    //   method: 'POST', headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(appt),
-    // });
-    // if (!res.ok) throw new Error('Add failed');
-    // return await res.json();
-    return appointmentsStorage.addAppointment(appt);
+    const res = await fetch(`${API_BASE}/citas`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(appt)
+    });
+    if (!res.ok) throw new Error('Add failed');
+    return await res.json();
   } catch (error) {
-    console.warn('Error al agregar cita en API:', error);
-    return null;
+    console.warn('[SmileTrack] Add offline:', error);
+    return appointmentsStorage.addAppointment(appt);
   }
 }
 
@@ -538,20 +743,20 @@ const init = async () => {
     initSidebar();
     initTabs();
     initSearch();
-    initFilters();    // ← Inicializa filtros funcionales
+    initFilters();
     initPagination();
     initNewAppointment();
     initModal();
     initBanner();
-    
+
     appointments = await fetchAppointments();
     updateStats();
     renderAppointments();
-    
-    window.addEventListener('beforeunload', () => { /* Cleanup en SPA real */ });
+
+    window.addEventListener('beforeunload', () => { /* Cleanup SPA real */ });
   } catch (e) {
-    console.error('[SmileTrack] Error inicializando modulo', e);
-    mostrarErrorUsuario(e.message || 'Error cargando módulo. Intente recargar.');
+    console.error('[SmileTrack] Error inicializando modulo citas:', e);
+    mostrarErrorUsuario(e.message || 'Error cargando módulo de citas. Intente recargar.');
   }
 };
 

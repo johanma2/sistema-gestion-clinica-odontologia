@@ -1,15 +1,35 @@
-// =============================================
-// SMILETRACK — RECORDATORIOS (app.js)
-// =============================================
+/* ============================================
+SmileTrack — Recordatorios (st-rec-05-recordatorios)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-// Obtiene elemento del DOM con manejo seguro de null
+DESCRIPCIÓN:
+Controla la interfaz de recordatorios de recepción: envío manual, confirmación visual de estados de entrega y configuración de envíos automáticos.
+
+FUNCIONALIDADES PRINCIPALES:
+- Acciones de envío para recordatorios por medio de fetch API
+- Confirmación visual temporal (Toast) de los envíos realizados
+- Toggle de activación de canales de envío automáticos
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Recordatorios
+- CSS: ~/css/Gestion_De_Citas/st-rec-05-recordatorios/styles.css
+- JS: ~/js/Gestion_De_Citas/st-rec-05-recordatorios/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
+
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes de input
+// WHY: Debounce evita la sobrecarga del hilo principal ante eventos repetitivos como tecleos de búsqueda o redimensiones
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -18,7 +38,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre y cleanup de timeout
+// WHY: Las notificaciones no bloqueantes brindan retroalimentación al recepcionista sin interrumpir la gestión de la tabla
 const showToast = (message, type = 'success') => {
   const toastContainer = safeGetElement('toastContainer');
   if (!toastContainer) return;

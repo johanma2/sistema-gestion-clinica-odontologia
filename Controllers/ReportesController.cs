@@ -174,6 +174,7 @@ public class ReportesController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("reportes/descargar/{id}")]
     public IActionResult DescargarReporte(int id)
     {

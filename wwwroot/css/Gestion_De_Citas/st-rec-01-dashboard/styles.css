@@ -1,7 +1,26 @@
-/* =============================================
-   SMILETRACK — DASHBOARD RECEPCIÓN (styles.css)
-   [MEJORA]: Base unificada con st-pac-XX + componentes específicos de recepción
-   ============================================= */
+/* ============================================
+SmileTrack — Dashboard Recepción (st-rec-01-dashboard)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la recepción que definen las métricas operativas del día, la tabla de sala de espera y las alertas.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño de tarjetas del estado operativo diario de citas
+- Estilos para la tabla de pacientes en sala de espera
+- Diseño del menú de navegación lateral consistente con la recepción
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y RecepcionDashboard
+- CSS: ~/css/Gestion_De_Citas/st-rec-01-dashboard/styles.css
+- JS: ~/js/Gestion_De_Citas/st-rec-01-dashboard/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 
 /* ── VARIABLES GLOBALES (CONSISTENTES CON MÓDULOS ANTERIORES) ── */
 :root {

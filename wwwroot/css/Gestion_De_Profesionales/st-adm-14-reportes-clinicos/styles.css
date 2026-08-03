@@ -1,6 +1,28 @@
-/* =============================================
-   SMILETRACK — REPORTES CLÍNICOS (styles.css)
-   ============================================= */
+/* ============================================
+SmileTrack — Reportes Clínicos (st-adm-14-reportes-clinicos)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la vista de reportes clínicos que define la tabla paginada de reportes, los filtros de búsqueda, las tarjetas de detalle de procedimiento y el diseño responsive del módulo.
+
+FUNCIONALIDADES PRINCIPALES:
+- Tabla de reportes con columnas de fecha, profesional, paciente, procedimiento y estado
+- Panel de filtros superior con selector de profesional, rango de fechas y campo de búsqueda
+- Tarjeta de detalle del reporte con layout de dos columnas para información clínica
+- Paginación accesible con botones numerados y estado activo destacado
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController (ViewData: ProfesionalesReportes, ReportesClinicos, ReportesClinicosPage)
+- CSS: ~/css/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/reportes.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Los estilos del panel de filtros están separados de la tabla para facilitar reutilización en otros módulos con filtros similares.
+============================================ */
 
 :root {
     /* === VARIABLES BASE (IDÉNTICAS A st-adm-07) === */

@@ -1,4 +1,29 @@
-﻿@{
+﻿@* ============================================
+SmileTrack — Gestión de Profesionales (st-adm-07-gestion-profesionales)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista de administración de profesionales que permite registrar, editar y eliminar odontólogos del sistema, asignarles especialidades y usuarios de acceso, y visualizar la lista completa con filtros y búsqueda en tiempo real.
+
+FUNCIONALIDADES PRINCIPALES:
+- CRUD completo de profesionales renderizado con Razor desde el Controller (server-side)
+- Modales de creación y edición con validación de formularios en cliente y servidor
+- Filtro de búsqueda y paginación en la tabla de profesionales con feedback ARIA
+- Contadores de métricas (total, activos, especialidades) con animación de conteo
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController (ViewBag: Especialidades, Usuarios, Profesionales)
+- CSS: ~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/app.js
+- Partial / Otros: _Layout o Layout=null (verificar)
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La vista usa ViewData con fallback a colección vacía para evitar NullReferenceException si el Controller falla al poblar los datos.
+============================================ *@
+@{
   // Extraer datos del ViewBag con fallback para evitar null reference en caso de error del Controller
   var especialidades = ViewData["Especialidades"] as List<SmileTrack_MVC.Models.Entities.Especialidad> ?? new();
   var usuarios       = ViewData["Usuarios"]       as List<SmileTrack_MVC.Models.Entities.Usuario>      ?? new();

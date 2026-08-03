@@ -1,16 +1,37 @@
-﻿/**
- * SMILETRACK — ASISTENCIA EN PROCEDIMIENTO (app.js)
- * Lógica con timer, persistencia de estado y accesibilidad
- */
+﻿/* ============================================
+SmileTrack — Asistencia en Procedimiento (st-aux-06-asistencia-procedi)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-// Obtiene elemento del DOM con manejo seguro de null
+DESCRIPCIÓN:
+Gestiona el timer del procedimiento, la persistencia del estado de las etapas y la interactividad de las píldoras de control (Limpieza, Esterilización, Equipos) con feedback visual en tiempo real.
+
+FUNCIONALIDADES PRINCIPALES:
+- Timer de procedimiento con incremento cada 60 segundos persistido en LocalStorage
+- Estado de las píldoras de etapas persistido en LocalStorage para continuidad ante refrescos de página
+- Toggle visual de estado completado/pendiente de etapas con actualización de atributos aria-pressed
+- Notificaciones toast no bloqueantes ante confirmación de cambio de estado de etapas
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.css
+- JS: ~/js/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.js
+- Partial / Otros: asistencia-proc.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La clave de LocalStorage incluye la fecha y hora de inicio del procedimiento para evitar colisiones entre sesiones.
+============================================ */
+
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes de input
+// WHY: Debounce evita saturar la API con peticiones redundantes ante cambios veloces del usuario
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -19,7 +40,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre y cleanup de timeout
+// WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin interrumpir el flujo durante el procedimiento
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -31,11 +52,11 @@ const showToast = (message, type = 'success') => {
   toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
 };
 
-// Gestiona persistencia del timer y estado de píldoras con localStorage
+// WHY: La clave incluye fecha y hora para evitar colisiones entre sesiones de diferentes procedimientos en el mismo dispositivo
 const procedureStorage = {
   key: 'smiletrack_procedure_20260320_1003',
   
-  // Carga estado guardado o usa valores por defecto
+  // WHY: Carga el estado desde LocalStorage para continuar el seguimiento tras refrescos de página o re-apertura del navegador
   load: () => {
     const stored = localStorage.getItem(procedureStorage.key);
     if (stored) {
@@ -56,7 +77,7 @@ const procedureStorage = {
     };
   },
   
-  // Guarda estado en localStorage
+  // WHY: Persiste el estado inmediatamente después de cada cambio para garantizar integridad si se cierra el navegador inesperadamente
   save: (state) => {
     try {
       localStorage.setItem(procedureStorage.key, JSON.stringify(state));
@@ -67,14 +88,14 @@ const procedureStorage = {
     }
   },
   
-  // Actualiza minutos transcurridos
+  // WHY: Guarda los minutos del timer de forma aislada para minimizar escrituras en LocalStorage
   updateMinutes: (minutes) => {
     const state = procedureStorage.load();
     state.minutes = minutes;
     procedureStorage.save(state);
   },
   
-  // Actualiza estado de una píldora específica
+  // WHY: Actualiza solo la píldora modificada en lugar de reescribir el estado completo, optimizando escrituras
   updatePill: (pillId, completed) => {
     const state = procedureStorage.load();
     state.pills[pillId] = completed;
@@ -125,32 +146,32 @@ const initMobileMenu = () => {
   });
 };
 
-// Inicializa timer del procedimiento con persistencia
+// WHY: Inicializa el timer del procedimiento cargando el valor persistido y ejecutando un intervalo de 60s
 const initTimer = () => {
   const timerValue = safeGetElement('timerValue');
   if (!timerValue) return;
   
-  // Carga minutos guardados
+  // WHY: Carga el valor guardado en lugar de iniciar desde 0 para garantizar continuidad ante refrescos de página
   const state = procedureStorage.load();
   let minutes = state.minutes;
   
   // Actualiza display inicial
   timerValue.textContent = minutes;
   
-  // Inicia intervalo para incrementar cada minuto real
+  // WHY: Incrementa el timer en tiempo real para reflejar la duración real del procedimiento
   const timerInterval = setInterval(() => {
     minutes++;
     timerValue.textContent = minutes;
     procedureStorage.updateMinutes(minutes);
   }, 60000);
   
-  // Limpia intervalo al unload para evitar memory leaks
+  // WHY: Limpia el intervalo al descargar la página para prevenir memory leaks en entornos de larga ejecución
   window.addEventListener('beforeunload', () => {
     clearInterval(timerInterval);
   });
 };
 
-// Inicializa píldoras de procedimiento con persistencia y feedback
+// WHY: Centraliza la lógica de las píldoras para garantizar sincronización entre UI, aria-pressed y LocalStorage
 const initProcedurePills = () => {
   const pills = [
     { el: safeGetElement('pillLimpieza'), id: 'limpieza', label: 'Limpieza' },
@@ -158,7 +179,7 @@ const initProcedurePills = () => {
     { el: safeGetElement('pillEquipos'), id: 'equipos', label: 'Equipos' }
   ];
   
-  // Carga estado guardado y aplica a cada píldora
+  // WHY: Restaura el estado visual al montar el componente para continuar donde se dejó ante refrescos de página
   const savedState = procedureStorage.load().pills;
   pills.forEach(({ el, id, label }) => {
     if (!el) return;
@@ -171,7 +192,7 @@ const initProcedurePills = () => {
       el.setAttribute('aria-label', `${label} completada`);
     }
     
-    // Maneja click para toggle de estado
+    // WHY: Mantiene sincronizados aria-pressed y la clase CSS para cumplir requisitos WCAG de controles toggle
     el.addEventListener('click', () => {
       const wasCompleted = el.classList.contains('completed');
       const isNowCompleted = !wasCompleted;

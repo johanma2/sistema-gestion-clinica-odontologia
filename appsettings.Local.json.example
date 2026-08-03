@@ -1,5 +1,0 @@
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=SmileTrackDB;User Id=sa;Password=SmileTrack#2025;TrustServerCertificate=True;"
-  }
-}

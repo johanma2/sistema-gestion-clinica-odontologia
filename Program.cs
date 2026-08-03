@@ -1,9 +1,16 @@
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.Entities;
 using System.Security.Claims;
 using System.Net;
+using System.Globalization;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +18,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "XSRF-TOKEN";
+    options.Cookie.HttpOnly = false;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
@@ -23,15 +39,143 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         maxRetryDelay: TimeSpan.FromSeconds(3),
         errorNumbersToAdd: null)));
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSection.GetValue<string>("Key") ?? "TuClaveSecretaSuperSegura123!_CambiaEstoEnProduccion_SmileTrack2025";
+var jwtIssuer = jwtSection.GetValue<string>("Issuer") ?? "SmileTrack";
+var jwtAudience = jwtSection.GetValue<string>("Audience") ?? "SmileTrackClient";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+})
     .AddCookie(options =>
     {
         options.LoginPath = "/acceso-y-seguridad/login";
         options.AccessDeniedPath = "/acceso-y-seguridad/login";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async context =>
+            {
+                var principal = context.Principal;
+                if (principal == null)
+                {
+                    context.RejectPrincipal();
+                    return;
+                }
+
+                var userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(userIdValue, out var userId))
+                {
+                    context.RejectPrincipal();
+                    return;
+                }
+
+                var lastLogoutClaim = principal.FindFirst("LastLogoutUtc")?.Value;
+                using var scope = context.HttpContext.RequestServices.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var user = await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.IdUsuario == userId, context.HttpContext.RequestAborted);
+                if (user == null)
+                {
+                    context.RejectPrincipal();
+                    return;
+                }
+
+                if (!string.Equals(user.Estado, "activo", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.RejectPrincipal();
+                    return;
+                }
+
+                if (user.UltimoLogout.HasValue && !string.IsNullOrWhiteSpace(lastLogoutClaim))
+                {
+                    if (DateTime.TryParse(lastLogoutClaim, null, DateTimeStyles.RoundtripKind, out var claimLogoutUtc) && user.UltimoLogout.Value > claimLogoutUtc)
+                    {
+                        context.RejectPrincipal();
+                        return;
+                    }
+                }
+            }
+        };
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (string.IsNullOrEmpty(context.Token))
+                {
+                    context.Token = context.Request.Cookies["SmileTrack-JWT"];
+                }
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = async context =>
+            {
+                var principal = context.Principal;
+                if (principal == null)
+                {
+                    context.Fail("Token inválido.");
+                    return;
+                }
+
+                var userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(userIdValue, out var userId))
+                {
+                    context.Fail("Usuario inválido en token.");
+                    return;
+                }
+
+                using var scope = context.HttpContext.RequestServices.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var usuario = await db.Usuarios.AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.IdUsuario == userId, context.HttpContext.RequestAborted);
+
+                if (usuario == null || !string.Equals(usuario.Estado, "activo", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Fail("Usuario inactivo o inexistente.");
+                    return;
+                }
+
+                var issuedAtClaim = principal.FindFirst(JwtRegisteredClaimNames.Iat)?.Value;
+                if (!string.IsNullOrWhiteSpace(issuedAtClaim) &&
+                    long.TryParse(issuedAtClaim, out var issuedAtSeconds) &&
+                    usuario.UltimoLogout.HasValue)
+                {
+                    var tokenIssuedUtc = DateTimeOffset.FromUnixTimeSeconds(issuedAtSeconds).UtcDateTime;
+                    if (usuario.UltimoLogout.Value > tokenIssuedUtc)
+                    {
+                        context.Fail("Token revocado por logout.");
+                        return;
+                    }
+                }
+            }
+        };
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
     });
-builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ApiOrCookie", policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, CookieAuthenticationDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+    });
+});
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SmileTrack_MVC.Services.IAuthService, SmileTrack_MVC.Services.AuthService>();
@@ -54,9 +198,9 @@ app.Use(async (context, next) =>
     catch (Exception ex)
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        if (ex is OperationCanceledException)
+        if (ex is OperationCanceledException ocex)
         {
-            logger.LogWarning("Solicitud cancelada por el cliente: {Metodo} {Ruta}", context.Request.Method, context.Request.Path);
+            logger.LogWarning(ocex, "Solicitud cancelada por el cliente: {Metodo} {Ruta}", context.Request.Method, context.Request.Path);
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return;
         }
@@ -66,7 +210,7 @@ app.Use(async (context, next) =>
 
         if (context.Response.HasStarted)
         {
-            logger.LogWarning("Ya se habia iniciado la respuesta; no se puede reescribir error para RequestId {RequestId}", requestId);
+            logger.LogWarning(ex, "Ya se habia iniciado la respuesta; no se puede reescribir error para RequestId {RequestId}", requestId);
             throw;
         }
 
@@ -140,24 +284,23 @@ a{{color:#0f766e;text-decoration:none;font-weight:600;}}
     });
 
     app.UseRouting();
+
+    app.Use(async (context, next) =>
+    {
+        if (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
+        {
+            var antiforgery = context.RequestServices.GetRequiredService<IAntiforgery>();
+            // GetAndStoreTokens already handles setting the antiforgery cookie.
+            antiforgery.GetAndStoreTokens(context);
+        }
+
+        await next();
+    });
+
     app.UseAuthentication();
     app.UseAuthorization();
 
-    static string InferirModuloDesdeRuta(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return "sin-ruta";
-        var p = path.ToLowerInvariant();
-        if (p.Contains("gestion-de-citas") || p.Contains("/api/citas")) return "GestionCitas";
-        if (p.Contains("gestion-de-profesionales")) return "GestionProfesionales";
-        if (p.Contains("gestion-de-pacientes")) return "GestionPacientes";
-        if (p.Contains("facturacion") || p.Contains("pagos")) return "FacturacionPagos";
-        if (p.Contains("historia") || p.Contains("clinica")) return "HistoriaClinica";
-        if (p.Contains("acceso") || p.Contains("login") || p.Contains("register") || p.Contains("recover")) return "Autenticacion";
-        if (p.Contains("pqr")) return "PQR";
-        if (p.Contains("servicios") || p.Contains("recursos")) return "ServiciosRecursos";
-        if (p.Contains("perfil")) return "Perfiles";
-        return "General";
-    }
+    // InferirModuloDesdeRuta removed — unused helper created earlier; keeping codebase minimal avoids dead code warnings
 
     app.MapControllers();
 
@@ -197,7 +340,6 @@ _ = Task.Run(async () =>
             await db.Consultorios.AnyAsync())
         {
             logger.LogInformation("✅ BD ya inicializada, seed omitido");
-            
             // Corregir asociación incorrecta de profesionales si la semilla ya se ejecutó con el ID equivocado
             var profUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "prof@smiletrack.co");
             var adminUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "admin@smiletrack.co");

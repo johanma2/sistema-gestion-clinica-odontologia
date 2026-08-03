@@ -1,4 +1,26 @@
-/* SMILETRACK – MIS REPORTES */
+/* ============================================
+SmileTrack — Mis Reportes (st-odo-08-mis-reportes)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la sección de reportes del odontólogo que definen las métricas de rendimiento, los filtros mensuales y la visualización de reportes clínicos del profesional.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño de tarjetas de progreso mensual y metas de atención
+- Badges de estado con coloración diferenciada para borradores y reportes finalizados
+- Adaptabilidad para visualización móvil de la tabla de reportes mediante colapso responsive
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController
+- CSS: ~/css/Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.css
+- JS: ~/js/Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.js
+- Partial / Otros: mis-reportes.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 :root {
   --sidebar-w:220px; --bg:#f0f4fb; --white:#fff;
   --primary:#1a56cc; --primary-dark:#0f3da0; --primary-light:#eef2ff;

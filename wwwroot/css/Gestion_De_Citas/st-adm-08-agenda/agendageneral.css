@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — AGENDA GENERAL (styles.css)
-   Base unificada + componentes específicos de agenda
-   ============================================= */
+/* ============================================
+SmileTrack — Agenda General (st-adm-08-agenda)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la agenda general que configuran la estructura visual del calendario semanal, sus cabeceras dinámicas, y la representación visual de cada estado de cita médica.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño en cuadrícula (CSS Grid) para representar los días de la semana y citas
+- Estilos diferenciados por estado de cita mediante clases CSS dinámicas (.confirmed, .attended, .cancelled, .available, .reserved)
+- Controles de navegación y menús responsive con soporte móvil
+- Botón de acción flotante (FAB) y estilos para las ventanas modales de creación y detalle
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm08Agenda
+- CSS: ~/css/Gestion_De_Citas/st-adm-08-agenda/agendageneral.css
+- JS: ~/js/Gestion_De_Citas/st-adm-08-agenda/agendageneral.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Las variables CSS unificadas en :root permiten una fácil adaptación de temas y colores.
+============================================ */
 
 :root {
   /* === VARIABLES BASE (IDÉNTICAS A st-odo-01) === */

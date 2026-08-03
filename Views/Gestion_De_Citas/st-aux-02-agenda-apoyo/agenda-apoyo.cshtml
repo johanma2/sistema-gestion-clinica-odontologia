@@ -1,4 +1,29 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Agenda de Apoyo Clínico (st-aux-02-agenda-apoyo)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista que muestra el listado de citas del día ordenadas cronológicamente, enfocándose en la labor del auxiliar para realizar labores de asistencia y preparación.
+
+FUNCIONALIDADES PRINCIPALES:
+- Visualización de la lista de citas del día con detalles clínicos clave (alergias y tipo de cita)
+- Filtro por profesional médico (Méndez, Ramírez, Gómez) con menú desplegable accesible
+- Filtros por tipo de cita (Consulta, Procedimiento, Urgencia) estructurados como radiogroup accesible
+- Tabla responsive y optimizada para accesibilidad visual y lectores de pantalla
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm08Agenda (o equivalente del rol Auxiliar)
+- CSS: ~/css/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.css
+- JS: ~/js/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.js
+- Partial / Otros: _SidebarAuxiliar.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Se implementan controles ARIA con roles de radiogroup, toolbar y menuitem para una navegación accesible.
+============================================ *@
+@{ Layout = null; }
 
 ﻿<!DOCTYPE html>
 <html lang="es">

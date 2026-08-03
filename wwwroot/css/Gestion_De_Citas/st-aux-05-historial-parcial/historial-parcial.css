@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — HISTORIAL PARCIAL (styles.css)
-   Base unificada con vistas de auxiliar + componentes específicos
-   ============================================= */
+/* ============================================
+SmileTrack — Historial Clínico Parcial (st-aux-05-historial-parcial)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la historia parcial del paciente, regulando el aspecto del banner de alerta médica destacado, el formato tabular de consultas anteriores y la animación del skeleton loader.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño del banner de alerta médica con coloración de advertencia y bordes de alta visibilidad
+- Tabla de historial estructurada y responsive (conversión a bloque en pantallas de ancho reducido)
+- Animación de desvanecimiento con brillo (shimmer effect) para skeleton loaders de carga asíncrona
+- Soporte para navegación accesible e impresión física legible del historial médico
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.css
+- JS: ~/js/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.js
+- Partial / Otros: historial-parcial.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La animación shimmer utiliza transiciones CSS optimizadas para evitar retrasos de procesamiento de fotogramas (jank).
+============================================ */
 
 /* Variables globales consistentes con el sistema SmileTrack */
 :root {

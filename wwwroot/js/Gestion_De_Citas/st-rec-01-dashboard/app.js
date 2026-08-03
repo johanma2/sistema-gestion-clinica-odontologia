@@ -1,14 +1,27 @@
-// =============================================
-// SMILETRACK — DASHBOARD RECEPCIÓN (app.js)
-// [MEJORA]: Código refactorizado con patrones reutilizables de SmileTrack
-// =============================================
+/* ============================================
+SmileTrack — Dashboard Recepción (st-rec-01-dashboard)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-/**
- * [MEJORA]: Utilidad reutilizable para obtener elementos con null check seguro
- * Consistente con st-pac-XX - evita errores si el elemento no existe
- * @param {string} id - ID del elemento a buscar
- * @returns {HTMLElement|null} Elemento o null si no existe
- */
+DESCRIPCIÓN:
+Controla la carga de pacientes en sala de espera, el cálculo de sus tiempos acumulados y la canalización de pacientes hacia consultorios.
+
+FUNCIONALIDADES PRINCIPALES:
+- Carga y actualización en tiempo real de pacientes en sala de espera
+- Manejo de botones de acción para llamar pacientes o cambiar su estado de recepción
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y RecepcionDashboard
+- CSS: ~/css/Gestion_De_Citas/st-rec-01-dashboard/styles.css
+- JS: ~/js/Gestion_De_Citas/st-rec-01-dashboard/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
+
+// WHY: safeGetElement evita excepciones fatales en tiempo de ejecución si un id no se encuentra en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) {
@@ -17,13 +30,7 @@ const safeGetElement = (id) => {
   return el;
 };
 
-/**
- * [MEJORA]: Función debounce reutilizable para optimizar eventos de input
- * Consistente con módulos anteriores - reduce renders innecesarios al tipear
- * @param {Function} fn - Función a ejecutar
- * @param {number} delay - Tiempo de espera en ms
- * @returns {Function} Función debounceada
- */
+// WHY: Debounce evita la sobrecarga del hilo principal ante eventos repetitivos como tecleos de búsqueda o redimensiones
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -32,11 +39,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-/**
- * [MEJORA]: Toast con cleanup de timeout para evitar solapamientos
- * Consistente con módulos anteriores - mejora robustez en notificaciones rápidas
- * @param {string} msg - Mensaje a mostrar
- */
+// WHY: Muestra retroalimentación temporal autolimpiable para no interrumpir el flujo visual de la recepción
 const showToast = (msg) => {
   const t = safeGetElement('toast');
   if (!t) return;

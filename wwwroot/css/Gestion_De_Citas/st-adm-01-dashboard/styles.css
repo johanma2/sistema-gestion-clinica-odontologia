@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — DASHBOARD ADMINISTRADOR (styles.css)
-   Base unificada + componentes específicos de admin
-   ============================================= */
+/* ============================================
+SmileTrack — Dashboard Admin (st-adm-01-dashboard)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Estilos del dashboard administrador que definen el diseño responsive, el sidebar colapsable, la grilla de métricas (KPIs), tablas y barras de progreso animadas.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño fluido con CSS Grid y Flexbox responsive
+- Soporte para accesibilidad visual (skip-link, focus-visible)
+- Animaciones optimizadas de barras de progreso y carga
+- Adaptación para impresión de reportes y reducción de movimiento (prefers-reduced-motion)
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm01Dashboard
+- CSS: ~/css/Gestion_De_Citas/st-adm-01-dashboard/styles.css
+- JS: ~/js/Gestion_De_Citas/st-adm-01-dashboard/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Las variables de color unificadas garantizan consistencia visual en toda la aplicación.
+============================================ */
 
 :root {
   /* === VARIABLES BASE (IDÉNTICAS A st-odo-01) === */

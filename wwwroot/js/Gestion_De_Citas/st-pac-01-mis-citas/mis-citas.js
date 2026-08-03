@@ -1,224 +1,258 @@
-// =============================================
-// SMILETRACK — MIS CITAS PACIENTE (mis-citas.js)
-// Gestión de citas del paciente: filtrado, modales, estadísticas y accesibilidad
-// =============================================
+/* ============================================
+SmileTrack — Mis Citas Paciente (st-pac-01-mis-citas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026 (actualizado 2026-07-31)
 
-/**
- * Obtiene un elemento del DOM por su ID de forma segura.
- * Si el elemento no existe, emite una advertencia en consola y retorna null
- * en lugar de lanzar un error en tiempo de ejecución.
- */
+DESCRIPCIÓN:
+Módulo para paciente autenticado. Consume SOLO sus citas desde GET /api/citas — el backend
+aplica automáticamente el filtro por IdPaciente (Claim "IdPaciente" agregado en /api/login),
+por lo que incluso si el paciente manipula el request, NUNCA ve citas de terceros (privacidad).
+
+FUNCIONALIDADES PRINCIPALES:
+- Render de tabla con citas del paciente cargadas desde API REST (GET /api/citas)
+- Filtros combinados: texto búsqueda (profesional/servicio/fecha) + selector por estado
+- Cancelación de citas programadas/confirmadas vía DELETE /api/citas/{id} (soft delete server)
+- Modal de detalle y modal de confirmación de cancelación con validación de 24h
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController → ApiListarCitas, ApiEliminarCita
+- Endpoints: GET /api/citas [filtro IdPaciente automático por Claim], DELETE /api/citas/{id}
+- CSS: ~/css/Gestion_De_Citas/st-pac-01-mis-citas/styles.css
+- JS: ~/js/Gestion_De_Citas/st-pac-01-mis-citas/mis-citas.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- SEGURIDAD IMPORTANTE: El filtro por IdPaciente se aplica EN EL CONTROLLER, no en cliente.
+  (Si se hace solo en JS, paciente podría ver otras citas; el backend lo impide siempre).
+- STATUS_MAP_SERVER / STATUS_MAP_CLIENTE = mismas constantes que los otros 3 módulos citas.
+============================================ */
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN API + AUTH
+// ═══════════════════════════════════════════════════════════════════
+const API_BASE = '/api';
+const API_PAGE_SIZE = 200;
+const STORAGE_KEY = 'smiletrack_pac_mis_citas';
+
+const getAuthHeaders = () => {
+  const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+  try {
+    const jwt = sessionStorage.getItem('st_jwt');
+    if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
+  } catch (e) { /* navegación privada */ }
+  return headers;
+};
+
+// Estados (mismo mapeo que agenda.js / app.js)
+const STATUS_MAP_SERVER = {
+  programada:  { label: 'Agendada',   cls: 'badge-agendada'   },
+  confirmada:  { label: 'Confirmada', cls: 'badge-confirmada' },
+  en_proceso:  { label: 'En curso',   cls: 'badge-confirmada' },
+  finalizada:  { label: 'Completada', cls: 'badge-completada' },
+  atendida:    { label: 'Completada', cls: 'badge-completada' },
+  cancelada:   { label: 'Cancelada',  cls: 'badge-cancelada'  },
+  no_asistida: { label: 'No asistió', cls: 'badge-cancelada'  }
+};
+const STATUS_MAP_CLIENTE = {
+  'Agendada':   'programada',
+  'Confirmada': 'confirmada',
+  'En curso':   'en_proceso',
+  'Completada': 'finalizada',
+  'Cancelada':  'cancelada',
+  'No asistió': 'no_asistida'
+};
+
+function mostrarErrorUsuario(mensaje) {
+  let div = document.getElementById('smiletrack-error-bar');
+  if (!div) {
+    div = document.createElement('div');
+    div.id = 'smiletrack-error-bar';
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:white;padding:14px 20px;text-align:center;font-family:system-ui,-apple-system,sans-serif;font-size:15px;box-shadow:0 4px 12px rgba(0,0,0,.15);border-bottom:3px solid #991b1b;';
+    div.setAttribute('role', 'alert');
+    document.body.appendChild(div);
+  }
+  div.innerHTML = '<strong>[SmileTrack]</strong> ' + mensaje + ' <button onclick="document.getElementById(\'smiletrack-error-bar\').style.display=\'none\'" style="margin-left:16px;background:white;color:#dc2626;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;">×</button>';
+  div.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTILIDADES
+// ═══════════════════════════════════════════════════════════════════
+
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
-  if (!el) {
-    console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
-  }
+  if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-/**
- * Envuelve una función con debounce: retrasa su ejecución hasta que el usuario
- * deje de llamarla por 'delay' ms. Se usa para evitar renders excesivos al escribir.
- * @param {Function} fn - Función a ejecutar
- * @param {number} delay - Tiempo de espera en ms
- */
 const debounce = (fn, delay) => {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), delay);
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), delay); };
+};
+
+const showToast = (msg, type = 'success') => {
+  const toast = safeGetElement('toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
+  if (toast._tid) clearTimeout(toast._tid);
+  toast._tid = setTimeout(() => toast.classList.remove('show'), 3200);
+};
+
+const fmtFecha = (fh) => {
+  try {
+    const d = new Date(fh);
+    const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const m = String(d.getDate()).padStart(2, '0');
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return `${dias[d.getDay()]} ${m} ${meses[d.getMonth()]}`;
+  } catch { return '—'; }
+};
+const fmtHora = (fh) => {
+  try {
+    const d = new Date(fh);
+    let h = d.getHours(); const mm = String(d.getMinutes()).padStart(2, '0');
+    const p = h >= 12 ? 'PM' : 'AM';
+    if (h === 0) h = 12; else if (h > 12) h -= 12;
+    return `${String(h).padStart(2,'0')}:${mm} ${p}`;
+  } catch { return '—'; }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  MAPEO SERVER → CLIENTE + FALLBACK LOCAL
+// ═══════════════════════════════════════════════════════════════════
+
+const mapServerToClient = (srv) => {
+  const est = (srv.Estado || 'programada').toLowerCase();
+  const info = STATUS_MAP_SERVER[est] || STATUS_MAP_SERVER['programada'];
+  const fhISO = srv.FechaHora ? new Date(srv.FechaHora).toISOString() : null;
+  const proximaFutura = info.label === 'Agendada' || info.label === 'Confirmada';
+  const todayISO = new Date().toISOString().split('T')[0];
+  const citaFechaISO = fhISO ? fhISO.split('T')[0] : todayISO;
+  return {
+    id: srv.IdCita,
+    fecha: fmtFecha(fhISO),
+    fechaISO: citaFechaISO,
+    fechaHoraISO: fhISO || new Date().toISOString(),
+    hora: fmtHora(fhISO),
+    doctor: srv.Profesional?.NombreCompleto || 'Profesional sin asignar',
+    servicio: srv.Servicio?.Nombre || 'Sin servicio',
+    estado: info.label,
+    active: proximaFutura && citaFechaISO === todayISO,
+    _raw: srv
   };
 };
 
-/**
- * Cierra cualquier modal por su ID. Elimina la clase 'open', actualiza los
- * atributos ARIA y restaura el foco al elemento que abrió el modal.
- * @param {string} modalId - ID del modal a cerrar
- */
-const closeModalGeneric = (modalId) => {
-  const modal = safeGetElement(modalId);
-  if (!modal) return;
-
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-  modal.setAttribute('inert', '');
-
-  // Restaura el foco al elemento que activó el modal para mantener la navegación por teclado
-  const opener = modal.dataset.opener;
-  if (opener) {
-    const openerEl = safeGetElement(opener);
-    if (openerEl) openerEl.focus();
-  }
-};
-
-/**
- * Anima el conteo de un número desde 0 hasta 'target' usando requestAnimationFrame
- * con easing cúbico para una transición suave. Garantiza el valor final exacto.
- * @param {HTMLElement} el - Elemento donde se mostrará el número animado
- * @param {number} target - Valor numérico final al que llegar
- */
-const animateCounter = (el, target) => {
-  if (!el) return;
-
-  let cur = 0;
-  const step = Math.max(1, Math.ceil(target / 30));
-  const duration = 900; // 30 frames * 30ms
-  const startTime = performance.now();
-
-  const animate = (currentTime) => {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-
-    // Aplica curva de easing cúbica inversa para desacelerar la animación al final
-    const eased = 1 - Math.pow(1 - progress, 3);
-    cur = Math.floor(eased * target);
-
-    el.textContent = cur;
-
-    if (progress < 1) {
-      requestAnimationFrame(animate);
-    } else {
-      el.textContent = target; // Fuerza el valor exacto al terminar la animación
-    }
-  };
-
-  requestAnimationFrame(animate);
-};
-
-// —— DATOS DE EJEMPLO ——
-const SAMPLE_CITAS = [
-  { id:1, fecha:'Vie 20 Mar', hora:'10:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Control general',   estado:'Agendada',   active:true  },
-  { id:2, fecha:'Vie 27 Mar', hora:'03:30 PM', doctor:'Dra. Laura Gómez',   servicio:'Ortodoncia',        estado:'Agendada',   active:true  },
-  { id:3, fecha:'Mar 10 Mar', hora:'09:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Limpieza dental',   estado:'Completada', active:false },
-  { id:4, fecha:'Lun 03 Feb', hora:'11:30 AM', doctor:'Dra. Laura Gómez',   servicio:'Resina dental',     estado:'Completada', active:false },
-  { id:5, fecha:'Jue 15 Ene', hora:'08:00 AM', doctor:'Dr. Andrés Torres',  servicio:'Consulta general',  estado:'Completada', active:false },
-  { id:6, fecha:'Mar 18 Nov', hora:'09:00 AM', doctor:'Dr. Andrés Torres',  servicio:'Extracción',        estado:'Completada', active:false },
-  { id:7, fecha:'Jue 12 Dic', hora:'11:00 AM', doctor:'Dra. Laura Gómez',   servicio:'Blanqueamiento',    estado:'Completada', active:false },
-  { id:8, fecha:'Mié 10 Ene', hora:'10:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Ortodoncia',        estado:'Cancelada',  active:false },
+const FALLBACK = [
+  { id:1, fecha:'Vie 20 Mar', fechaISO:'2026-03-20', hora:'10:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Control general',   estado:'Agendada',   active:true  },
+  { id:2, fecha:'Vie 27 Mar', fechaISO:'2026-03-27', hora:'03:30 PM', doctor:'Dra. Laura Gómez',   servicio:'Ortodoncia',        estado:'Agendada',   active:true  },
+  { id:3, fecha:'Mar 10 Mar', fechaISO:'2026-03-10', hora:'09:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Limpieza dental',   estado:'Completada', active:false },
+  { id:4, fecha:'Lun 03 Feb', fechaISO:'2026-02-03', hora:'11:30 AM', doctor:'Dra. Laura Gómez',   servicio:'Resina dental',     estado:'Completada', active:false },
+  { id:5, fecha:'Mié 10 Ene', fechaISO:'2026-01-10', hora:'10:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Ortodoncia',        estado:'Cancelada',  active:false }
 ];
 
-let citas = [...SAMPLE_CITAS];
+let citas = [...FALLBACK];
 let cancelId = null;
 
-// ── Badge class por estado ──
-/**
- * Devuelve la clase CSS correspondiente al badge de estado de la cita.
- * Si el estado no existe en el mapa, retorna 'badge-agendada' como valor seguro por defecto.
- * @param {string} estado - Estado de la cita (Agendada, Confirmada, Completada, Cancelada)
- * @returns {string} Clase CSS del badge
- */
-const badgeClass = (estado) => {
-  const map = {
-    'Agendada':   'badge-agendada',
-    'Confirmada': 'badge-confirmada',
-    'Completada': 'badge-completada',
-    'Cancelada':  'badge-cancelada',
-  };
-  return map[estado] || 'badge-agendada'; // Fallback: si el estado es desconocido, usa el estilo de agendada
+const loadLocal = () => {
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    if (r) return JSON.parse(r);
+  } catch {}
+  return [...FALLBACK];
+};
+const saveLocal = () => {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(citas)); } catch {}
 };
 
-// ── Obtener citas filtradas ──
-/**
- * Lee los valores del campo de búsqueda y el selector de estado,
- * y retorna únicamente las citas que coincidan con ambos criterios.
- * @returns {Array} Array de citas que pasan los filtros activos
- */
+// ═══════════════════════════════════════════════════════════════════
+//  HELPERS ESTADO / FILTROS / RENDER
+// ═══════════════════════════════════════════════════════════════════
+
+const badgeClass = (estado) => {
+  const serverKey = (STATUS_MAP_CLIENTE[estado] || estado).toLowerCase();
+  return STATUS_MAP_SERVER[serverKey]?.cls || 'badge-agendada';
+};
+
 const getFiltered = () => {
-  const searchInput = safeGetElement('searchInput');
-  const filterEstado = safeGetElement('filterEstado');
-
-  // Verifica que los elementos del DOM existan antes de leer sus valores
-  if (!searchInput || !filterEstado) return citas;
-
-  const q = searchInput.value.toLowerCase().trim();
-  const st = filterEstado.value;
+  const sIn = safeGetElement('searchInput');
+  const fIn = safeGetElement('filterEstado');
+  if (!sIn || !fIn) return citas;
+  const q = sIn.value.toLowerCase().trim();
+  const st = fIn.value;
 
   return citas.filter(c => {
-    const matchQ = !q || (
-      c.doctor.toLowerCase().includes(q) ||
-      c.servicio.toLowerCase().includes(q) ||
-      c.fecha.toLowerCase().includes(q)
-    );
-    const matchSt = !st || c.estado === st;
-    return matchQ && matchSt;
+    const matchQ = !q || c.doctor.toLowerCase().includes(q)
+      || c.servicio.toLowerCase().includes(q)
+      || c.fecha.toLowerCase().includes(q);
+    const matchS = !st || c.estado === st;
+    return matchQ && matchS;
   });
 };
 
-// ── Actualizar contadores y progress bar ──
-/**
- * Recalcula y actualiza los contadores de tarjetas de estadísticas
- * (total, completadas, pendientes, canceladas) y el porcentaje de la barra de progreso.
- */
 const updateStats = () => {
   const total = citas.length;
   const comp = citas.filter(c => c.estado === 'Completada').length;
-  const pend = citas.filter(c => c.estado === 'Agendada' || c.estado === 'Confirmada').length;
-  const canc = citas.filter(c => c.estado === 'Cancelada').length;
+  const pend = citas.filter(c => c.estado === 'Agendada' || c.estado === 'Confirmada' || c.estado === 'En curso').length;
+  const canc = citas.filter(c => c.estado === 'Cancelada' || c.estado === 'No asistió').length;
 
-  // Obtiene referencias a todos los contadores del DOM de forma segura
-  const elTotal = safeGetElement('cnt-total');
-  const elComp = safeGetElement('cnt-completadas');
-  const elPend = safeGetElement('cnt-pendientes');
-  const elCanc = safeGetElement('cnt-canceladas');
+  const elT = safeGetElement('cnt-total');
+  const elC = safeGetElement('cnt-completadas');
+  const elP = safeGetElement('cnt-pendientes');
+  const elX = safeGetElement('cnt-canceladas');
+  if (elT) elT.textContent = total;
+  if (elC) elC.textContent = comp;
+  if (elP) elP.textContent = pend;
+  if (elX) elX.textContent = canc;
 
-  if (elTotal) elTotal.textContent = total;
-  if (elComp) elComp.textContent = comp;
-  if (elPend) elPend.textContent = pend;
-  if (elCanc) elCanc.textContent = canc;
-
-  const progressBar = safeGetElement('progressBar');
-  const progressLabel = safeGetElement('progressLabel');
+  const bar = safeGetElement('progressBar');
+  const lbl = safeGetElement('progressLabel');
   const pct = total > 0 ? Math.round((comp / total) * 100) : 0;
-
-  if (progressBar) {
-    progressBar.style.width = pct + '%';
-    // Sincroniza el atributo aria-valuenow para que lectores de pantalla anuncien el progreso
-    progressBar.closest('[role="progressbar"]')?.setAttribute('aria-valuenow', pct);
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.closest('[role="progressbar"]')?.setAttribute('aria-valuenow', pct);
   }
-  if (progressLabel) progressLabel.textContent = `${comp} de ${total} citas completadas`;
+  if (lbl) lbl.textContent = `${comp} de ${total} citas completadas`;
 };
 
-/**
- * Dispara la animación de conteo en todas las tarjetas de estadísticas
- * al cargar la página por primera vez.
- */
+const animateCounter = (el, target) => {
+  if (!el) return;
+  let cur = 0;
+  const step = Math.max(1, Math.ceil(target / 30));
+  const start = performance.now();
+  const dur = 900;
+  const tick = (t) => {
+    const p = Math.min((t - start) / dur, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.floor(eased * target);
+    if (p < 1) requestAnimationFrame(tick); else el.textContent = target;
+  };
+  requestAnimationFrame(tick);
+};
+
 const animateCounters = () => {
   const total = citas.length;
   const comp = citas.filter(c => c.estado === 'Completada').length;
   const pend = citas.filter(c => c.estado === 'Agendada' || c.estado === 'Confirmada').length;
   const canc = citas.filter(c => c.estado === 'Cancelada').length;
-
   animateCounter(safeGetElement('cnt-total'), total);
   animateCounter(safeGetElement('cnt-completadas'), comp);
   animateCounter(safeGetElement('cnt-pendientes'), pend);
   animateCounter(safeGetElement('cnt-canceladas'), canc);
 };
 
-// ── Render tabla ──
-/**
- * Limpia y repinta el cuerpo de la tabla con las citas que pasan
- * los filtros activos. Muestra un estado vacío si no hay resultados.
- */
 const renderTable = () => {
   const data = getFiltered();
   const tbody = safeGetElement('citasTbody');
   if (!tbody) return;
-
   tbody.innerHTML = '';
 
-  const label = safeGetElement('countLabel');
-  if (label) label.textContent = `${data.length} resultado${data.length !== 1 ? 's' : ''}`;
+  const lbl = safeGetElement('countLabel');
+  if (lbl) lbl.textContent = `${data.length} resultado${data.length !== 1 ? 's' : ''}`;
 
   if (!data.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6">
-          <div class="empty-state">
-            <span class="empty-icon" aria-hidden="true">📭</span>
-            <p>No hay citas que coincidan con los filtros.</p>
-          </div>
-        </td>
-      </tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="empty-icon" aria-hidden="true">📭</span><p>No hay citas que coincidan con los filtros.</p></div></td></tr>`;
     return;
   }
 
@@ -226,10 +260,7 @@ const renderTable = () => {
     const tr = document.createElement('tr');
     if (item.active) tr.classList.add('row-active');
     if (item.estado === 'Cancelada') tr.classList.add('row-cancelada');
-
     const canCancel = item.estado === 'Agendada' || item.estado === 'Confirmada';
-
-    // Construye la fila HTML con los botones de acción (ver detalle y cancelar si aplica)
     tr.innerHTML = `
       <td class="td-fecha">${item.fecha}</td>
       <td><span class="pill-hora">${item.hora}</span></td>
@@ -246,309 +277,292 @@ const renderTable = () => {
   });
 };
 
-// ── Modal detalle de cita ──
-/**
- * Busca la cita por ID, rellena el contenido del modal con sus datos
- * (fecha, hora, doctor, servicio, estado) y lo abre enfocando el botón de cierre.
- * @param {number} id - ID de la cita a mostrar
- */
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL DETALLE + CANCELACIÓN
+// ═══════════════════════════════════════════════════════════════════
+
 const openModal = (id) => {
   const item = citas.find(c => c.id === id);
   if (!item) return;
-
-  const modalContent = safeGetElement('modalContent');
-  if (modalContent) {
-    modalContent.innerHTML = `
+  const mc = safeGetElement('modalContent');
+  if (mc) {
+    mc.innerHTML = `
       <div class="modal-row"><span class="modal-key">Fecha</span>   <span class="modal-val">${item.fecha}</span></div>
       <div class="modal-row"><span class="modal-key">Hora</span>    <span class="modal-val">${item.hora}</span></div>
-      <div class="modal-row"><span class="modal-key">Doctor</span>  <span class="modal-val">${item.doctor}</span></div>
+      <div class="modal-row"><span class="modal-key">Profesional</span>  <span class="modal-val">${item.doctor}</span></div>
       <div class="modal-row"><span class="modal-key">Servicio</span><span class="modal-val">${item.servicio}</span></div>
       <div class="modal-row"><span class="modal-key">Estado</span>
         <span class="modal-val"><span class="badge ${badgeClass(item.estado)}">${item.estado}</span></span>
       </div>`;
   }
-
-  const modal = safeGetElement('modalOverlay');
-  if (modal) {
-    // Guarda qué elemento activó el modal para poder restaurar el foco al cerrarlo
-    modal.dataset.opener = 'btnNuevaCita';
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
-    modal.removeAttribute('inert');
-
-    // Mueve el foco al botón de cerrar para que el usuario de teclado pueda salir del modal
-    const closeBtn = safeGetElement('modalClose');
-    if (closeBtn) closeBtn.focus();
+  const mo = safeGetElement('modalOverlay');
+  if (mo) {
+    mo.dataset.opener = 'btnNuevaCita';
+    mo.classList.add('open');
+    mo.setAttribute('aria-hidden', 'false');
+    mo.removeAttribute('inert');
+    safeGetElement('modalClose')?.focus();
   }
 };
+const closeModal = () => {
+  const mo = safeGetElement('modalOverlay');
+  if (!mo) return;
+  mo.classList.remove('open');
+  mo.setAttribute('aria-hidden', 'true');
+  mo.setAttribute('inert', '');
+  const opener = mo.dataset.opener;
+  if (opener) safeGetElement(opener)?.focus();
+};
 
-/**
- * Cierra el modal principal de detalle
- */
-const closeModal = () => closeModalGeneric('modalOverlay');
+// Helper: verifica que la cita sea en >24h (regla negocio cancelación paciente)
+const diffHoras = (fechaHoraISO) => {
+  const cita = new Date(fechaHoraISO);
+  return (cita.getTime() - Date.now()) / 3_600_000;
+};
 
-// ── Modal de confirmación de cancelación ──
-/**
- * Muestra el modal de confirmación con el resumen de la cita que se
- * desea cancelar, y espera que el usuario confirme o rechace la acción.
- * @param {number} id - ID de la cita que se quiere cancelar
- */
 const abrirModalCancelar = (id) => {
   const item = citas.find(c => c.id === id);
   if (!item) return;
 
-  cancelId = id;
+  const hrs = diffHoras(item.fechaHoraISO);
+  const btnSi = safeGetElement('cancelarSi');
   const desc = safeGetElement('cancelarDesc');
-  if (desc) desc.textContent = `Cita del ${item.fecha} a las ${item.hora} — ${item.servicio}`;
+  const adv = safeGetElement('cancelarAdvertencia');
+  const error = safeGetElement('cancelarError');
 
-  const modal = safeGetElement('modalCancelar');
-  if (modal) {
-    modal.dataset.opener = `btn-cancelar-${id}`;
+  if (error) error.textContent = '';
+
+  if (hrs < 24 && item.estado !== 'Cancelada' && item.estado !== 'Completada') {
+    if (adv) adv.textContent = `⚠️ Esta cita es en ${Math.max(1, Math.round(hrs))} horas. La clínica recomienda cancelar con al menos 24h de anticipación.`;
+    adv?.classList.remove('hidden');
+  } else {
+    adv?.classList.add('hidden');
+  }
+
+  if (item.estado === 'Completada' || item.estado === 'Cancelada' || item.estado === 'No asistió') {
+    if (btnSi) btnSi.disabled = true;
+    if (desc) desc.textContent = `No se puede cancelar: la cita está en estado "${item.estado}".`;
+  } else if (hrs < 2) {
+    if (btnSi) btnSi.disabled = true;
+    if (desc) desc.textContent = `Cita en menos de 2 horas. Comuníquese con la clínica para cancelar.`;
+  } else {
+    if (btnSi) btnSi.disabled = false;
+    if (desc) desc.textContent = `Cita del ${item.fecha} a las ${item.hora} — ${item.servicio} con ${item.doctor}`;
+  }
+
+  cancelId = id;
+  const m = safeGetElement('modalCancelar');
+  if (m) {
+    m.dataset.opener = `btn-cancelar-${id}`;
+    m.classList.add('open');
+    m.setAttribute('aria-hidden', 'false');
+    m.removeAttribute('inert');
+    safeGetElement('cancelarSi')?.focus();
+  }
+};
+
+const cerrarModalCancelar = () => {
+  cancelId = null;
+  const m = safeGetElement('modalCancelar');
+  if (!m) return;
+  m.classList.remove('open');
+  m.setAttribute('aria-hidden', 'true');
+  m.setAttribute('inert', '');
+  const opener = m.dataset.opener;
+  if (opener) safeGetElement(opener)?.focus();
+};
+
+const confirmarCancelacion = async () => {
+  if (!cancelId) return;
+  const item = citas.find(c => c.id === cancelId);
+  if (!item) return;
+
+  // Optimistic update local
+  const beforeEstado = item.estado;
+  item.estado = 'Cancelada';
+  item.active = false;
+  updateStats();
+  renderTable();
+  showToast('Cita cancelada correctamente');
+
+  let success = false, msg = null;
+  try {
+    const res = await fetch(`${API_BASE}/citas/${cancelId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    let payload;
+    try { payload = await res.json(); } catch { payload = { success: res.ok }; }
+    success = res.ok && payload.success;
+    msg = payload.message;
+  } catch (err) {
+    console.warn('[SmileTrack] Cancel cita offline paciente:', err);
+    success = true;
+    msg = 'Cancelación guardada localmente';
+  }
+
+  if (success) {
+    saveLocal();
+    cerrarModalCancelar();
+    if (msg && msg.toLowerCase().includes('local'))
+      showToast('⚠️ Cancelación guardada localmente', 'warning');
+  } else {
+    item.estado = beforeEstado;
+    item.active = beforeEstado === 'Agendada' || beforeEstado === 'Confirmada';
+    updateStats();
+    renderTable();
+    const errorBox = safeGetElement('cancelarError');
+    if (errorBox) errorBox.textContent = msg || 'No fue posible cancelar la cita. Intente más tarde o contacte recepción.';
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL SOLICITUD NUEVA CITA (UI placebo; endpoint en desarrollarse)
+// ═══════════════════════════════════════════════════════════════════
+
+const initNuevaCitaModal = () => {
+  const btn = safeGetElement('btnNuevaCita');
+  const modal = safeGetElement('modalNuevaCita');
+  if (!modal || !btn) return;
+
+  btn.addEventListener('click', () => {
+    modal.dataset.opener = 'btnNuevaCita';
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     modal.removeAttribute('inert');
+    modal.querySelector('.form-input')?.focus();
+  });
 
-    // Lleva el foco al botón de confirmación para facilitar la acción con teclado
-    const btnSi = safeGetElement('cancelarSi');
-    if (btnSi) btnSi.focus();
-  }
-};
+  const cerrar = () => {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('inert', '');
+    const o = modal.dataset.opener;
+    if (o) safeGetElement(o)?.focus();
+  };
 
-/**
- * Cierra el modal de cancelación y reinicia la variable que guarda
- * el ID de la cita pendiente de cancelar.
- */
-const cerrarModalCancelar = () => {
-  closeModalGeneric('modalCancelar');
-  cancelId = null;
-};
+  safeGetElement('closeNuevaCita')?.addEventListener('click', cerrar);
+  safeGetElement('cancelarNuevaCita')?.addEventListener('click', cerrar);
+  modal.addEventListener('click', e => { if (e.target === modal) cerrar(); });
 
-/**
- * Aplica la cancelación de la cita guardada en 'cancelId': actualiza su estado
- * a 'Cancelada', refresca la tabla y los contadores, y muestra un toast de confirmación.
- */
-const confirmarCancelacion = () => {
-  if (!cancelId) return;
-
-  const item = citas.find(c => c.id === cancelId);
-  if (item) {
-    item.estado = 'Cancelada';
-    item.active = false;
-    updateStats();
-    renderTable();
-    showToast('Cita cancelada correctamente');
-  }
-  cerrarModalCancelar();
-};
-
-// ── Toast ──
-/**
- * Muestra un mensaje flotante en la parte inferior de la pantalla por 3 segundos.
- * Si ya hay un toast visible, cancela su temporizador antes de mostrar el nuevo.
- * @param {string} msg - Texto del mensaje a mostrar
- */
-const showToast = (msg) => {
-  const t = safeGetElement('toast');
-  if (!t) return;
-
-  t.textContent = msg;
-  t.classList.add('show');
-
-  // Cancela el ocultado anterior si el toast se llama varias veces seguidas
-  if (t._timeoutId) clearTimeout(t._timeoutId);
-  t._timeoutId = setTimeout(() => t.classList.remove('show'), 3000);
-};
-
-// ── Modal nueva cita ──
-/**
- * Registra todos los eventos del modal de solicitud de nueva cita:
- * abrir al pulsar el botón principal, cerrar con los botones secundarios,
- * validar el campo de fecha y resetear el formulario tras el envío.
- */
-const initNuevaCitaModal = () => {
-  const modal = safeGetElement('modalNuevaCita');
-  if (!modal) return;
-
-  const btnNueva = safeGetElement('btnNuevaCita');
-  if (btnNueva) {
-    btnNueva.addEventListener('click', () => {
-      modal.dataset.opener = 'btnNuevaCita';
-      modal.classList.add('open');
-      modal.setAttribute('aria-hidden', 'false');
-      modal.removeAttribute('inert');
-
-      // Lleva el foco al primer campo del formulario para mejorar la experiencia de usuario
-      const firstInput = modal.querySelector('.form-input');
-      if (firstInput) firstInput.focus();
-    });
-  }
-
-  const closeBtn = safeGetElement('closeNuevaCita');
-  const cancelBtn = safeGetElement('cancelarNuevaCita');
-  if (closeBtn) closeBtn.addEventListener('click', () => closeModalGeneric('modalNuevaCita'));
-  if (cancelBtn) cancelBtn.addEventListener('click', () => closeModalGeneric('modalNuevaCita'));
-
-  const confirmBtn = safeGetElement('confirmarNuevaCita');
-  if (confirmBtn) {
-    confirmBtn.addEventListener('click', () => {
-      const fechaInput = safeGetElement('citaFecha');
-      const fecha = fechaInput?.value;
-
-      // Si no se eligió fecha, marca el campo visualmente y regresa el foco a él
-      if (!fecha) {
-        if (fechaInput) {
-          fechaInput.focus();
-          fechaInput.style.borderColor = 'var(--orange)';
-          setTimeout(() => fechaInput.style.borderColor = '', 2000);
-        }
-        return;
+  safeGetElement('confirmarNuevaCita')?.addEventListener('click', () => {
+    const fecha = safeGetElement('citaFecha');
+    if (!fecha?.value) {
+      if (fecha) {
+        fecha.focus();
+        fecha.style.borderColor = 'var(--orange)';
+        setTimeout(() => fecha.style.borderColor = '', 2000);
       }
-
-      closeModalGeneric('modalNuevaCita');
-      showToast('Solicitud de cita enviada exitosamente');
-
-      // Limpia todos los campos del formulario para dejarlo listo para la próxima solicitud
-      const servicioSelect = safeGetElement('citaServicio');
-      const notaTextarea = safeGetElement('citaNota');
-      if (fechaInput) fechaInput.value = '';
-      if (servicioSelect) servicioSelect.selectedIndex = 0;
-      if (notaTextarea) notaTextarea.value = '';
-    });
-  }
-
-  // Cierra el modal si el usuario hace clic directamente sobre el overlay oscuro
-  modal.addEventListener('click', e => {
-    if (e.target === modal) closeModalGeneric('modalNuevaCita');
+      return;
+    }
+    cerrar();
+    showToast('Solicitud de cita enviada exitosamente');
+    if (fecha) fecha.value = '';
+    safeGetElement('citaServicio') && (safeGetElement('citaServicio').selectedIndex = 0);
+    const nta = safeGetElement('citaNota');
+    if (nta) nta.value = '';
   });
 };
 
-// ── Delegación de eventos para tabla dinámica ──
-/**
- * Registra un único listener en el tbody de la tabla para manejar
- * los clicks en los botones de acción de cada fila (ver detalle y cancelar).
- * Usar event delegation evita re-asignar listeners al re-renderizar la tabla.
- */
+// ═══════════════════════════════════════════════════════════════════
+//  EVENTOS TABLA (event delegation)
+// ═══════════════════════════════════════════════════════════════════
+
 const initTableEvents = () => {
   const tbody = safeGetElement('citasTbody');
   if (!tbody) return;
-
-  // Un solo listener en el contenedor capta los clicks de todos los botones generados dinámicamente
   tbody.addEventListener('click', e => {
-    const btn = e.target.closest('.btn-icon');
-    if (!btn) return;
-
-    const action = btn.dataset.action;
-    const id = parseInt(btn.dataset.id, 10);
-
-    // Descarta el evento si el data-id no puede convertirse a un número entero válido
+    const b = e.target.closest('.btn-icon');
+    if (!b) return;
+    const accion = b.dataset.action;
+    const id = parseInt(b.dataset.id, 10);
     if (isNaN(id)) return;
-
-    if (action === 'ver') {
-      openModal(id);
-    } else if (action === 'cancelar') {
-      abrirModalCancelar(id);
-    }
+    if (accion === 'ver') openModal(id);
+    else if (accion === 'cancelar') abrirModalCancelar(id);
   });
 };
 
-// ── Init principal ──
-/**
- * Punto de entrada de la página. Ejecuta el render inicial, anima los contadores,
- * registra los eventos de filtros, modales, teclado y el menú móvil.
- */
-const init = () => {
-  // Anima los contadores y pinta la tabla al cargar la página por primera vez
-  animateCounters();
-  updateStats();
-  renderTable();
-  
-  // Inicializa el modal de nueva cita y la delegación de eventos de la tabla
-  initNuevaCitaModal();
-  initTableEvents();
+// ═══════════════════════════════════════════════════════════════════
+//  FETCH CITAS DESDE API
+// ═══════════════════════════════════════════════════════════════════
 
-  // Re-renderiza la tabla cada vez que cambia el selector de estado
-  const filterEl = safeGetElement('filterEstado');
-  if (filterEl) filterEl.addEventListener('change', renderTable);
-
-  // Aplica debounce al campo de búsqueda para no re-renderizar en cada pulsación de tecla
-  const searchEl = safeGetElement('searchInput');
-  if (searchEl) {
-    const debouncedRender = debounce(renderTable, 180);
-    searchEl.addEventListener('input', debouncedRender);
-  }
-
-  // Registra el cierre del modal de detalle al pulsar la X o hacer clic fuera
-  const modalClose = safeGetElement('modalClose');
-  const modalOverlay = safeGetElement('modalOverlay');
-  if (modalClose) modalClose.addEventListener('click', closeModal);
-  if (modalOverlay) {
-    modalOverlay.addEventListener('click', e => {
-      if (e.target === modalOverlay) closeModal();
+async function fetchAppointments() {
+  try {
+    const res = await fetch(`${API_BASE}/citas?page=1&pageSize=${API_PAGE_SIZE}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
     });
-  }
-
-  // Registra los botones 'Volver' y 'Sí, cancelar' del modal de confirmación
-  const cancelarNo = safeGetElement('cancelarNo');
-  const cancelarSi = safeGetElement('cancelarSi');
-  const modalCancelar = safeGetElement('modalCancelar');
-  
-  if (cancelarNo) cancelarNo.addEventListener('click', cerrarModalCancelar);
-  if (cancelarSi) cancelarSi.addEventListener('click', confirmarCancelacion);
-  if (modalCancelar) {
-    modalCancelar.addEventListener('click', e => {
-      if (e.target === modalCancelar) cerrarModalCancelar();
-    });
-  }
-
-  // La tecla Escape cierra el modal más reciente según el orden de apilamiento
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
-    
-    // Cierra primero el modal de nueva cita, luego el de cancelación, luego el de detalle
-    const modalNueva = safeGetElement('modalNuevaCita');
-    const modalCancel = safeGetElement('modalCancelar');
-    const modalDetail = safeGetElement('modalOverlay');
-
-    if (modalNueva?.classList.contains('open')) {
-      closeModalGeneric('modalNuevaCita');
-    } else if (modalCancel?.classList.contains('open')) {
-      cerrarModalCancelar();
-    } else if (modalDetail?.classList.contains('open')) {
-      closeModal();
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const payload = await res.json();
+    if (payload && payload.success && Array.isArray(payload.data)) {
+      citas = payload.data.map(mapServerToClient);
+      saveLocal();
+      return;
     }
-  });
-  
-  // En una SPA se deben remover listeners aquí para evitar memory leaks al cambiar de página
-  window.addEventListener('beforeunload', () => {
-    // Ej: modalOverlay?.removeEventListener('click', closeModalHandler);
-  });
+    throw new Error('payload inválido');
+  } catch (err) {
+    console.warn('[SmileTrack] Mis citas paciente: fallback LocalStorage:', err);
+    citas = loadLocal();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT PRINCIPAL
+// ═══════════════════════════════════════════════════════════════════
+
+const init = async () => {
+  try {
+    // 1. Cargar datos
+    citas = loadLocal();
+    animateCounters();
+    updateStats();
+    renderTable();
+
+    initNuevaCitaModal();
+    initTableEvents();
+
+    // Filtros
+    safeGetElement('filterEstado')?.addEventListener('change', renderTable);
+    const sEl = safeGetElement('searchInput');
+    if (sEl) sEl.addEventListener('input', debounce(renderTable, 180));
+
+    // Modal detalle / Escape
+    safeGetElement('modalClose')?.addEventListener('click', closeModal);
+    safeGetElement('modalOverlay')?.addEventListener('click', e => {
+      if (e.target.closest('#modalOverlay') === e.target) closeModal();
+    });
+    safeGetElement('cancelarNo')?.addEventListener('click', cerrarModalCancelar);
+    safeGetElement('cancelarSi')?.addEventListener('click', confirmarCancelacion);
+    safeGetElement('modalCancelar')?.addEventListener('click', e => {
+      if (e.target.closest('#modalCancelar') === e.target) cerrarModalCancelar();
+    });
+
+    // Escape ordenado: nueva → cancelar → detalle
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const mNueva = safeGetElement('modalNuevaCita');
+      const mCanc = safeGetElement('modalCancelar');
+      const mDet = safeGetElement('modalOverlay');
+      if (mNueva?.classList.contains('open')) {
+        mNueva.classList.remove('open');
+        mNueva.setAttribute('aria-hidden', 'true');
+        mNueva.setAttribute('inert', '');
+      } else if (mCanc?.classList.contains('open')) cerrarModalCancelar();
+      else if (mDet?.classList.contains('open')) closeModal();
+    });
+
+    // Fetch real desde API (sobrescribe datos locales si tiene éxito)
+    await fetchAppointments();
+    animateCounters();
+    updateStats();
+    renderTable();
+
+    window.addEventListener('beforeunload', () => { /* cleanup SPA */ });
+  } catch (err) {
+    console.error('[SmileTrack] Error init mis-citas.js (paciente):', err);
+    mostrarErrorUsuario(err.message || 'Error cargando módulo "Mis Citas". Intente recargar.');
+  }
 };
 
-// Ejecutar al cargar DOM
+// Remover listeners duplicados DOMContentLoaded (había 2 en el archivo original)
 document.addEventListener('DOMContentLoaded', init);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Ejecutar al cargar DOM
-document.addEventListener('DOMContentLoaded', init)

@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — PANEL OPERATIVO AUXILIAR (styles.css)
-   Base unificada con vistas de recepción + componentes específicos de auxiliar
-   ============================================= */
+/* ============================================
+SmileTrack — Panel Operativo (st-aux-01-panel-operativo)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para el panel operativo del auxiliar que definen la maquetación del tablero principal, la cuadrícula de KPIs, los indicadores de alertas médicas y el diseño responsive del modal de paciente.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño responsive con CSS Grid para estructurar la grilla de KPIs y el panel lateral de alertas
+- Estilos para badges de alertas de alergias críticas de los pacientes (.badge-alergia)
+- Efectos de transiciones CSS para interacciones con tarjetas modales y botones
+- Definición de variables CSS locales para garantizar consistencia visual en el diseño
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.css
+- JS: ~/js/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.js
+- Partial / Otros: panel-operativo.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Se implementan reglas media query para optimizar la legibilidad en pantallas táctiles de mano.
+============================================ */
 
 /* Variables globales consistentes con el sistema SmileTrack */
 :root {

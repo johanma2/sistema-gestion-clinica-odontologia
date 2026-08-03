@@ -96,6 +96,7 @@
                     <input class="w-full text-center text-2xl tracking-[1em] py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-mono text-white placeholder:text-white/40 outline-none" id="code" name="code" type="text" placeholder="••••••" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required />
                     <p id="codeError" class="text-error text-sm hidden" role="alert"></p>
                 </div>
+                <div class="flex gap-3">
                     <button type="button" id="backToStep1" class="flex-1 bg-white/10 text-white py-4 rounded-2xl font-title text-button hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 font-semibold">
                         Atrás
                     </button>
@@ -113,6 +114,7 @@
                         <div class="relative">
                             <input class="w-full pl-14 pr-12 py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-body text-white placeholder:text-white/40 outline-none" id="newPassword" name="newPassword" type="password" placeholder="Mínimo 8 caracteres" required minlength="8" />
                             <button type="button" class="toggle-password absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors" aria-label="Mostrar contraseña">
+                                <span class="visibility-icon material-symbols-outlined">visibility_off</span>
                             </button>
                         </div>
                         <div class="mt-2 space-y-1">
@@ -126,6 +128,7 @@
                         <div class="relative">
                             <input class="w-full pl-14 pr-12 py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-body text-white placeholder:text-white/40 outline-none" id="confirmPassword" name="confirmPassword" type="password" placeholder="Repite tu contraseña" required />
                             <button type="button" class="toggle-password absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors" aria-label="Mostrar contraseña">
+                                <span class="visibility-icon material-symbols-outlined">visibility_off</span>
                             </button>
                         </div>
                         <p id="passMatch" class="text-xs mt-2 hidden" role="alert"></p>
@@ -144,6 +147,7 @@
             <!-- Éxito -->
             <div id="successStep" class="px-10 pb-10 text-center space-y-6 hidden">
                 <div class="w-20 h-20 mx-auto bg-[#43A047]/20 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1; font-size:2.5rem; color:#43A047;">check_circle</span>
                 </div>
                 <div class="space-y-3">
                     <h2 class="font-title text-h2 text-white font-bold">¡Contraseña restablecida!</h2>

@@ -1,6 +1,29 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Mi Agenda Odontólogo (st-odo-02-agenda)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-﻿<!DOCTYPE html>
+DESCRIPCIÓN:
+Vista que permite al odontólogo ver sus citas programadas del día, filtrar por fecha e interactuar con el estado de cada cita (Iniciar atención, registrar inasistencia, etc.).
+
+FUNCIONALIDADES PRINCIPALES:
+- Visualización de agenda diaria y semanal estructurada por horas
+- Acciones rápidas sobre citas en tiempo real (iniciar atención, ver historial parcial)
+- Filtro interactivo de calendario para navegación rápida por días
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y CitasOdontologo
+- CSS: ~/css/Gestion_De_Citas/st-odo-02-agenda/agenda.css
+- JS: ~/js/Gestion_De_Citas/st-odo-02-agenda/agenda.js
+- Partial / Otros: Sidebar unificado
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ *@
+@{ Layout = null; }
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>

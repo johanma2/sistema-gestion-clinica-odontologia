@@ -1,14 +1,27 @@
-// =============================================
-// SMILETRACK — NOTIFICACIONES PACIENTE (notificaciones.js)
-// [MEJORA]: Código refactorizado con patrones reutilizables de SmileTrack
-// =============================================
+/* ============================================
+SmileTrack — Notificaciones Paciente (st-pac-03-notificaciones)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-/**
- * [MEJORA]: Utilidad reutilizable para obtener elementos con null check seguro
- * Consistente con st-pac-01 - evita errores si el elemento no existe
- * @param {string} id - ID del elemento a buscar
- * @returns {HTMLElement|null} Elemento o null si no existe
- */
+DESCRIPCIÓN:
+Controla la carga de notificaciones del paciente, acciones de marcar como leídas y filtrado de alertas.
+
+FUNCIONALIDADES PRINCIPALES:
+- Carga reactiva de la lista de notificaciones vía API fetch
+- Toggle interactivo de estados leído/no leído e inserción de contadores dinámicos
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y NotificacionesPaciente
+- CSS: ~/css/Gestion_De_Citas/st-pac-03-notificaciones/styles.css
+- JS: ~/js/Gestion_De_Citas/st-pac-03-notificaciones/notificaciones.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
+
+// WHY: safeGetElement evita excepciones fatales en tiempo de ejecución si un id no se encuentra en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) {
@@ -17,13 +30,7 @@ const safeGetElement = (id) => {
   return el;
 };
 
-/**
- * [MEJORA]: Función debounce reutilizable para optimizar eventos de input
- * Consistente con st-pac-01 - reduce renders innecesarios al tipear
- * @param {Function} fn - Función a ejecutar
- * @param {number} delay - Tiempo de espera en ms
- * @returns {Function} Función debounceada
- */
+// WHY: Debounce evita la sobrecarga del hilo principal ante eventos repetitivos como tecleos de búsqueda o redimensiones
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -32,11 +39,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-/**
- * [MEJORA]: Toast con cleanup de timeout para evitar solapamientos
- * Consistente con st-pac-01 - mejora robustez en notificaciones rápidas
- * @param {string} msg - Mensaje a mostrar
- */
+// WHY: Muestra retroalimentación temporal autolimpiable para no interrumpir el flujo visual de la lista de alertas
 const showToast = (msg) => {
   const t = safeGetElement('toast');
   if (!t) return;

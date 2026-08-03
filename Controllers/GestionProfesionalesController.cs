@@ -200,9 +200,9 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     [Route("gestion-de-profesionales/guardar-profesional")]
     public async Task<IActionResult> GuardarProfesional([FromForm] ProfesionalViewModel model, CancellationToken ct = default)
     {
-        var returnUrlSafe = string.IsNullOrWhiteSpace(model?.ReturnUrl)
-            ? "/gestion-de-profesionales/st-adm-07-gestion-profesionales"
-            : model.ReturnUrl;
+        var returnUrlSafe = !string.IsNullOrWhiteSpace(model?.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
+            ? model.ReturnUrl
+            : "/gestion-de-profesionales/st-adm-07-gestion-profesionales";
         var idOperacion = model?.IdProfesional ?? 0;
         var operacion = idOperacion > 0 ? "Actualizacion" : "Creacion";
 
@@ -416,7 +416,9 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     [Route("gestion-de-profesionales/eliminar-profesional")]
     public async Task<IActionResult> EliminarProfesional([FromForm] int IdProfesional, [FromForm] string? ReturnUrl, CancellationToken ct = default)
     {
-        var returnUrlSafe = string.IsNullOrWhiteSpace(ReturnUrl) ? "/gestion-de-profesionales/st-adm-07-gestion-profesionales" : ReturnUrl;
+        var returnUrlSafe = !string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)
+            ? ReturnUrl
+            : "/gestion-de-profesionales/st-adm-07-gestion-profesionales";
 
         try
         {

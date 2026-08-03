@@ -1,7 +1,26 @@
-/* =============================================
-   SMILETRACK — GESTIÓN DE CITAS RECEPCIÓN (styles.css)
-   Base unificada + componentes específicos de gestión de citas
-   ============================================= */
+/* ============================================
+SmileTrack — Gestión de Citas Recepción (st-rec-03-gestion-citas)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para el panel de gestión integral de citas que define el grid, el formulario de agendamiento y la visualización de modales.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño de la tabla de listado de citas y paginación
+- Layout del formulario de creación y reprogramación de citas en dos columnas
+- Colores de estados de cita unificados con el sistema SmileTrack
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y CitasRecepcion
+- CSS: ~/css/Gestion_De_Citas/st-rec-03-gestion-citas/styles.css
+- JS: ~/js/Gestion_De_Citas/st-rec-03-gestion-citas/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 
 :root {
   /* === VARIABLES BASE (IDÉNTICAS A st-rec-01) === */

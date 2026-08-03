@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — AGENDA DE APOYO (styles.css)
-   Base unificada con vistas de auxiliar + componentes específicos
-   ============================================= */
+/* ============================================
+SmileTrack — Agenda de Apoyo Clínico (st-aux-02-agenda-apoyo)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la agenda de apoyo clínico que configuran la visualización de los filtros en barra (toolbar), el menú desplegable y los estilos de badges de tipo de cita médica.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño fluido y responsive para el menú de navegación y barra lateral
+- Estilos para la barra de herramientas de filtros (.filtros-bar) y estados activos de botones
+- Estilización de dropdowns de profesionales con soporte para transiciones fluidas
+- Adaptación para accesibilidad (skip-link, focus-visible y reducción de movimiento)
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm08Agenda
+- CSS: ~/css/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.css
+- JS: ~/js/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.js
+- Partial / Otros: agenda-apoyo.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Las variables de color de tipo de cita y estados permiten un mantenimiento unificado del aspecto de badges.
+============================================ */
 
 /* Variables globales consistentes con el sistema SmileTrack */
 :root {

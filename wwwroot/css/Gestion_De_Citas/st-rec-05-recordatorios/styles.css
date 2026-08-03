@@ -1,7 +1,26 @@
-/* =============================================
-   SMILETRACK — RECORDATORIOS (styles.css)
-   Base unificada con vistas anteriores + componentes específicos de recordatorios
-   ============================================= */
+/* ============================================
+SmileTrack — Recordatorios (st-rec-05-recordatorios)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para el panel de recordatorios de citas que definen las tarjetas de configuración de mensajes, tablas de destinatarios y adaptabilidad.
+
+FUNCIONALIDADES PRINCIPALES:
+- Diseño del panel de configuración de canales
+- Estilos de lista de pacientes para envío manual
+- Variación de estados de envío y feedback visual en los botones
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Recordatorios
+- CSS: ~/css/Gestion_De_Citas/st-rec-05-recordatorios/styles.css
+- JS: ~/js/Gestion_De_Citas/st-rec-05-recordatorios/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ */
 
 /* Variables globales consistentes con módulos anteriores */
 :root {

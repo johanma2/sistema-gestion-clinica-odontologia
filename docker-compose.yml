@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -16,6 +18,22 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: smiletrack-web
+    container_name: smiletrack-web
+    depends_on:
+      - sqlserver
+    ports:
+      - "5258:80"
+    environment:
+      ASPNETCORE_URLS: "http://+:80"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=SmileTrackDB;User Id=sa;Password=SmileTrack#2025;TrustServerCertificate=True;"
     restart: unless-stopped
 
 volumes:

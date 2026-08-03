@@ -40,7 +40,7 @@ input:focus { transform: translateY(-1px); box-shadow: 0 10px 25px rgba(30, 136,
 .step-indicator.completed { background: #43A047; }
 
 /* Requisitos de contraseña */
-#passLength.dot, #passUpper.dot, #passNumber.dot { color: #E53935; }
+#passLength, #passUpper, #passNumber { color: #E53935; }
 #passLength.valid, #passUpper.valid, #passNumber.valid { color: #43A047; }
 
 /* Toggle password visibility */

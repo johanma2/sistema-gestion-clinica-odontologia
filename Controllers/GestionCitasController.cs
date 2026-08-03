@@ -4,12 +4,10 @@
  * ============================================
  * Autor: Johan Santamaria
  * Fecha: 2026-07-30
- * 
  * PROPÓSITO:
  * Centraliza la lógica de negocio para todos los módulos
  * relacionados con citas: dashboards, agenda, gestión integral,
  * paneles auxiliares y vistas de profesionales/pacientes.
- * 
  * PATRONES APLICADOS:
  * - Constructor injection para dependencias (ILogger, AppDbContext)
  * - CancellationToken en todas las operaciones asíncronas para soporte de cancelación
@@ -202,7 +200,8 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrador,Recepcionista")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "ApiOrCookie")]
     [Route("api/citas/agenda")]
     public async Task<IActionResult> CrearCitaDesdeAgenda([FromBody] CitaAgendaDto dto, CancellationToken ct = default)
     {
@@ -499,7 +498,9 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     [Route("gestion-de-citas/guardar-cita")]
     public async Task<IActionResult> GuardarCita([FromForm] CitaViewModel model, CancellationToken ct = default)
     {
-        var returnUrlSafe = string.IsNullOrWhiteSpace(model.ReturnUrl) ? "/gestion-de-citas/st-adm-09-citas" : model.ReturnUrl;
+        var returnUrlSafe = !string.IsNullOrWhiteSpace(model?.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
+            ? model.ReturnUrl
+            : "/gestion-de-citas/st-adm-09-citas";
         var idCitaOperacion = model?.IdCita ?? 0;
         var operacion = (idCitaOperacion > 0) ? "Actualizacion" : "Creacion";
 
@@ -676,7 +677,9 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     [Route("gestion-de-citas/eliminar-cita")]
     public async Task<IActionResult> EliminarCita([FromForm] int IdCita, [FromForm] string? ReturnUrl, CancellationToken ct = default)
     {
-        var returnUrlSafe = string.IsNullOrWhiteSpace(ReturnUrl) ? "/gestion-de-citas/st-adm-09-citas" : ReturnUrl;
+        var returnUrlSafe = !string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)
+            ? ReturnUrl
+            : "/gestion-de-citas/st-adm-09-citas";
 
         try
         {

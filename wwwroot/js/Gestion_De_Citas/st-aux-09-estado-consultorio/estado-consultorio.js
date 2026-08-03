@@ -1,16 +1,37 @@
-﻿/**
- * SMILETRACK — ESTADO DEL CONSULTORIO (app.js)
- * Lógica con persistencia, checklist accesible y validaciones
- */
+﻿/* ============================================
+SmileTrack — Estado del Consultorio (st-aux-09-estado-consultorio)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-// Obtiene elemento del DOM con manejo seguro de null
+DESCRIPCIÓN:
+Gestiona la lógica completa del módulo de estado del consultorio: checklist post-atención con persistencia, selector de disponibilidad accesible, auto-guardado de observaciones y registro de historial de cambios.
+
+FUNCIONALIDADES PRINCIPALES:
+- Checklist renderizado dinámicamente desde LocalStorage con progreso ARIA en tiempo real
+- Selector de estado del consultorio con patrón radiogroup y navegación por teclado (flechas)
+- Auto-guardado de observaciones con debounce (500ms) para minimizar escrituras en LocalStorage
+- Historial de cambios con timestamps ISO para trazabilidad de acciones del auxiliar
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.css
+- JS: ~/js/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.js
+- Partial / Otros: estado-consultorio.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La clave de LocalStorage incluye consultorio y fecha para evitar colisiones entre consultorios o días distintos.
+============================================ */
+
+// WHY: safeGetElement previene excepciones fatales en la inicialización si un elemento no existe en el DOM
 const safeGetElement = (id) => {
   const el = document.getElementById(id);
   if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
   return el;
 };
 
-// Reduce llamadas a función en eventos frecuentes de input
+// WHY: Debounce evita saturar LocalStorage con escrituras redundantes ante cambios veloces del usuario
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -19,7 +40,7 @@ const debounce = (fn, delay) => {
   };
 };
 
-// Muestra notificación temporal con auto-cierre y cleanup de timeout
+// WHY: Las notificaciones no bloqueantes brindan retroalimentación sin interrumpir el flujo clínico del auxiliar
 const showToast = (message, type = 'success') => {
   const toast = safeGetElement('toast');
   if (!toast) return;
@@ -31,11 +52,11 @@ const showToast = (message, type = 'success') => {
   toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
 };
 
-// Gestiona persistencia del estado del consultorio con localStorage
+// WHY: La clave incluye consultorio y fecha para evitar colisiones entre sesiones de distintos consultorios en el mismo dispositivo
 const consultorioStorage = {
   key: 'smiletrack_consultorio_1_20260320',
   
-  // Carga estado guardado o usa valores por defecto
+  // WHY: Carga desde LocalStorage para continuar el estado entre refrescos de página sin perder el avance del checklist
   load: () => {
     const stored = localStorage.getItem(consultorioStorage.key);
     if (stored) {
@@ -65,7 +86,7 @@ const consultorioStorage = {
     };
   },
   
-  // Guarda estado en localStorage
+  // WHY: Persiste el estado completo inmediatamente tras cada cambio para garantizar integridad ante cierres inesperados
   save: (state) => {
     try {
       localStorage.setItem(consultorioStorage.key, JSON.stringify(state));
@@ -76,7 +97,7 @@ const consultorioStorage = {
     }
   },
   
-  // Actualiza estado de un ítem del checklist
+  // WHY: Actualiza solo el ítem modificado sin reescribir el array completo para mantener eficiencia de escritura
   updateChecklistItem: (index, checked) => {
     const state = consultorioStorage.load();
     if (state.checklist[index]) {
@@ -85,28 +106,28 @@ const consultorioStorage = {
     }
   },
   
-  // Agrega nuevo ítem al checklist
+  // WHY: Permite agregar ítems dinámicos al checklist sin recargar la vista
   addChecklistItem: (text) => {
     const state = consultorioStorage.load();
     state.checklist.push({ text, checked: false });
     consultorioStorage.save(state);
   },
   
-  // Actualiza estado del consultorio
+  // WHY: Registra el estado seleccionado para sintonizar la UI con el estado persistido al recargar la vista
   updateStatus: (status) => {
     const state = consultorioStorage.load();
     state.status = status;
     consultorioStorage.save(state);
   },
   
-  // Actualiza observaciones
+  // WHY: Guarda las observaciones del auxiliar para que no se pierdan al navegar entre vistas
   updateObservations: (text) => {
     const state = consultorioStorage.load();
     state.observations = text;
     consultorioStorage.save(state);
   },
   
-  // Agrega entrada al historial
+  // WHY: Limita el historial a 10 entradas para no saturar LocalStorage con datos indefinidos
   addToHistory: (user, detail) => {
     const state = consultorioStorage.load();
     state.history.unshift({
@@ -114,13 +135,13 @@ const consultorioStorage = {
       user,
       detail
     });
-    // Limita historial a últimos 10 entries
+    // WHY: Limita el historial a máximo 10 entradas para evitar el crecimiento indefinido del objeto en LocalStorage
     if (state.history.length > 10) state.history.pop();
     consultorioStorage.save(state);
   }
 };
 
-// Calcula progreso del checklist
+// WHY: Calcula el progreso en tiempo real para actualizar tanto la barra visual como la etiqueta ARIA accesible
 const calculateProgress = () => {
   const state = consultorioStorage.load();
   const total = state.checklist.length;
@@ -175,7 +196,7 @@ const initMobileMenu = () => {
   });
 };
 
-// Inicializa checklist con persistencia y actualización de progreso
+// WHY: Renderiza el checklist desde LocalStorage para mantener el estado entre refrescos de página
 const initChecklist = () => {
   const checklist = safeGetElement('checklistItems');
   const progressBar = safeGetElement('progressBar');
@@ -187,7 +208,7 @@ const initChecklist = () => {
   // Carga estado guardado
   const state = consultorioStorage.load();
   
-  // Limpia lista actual y renderiza desde estado guardado
+  // WHY: Re-renderiza la lista completa desde el estado guardado en lugar de confiar en el HTML estático del servidor
   checklist.innerHTML = '';
   state.checklist.forEach((item, index) => {
     const li = document.createElement('li');
@@ -201,7 +222,7 @@ const initChecklist = () => {
       </label>
     `;
     
-    // Maneja cambio de checkbox
+    // WHY: Actualiza el aria-label del checkbox al cambiar estado para que lectores de pantalla anuncien el nuevo estado
     const checkbox = li.querySelector('input');
     checkbox.addEventListener('change', () => {
       consultorioStorage.updateChecklistItem(index, checkbox.checked);
@@ -235,7 +256,7 @@ const initChecklist = () => {
   }
 };
 
-// Inicializa botón para agregar nuevo ítem al checklist
+// WHY: Habilita agregar ítems personalizados al checklist en tiempo real según la situación específica del consultorio
 const initAddItem = () => {
   const input = safeGetElement('newItemInput');
   const btn = safeGetElement('btnAddItem');
@@ -282,7 +303,7 @@ const initAddItem = () => {
     
     checklist.appendChild(li);
     
-    // Trigger reflow y animar
+    // WHY: requestAnimationFrame garantiza que el reflow se complete antes de aplicar la transición de entrada
     requestAnimationFrame(() => {
       li.style.opacity = '1';
       li.style.transform = 'translateY(0)';
@@ -311,7 +332,7 @@ const initAddItem = () => {
   window.addItem = addItem;
 };
 
-// Inicializa selector de estado del consultorio con persistencia
+// WHY: Implementa el patrón radiogroup accesible con navegación por teclado (flechas) para seleccionar el estado del consultorio
 const initStatusSelector = () => {
   const options = document.querySelectorAll('.status-option');
   
@@ -388,7 +409,7 @@ const initStatusSelector = () => {
   };
 };
 
-// Inicializa observaciones con auto-guardado
+// WHY: El debounce de 500ms evita escrituras excesivas en LocalStorage mientras el usuario aún está escribiendo observaciones
 const initObservations = () => {
   const textarea = safeGetElement('obsTextarea');
   if (!textarea) return;
@@ -405,7 +426,7 @@ const initObservations = () => {
   textarea.addEventListener('input', debouncedSave);
 };
 
-// Inicializa botones de confirmación
+// WHY: Los botones de confirmación validan el estado completo antes de registrar en el historial
 const initConfirmButtons = () => {
   const btnPreparation = safeGetElement('btnConfirmPreparation');
   const btnStatus = safeGetElement('btnConfirmStatus');
@@ -465,7 +486,7 @@ const initConfirmButtons = () => {
   window.confirmStatus = () => btnStatus?.click();
 };
 
-// Inicializa renderizado del historial
+// WHY: El historial de estados se renderiza dinámicamente para reflejar las confirmaciones realizadas durante la sesión
 const initHistoryList = () => {
   const list = safeGetElement('history-list');
   if (!list) return;

@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — ESTADO DE CONSULTORIO (styles.css)
-   Base unificada + componentes de estado de consultorio
-   ============================================= */
+/* ============================================
+SmileTrack — Estado del Consultorio (st-aux-09-estado-consultorio)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para la vista de estado del consultorio que definen el checklist accesible con checkmarks CSS personalizados, el selector de estado tipo radiogroup visual y la barra de progreso animada.
+
+FUNCIONALIDADES PRINCIPALES:
+- Checkboxes con diseño personalizado vía CSS (checkmark y estado checked con tachado de texto)
+- Variables de color para cada estado del consultorio (disponible/mantenimiento/no-disponible)
+- Barra de progreso con transición fluida para reflejar el avance del checklist en tiempo real
+- Estilos de impresión que ocultan controles interactivos y muestran solo el contenido informativo
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.css
+- JS: ~/js/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.js
+- Partial / Otros: estado-consultorio.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- El diseño del checkmark usa posicionamiento absoluto con pseudo-elemento ::after para evitar dependencias de iconos externos.
+============================================ */
 
 /* Variables globales consistentes con el sistema SmileTrack */
 :root {

@@ -1,6 +1,31 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Estado del Consultorio (st-aux-09-estado-consultorio)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-﻿<!DOCTYPE html>
+DESCRIPCIÓN:
+Vista de gestión del estado del consultorio odontológico que permite al auxiliar completar el checklist post-atención, registrar observaciones, seleccionar el estado operativo y confirmar la disponibilidad del consultorio.
+
+FUNCIONALIDADES PRINCIPALES:
+- Checklist interactivo post-atención con barra de progreso ARIA accesible
+- Selector de estado del consultorio (Disponible / En mantenimiento / No disponible) con patrón radiogroup
+- Campo de observaciones con auto-guardado mediante debounce
+- Historial cronológico de cambios de estado del consultorio con marcas de tiempo accesibles
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Stadm09Citas
+- CSS: ~/css/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.css
+- JS: ~/js/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.js
+- Partial / Otros: Sidebar hardcoded en la vista (no usa partial)
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- La barra de progreso usa role="progressbar" con aria-valuenow para anunciar el avance del checklist a lectores de pantalla.
+============================================ *@
+@{ Layout = null; }
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>

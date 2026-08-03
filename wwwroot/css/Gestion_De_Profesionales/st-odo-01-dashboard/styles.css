@@ -1,7 +1,28 @@
-/* =============================================
-   SMILETRACK — DASHBOARD ADMINISTRADOR (styles.css)
-   Base unificada + componentes específicos de admin
-   ============================================= */
+/* ============================================
+SmileTrack — Dashboard del Odontólogo (st-odo-01-dashboard)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Hojas de estilo para el dashboard personal del odontólogo que define las tarjetas de métricas, el panel de próximas citas, las notificaciones del sistema y la navegación lateral del rol odontólogo.
+
+FUNCIONALIDADES PRINCIPALES:
+- Tarjetas de KPIs con iconos, valores numéricos grandes y subtítulo de variación del día
+- Panel de próximas citas con badges de estado y separadores de horario
+- Notificaciones con colores semánticos (info/warning/success) y botón de dismissal
+- Sidebar con íconos y nav-group colapsable con animación de flecha
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionProfesionalesController o DashboardOdontologoController
+- CSS: ~/css/Gestion_De_Profesionales/st-odo-01-dashboard/styles.css
+- JS: ~/js/Gestion_De_Profesionales/st-odo-01-dashboard/app.js
+- Partial / Otros: index.cshtml
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+- Las variables de color del sidebar son idénticas a st-adm-07 para garantizar consistencia visual entre roles.
+============================================ */
 
 :root {
   /* === VARIABLES BASE (IDÉNTICAS A st-odo-01) === */

@@ -1,6 +1,29 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Notificaciones Paciente (st-pac-03-notificaciones)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-﻿<!DOCTYPE html>
+DESCRIPCIÓN:
+Vista que permite al paciente consultar y gestionar sus notificaciones del sistema (recordatorios de citas, avisos de reprogramación y alertas generales de la clínica).
+
+FUNCIONALIDADES PRINCIPALES:
+- Visualización de la lista de notificaciones pendientes y leídas
+- Marcar notificaciones individuales como leídas o eliminarlas
+- Filtros rápidos para clasificar las alertas (Todas, Recordatorios, Alertas)
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y NotificacionesPaciente
+- CSS: ~/css/Gestion_De_Citas/st-pac-03-notificaciones/styles.css
+- JS: ~/js/Gestion_De_Citas/st-pac-03-notificaciones/notificaciones.js
+- Partial / Otros: Menú del paciente
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ *@
+@{ Layout = null; }
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>

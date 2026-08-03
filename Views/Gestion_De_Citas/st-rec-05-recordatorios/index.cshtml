@@ -1,6 +1,29 @@
-﻿@{ Layout = null; }
+﻿@* ============================================
+SmileTrack — Recordatorios (st-rec-05-recordatorios)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
 
-﻿<!DOCTYPE html>
+DESCRIPCIÓN:
+Vista que permite a los recepcionistas enviar recordatorios manuales o programar notificaciones automáticas de citas médicas a los pacientes a través de múltiples canales.
+
+FUNCIONALIDADES PRINCIPALES:
+- Listado de citas próximas para envío de recordatorios
+- Envío directo e individualizado de recordatorios vía mensajería
+- Panel de configuración para mensajes automáticos y estados del canal
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController y Recordatorios
+- CSS: ~/css/Gestion_De_Citas/st-rec-05-recordatorios/styles.css
+- JS: ~/js/Gestion_De_Citas/st-rec-05-recordatorios/app.js
+- Partial / Otros: Sidebar unificado
+
+NOTAS DE MANTENIMIENTO:
+- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
+============================================ *@
+@{ Layout = null; }
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
