@@ -1,4 +1,4 @@
-﻿@{ Layout = null; }
+@{ Layout = null; }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -310,7 +310,10 @@
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
-  <script src="@Url.Content("~/js/Facturacion_Y_Pagos/st-adm-12-facturacion/gestionfacturacion.js")"></script>
+<script>
+  window.RAZOR_INVOICES = @Html.Raw(ViewData["FacturasJson"] ?? "[]");
+</script>
+<script src="@Url.Content("~/js/Facturacion_Y_Pagos/st-adm-12-facturacion/gestionfacturacion.js")"></script>
 </body>
 
 </html>

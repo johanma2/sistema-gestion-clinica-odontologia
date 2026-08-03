@@ -188,6 +188,26 @@ const initDeleteHandlers = () => {
   });
 };
 
+// Actualiza el paciente mostrado en el header de la factura al cambiar selección
+const initPatientSelect = () => {
+  const pacienteSelect = safeGetElement('pacienteSelect');
+  const patientNameEl = safeGetElement('invoicePatientName');
+  const patientDocEl = safeGetElement('invoicePatientDoc');
+
+  if (pacienteSelect && patientNameEl && patientDocEl) {
+    pacienteSelect.addEventListener('change', (e) => {
+      const option = e.target.options[e.target.selectedIndex];
+      if (!option.value) {
+        patientNameEl.textContent = 'Seleccione un paciente';
+        patientDocEl.textContent = '—';
+        return;
+      }
+      patientNameEl.textContent = option.text;
+      patientDocEl.textContent = option.dataset.doc || '—';
+    });
+  }
+};
+
 // Actualiza profesional mostrado en header al cambiar selección
 const initProfessionalSelect = () => {
   const profesionalSelect = safeGetElement('profesionalSelect');
@@ -386,6 +406,7 @@ const init = () => {
   initSampleData();
   recalculateInvoice();
   initDeleteHandlers();
+  initPatientSelect();
   initProfessionalSelect();
   initAmountValidation();
   initPrint();

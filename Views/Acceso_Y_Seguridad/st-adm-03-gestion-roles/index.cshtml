@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Gestión de Roles";
 }
 <!DOCTYPE html>
@@ -484,7 +484,10 @@
     });
   });
 </script>
-  <script src="@Url.Content("~/js/Acceso_Y_Seguridad/st-adm-03-gestion-roles/script.js")" defer></script>
+<script>
+  window.RAZOR_ROLES = @Html.Raw(ViewData["RolesJson"] ?? "[]");
+</script>
+<script src="@Url.Content("~/js/Acceso_Y_Seguridad/st-adm-03-gestion-roles/script.js")" defer></script>
 </body>
 
 </html>

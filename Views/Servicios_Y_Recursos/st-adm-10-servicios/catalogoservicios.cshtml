@@ -321,7 +321,6 @@
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
-  <script src="@Url.Content("~/js/Servicios_Y_Recursos/st-adm-10-servicios/catalogoservicios.js")"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -354,6 +353,10 @@
     });
   });
 </script>
+<script>
+  window.RAZOR_SERVICIOS = @Html.Raw(ViewData["ServiciosJson"] ?? "[]");
+</script>
+<script src="@Url.Content("~/js/Servicios_Y_Recursos/st-adm-10-servicios/catalogoservicios.js")"></script>
 </body>
 
 </html>

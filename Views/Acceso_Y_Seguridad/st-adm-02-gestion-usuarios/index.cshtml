@@ -294,6 +294,9 @@
     });
   });
 </script>
+<script>
+  window.RAZOR_USERS = @Html.Raw(ViewData["UsuariosJson"] ?? "[]");
+</script>
 <script src="@Url.Content("~/js/Acceso_Y_Seguridad/st-adm-02-gestion-usuarios/script.js")"></script>
 </body>
 </html>

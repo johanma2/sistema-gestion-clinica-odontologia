@@ -360,6 +360,9 @@
     });
   });
 </script>
+  <script>
+    window.RAZOR_FINANCIAL_REPORT = @Html.Raw(ViewData["ReportesFinancierosJson"] ?? "null");
+  </script>
   <script src="@Url.Content("~/js/Facturacion_Y_Pagos/st-adm-13-reportes-financieros/reportes.js")"></script>
 </body>
 

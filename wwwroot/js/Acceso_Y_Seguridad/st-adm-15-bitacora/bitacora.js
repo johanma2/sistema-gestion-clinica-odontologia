@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SMILETRACK — BITÁCORA DEL SISTEMA (bitacora.js)
  * API-ready + Accesibilidad + Renderizado inmediato (sin loading)
  * 
@@ -89,7 +89,18 @@ const SAMPLE_LOGS = [
   { id: 7, timestamp: '2026-05-23T12:00:00', level: 'info', module: 'auth', description: 'Inicio de sesión exitoso — Odontólogo desde 192.168.1.45', user: 'odontologo', ip: '192.168.1.45', metadata: { role: 'odontologo', session: 'abc123' } },
 ];
 
-let logs = [...SAMPLE_LOGS];
+let rawLogs = Array.isArray(window.RAZOR_BITACORA) && window.RAZOR_BITACORA.length > 0 ? window.RAZOR_BITACORA.map(b => ({
+  id: b.id,
+  timestamp: b.fecha,
+  level: b.accion === 'DELETE' ? 'critical' : b.accion === 'UPDATE' ? 'warning' : 'info',
+  module: b.tabla || 'system',
+  description: b.descripcion,
+  user: b.usuario,
+  ip: b.ip,
+  metadata: { tabla: b.tabla, accion: b.accion }
+})) : SAMPLE_LOGS;
+
+let logs = [...rawLogs];
 let searchQuery = '';
 let selectedLevel = '';
 let selectedModule = '';

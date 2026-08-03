@@ -44,6 +44,9 @@ const servicesStorage = {
   key: 'smiletrack_servicios_admin',
   
   load: () => {
+    if (Array.isArray(window.RAZOR_SERVICIOS) && window.RAZOR_SERVICIOS.length > 0) {
+      return window.RAZOR_SERVICIOS;
+    }
     const stored = localStorage.getItem(servicesStorage.key);
     if (stored) {
       try { return JSON.parse(stored); }

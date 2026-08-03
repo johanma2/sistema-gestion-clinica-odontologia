@@ -26,19 +26,52 @@ public class ReportesController : Controller
 
         var totalPacientes = await _context.Pacientes.CountAsync();
         var totalCitas = await _context.Citas.CountAsync();
+        var citasCompletadas = await _context.Citas.CountAsync(c => c.Estado == "Atendida" || c.Estado == "Completada");
+        var totalIngresos = await _context.Facturas.Where(f => f.Estado == "pagada").SumAsync(f => (decimal?)f.Total) ?? 0m;
+
+        // Distribución de servicios de BD
+        var serviciosDb = await _context.Servicios.ToListAsync();
+        var totalServicios = serviciosDb.Count;
+        var distribucion = serviciosDb.Select((s, idx) => new DistribucionServicioViewModel
+        {
+            Nombre = s.Nombre,
+            Porcentaje = totalServicios > 0 ? Math.Round(100.0 / totalServicios, 1) : 0,
+            Color = idx % 5 == 0 ? "#6366f1" : idx % 5 == 1 ? "#10b981" : idx % 5 == 2 ? "#f59e0b" : idx % 5 == 3 ? "#8b5cf6" : "#ec4899"
+        }).ToList();
+
+        if (!distribucion.Any())
+        {
+            distribucion = new List<DistribucionServicioViewModel>
+            {
+                new() { Nombre = "Limpieza dental", Porcentaje = 35, Color = "#6366f1" },
+                new() { Nombre = "Ortodoncia", Porcentaje = 25, Color = "#10b981" },
+                new() { Nombre = "Endodoncia", Porcentaje = 20, Color = "#f59e0b" },
+                new() { Nombre = "Blanqueamiento", Porcentaje = 12, Color = "#8b5cf6" },
+                new() { Nombre = "Otros", Porcentaje = 8, Color = "#ec4899" }
+            };
+        }
+
+        // Ingresos por profesional
+        var profesionales = await _context.Profesionales.ToListAsync();
+        var ingresosProf = profesionales.Select(p => new IngresoProfesionalViewModel
+        {
+            Nombre = $"{p.Nombres} {p.Apellidos}",
+            Monto = totalIngresos > 0 ? Math.Round(totalIngresos / Math.Max(1, profesionales.Count), 2) : 15000000m,
+            Porcentaje = profesionales.Count > 0 ? Math.Round(100.0 / profesionales.Count, 1) : 33.3
+        }).ToList();
 
         var model = new ReportesViewModel
         {
             NombreUsuario = userName,
             Rol = userRole,
             FotoPerfilUrl = "/images/Imagenes/Logos/logo.jpg",
-            UltimaActualizacion = DateTime.Now.AddMinutes(-5),
+            UltimaActualizacion = DateTime.Now,
 
-            IngresosTotales = 45200000m,
+            IngresosTotales = totalIngresos > 0 ? totalIngresos : 45200000m,
             VariacionIngresos = 12.5,
             NuevosPacientes = totalPacientes > 0 ? totalPacientes : 48,
             VariacionPacientes = 8.2,
-            CitasCompletadas = totalCitas > 0 ? totalCitas : 342,
+            CitasCompletadas = citasCompletadas > 0 ? citasCompletadas : (totalCitas > 0 ? totalCitas : 342),
             VariacionCitas = 5.4,
             TasaRetencion = 89.0,
             VariacionRetencion = 2.1,
@@ -60,44 +93,33 @@ public class ReportesController : Controller
                 new() { Mes = "Jul", ValorActual = 92, ValorAnterior = 80 }
             },
 
-            DistribucionServicios = new List<DistribucionServicioViewModel>
-            {
-                new() { Nombre = "Limpieza dental", Porcentaje = 35, Color = "#6366f1" },
-                new() { Nombre = "Ortodoncia", Porcentaje = 25, Color = "#10b981" },
-                new() { Nombre = "Endodoncia", Porcentaje = 20, Color = "#f59e0b" },
-                new() { Nombre = "Blanqueamiento", Porcentaje = 12, Color = "#8b5cf6" },
-                new() { Nombre = "Otros", Porcentaje = 8, Color = "#ec4899" }
-            },
-
-            IngresosPorProfesional = new List<IngresoProfesionalViewModel>
-            {
-                new() { Nombre = "Dr. Ricardo Méndez", Monto = 18500000m, Porcentaje = 41.0 },
-                new() { Nombre = "Dra. Elena Sotelo", Monto = 14200000m, Porcentaje = 31.4 },
-                new() { Nombre = "Dr. Carlos Ruiz", Monto = 12500000m, Porcentaje = 27.6 }
-            },
+            DistribucionServicios = distribucion,
+            IngresosPorProfesional = ingresosProf,
 
             EstadoCitas = new List<EstadoCitaViewModel>
             {
-                new() { Estado = "Completadas", Cantidad = 310, Porcentaje = 75.6 },
-                new() { Estado = "Programadas", Cantidad = 65, Porcentaje = 15.8 },
-                new() { Estado = "Canceladas", Cantidad = 20, Porcentaje = 4.9 },
-                new() { Estado = "Inasistencias", Cantidad = 15, Porcentaje = 3.7 }
+                new() { Estado = "Completadas", Cantidad = citasCompletadas, Porcentaje = totalCitas > 0 ? Math.Round(citasCompletadas * 100.0 / totalCitas, 1) : 75.6 },
+                new() { Estado = "Programadas", Cantidad = await _context.Citas.CountAsync(c => c.Estado == "Agendada" || c.Estado == "Programada"), Porcentaje = 15.8 },
+                new() { Estado = "Canceladas", Cantidad = await _context.Citas.CountAsync(c => c.Estado == "Cancelada"), Porcentaje = 4.9 },
+                new() { Estado = "Inasistencias", Cantidad = await _context.Citas.CountAsync(c => c.Estado == "No asistio"), Porcentaje = 3.7 }
             },
 
-            Procedimientos = new List<ProcedimientoReporteViewModel>
+            Procedimientos = serviciosDb.Select(s => new ProcedimientoReporteViewModel
             {
-                new() { Nombre = "Limpieza Profiláctica Completa", Icono = "clean_hands", Cantidad = 124, IngresosGenerados = 9920000m, PrecioPromedio = 80000m, Tendencia = 14.2 },
-                new() { Nombre = "Ajuste de Ortodoncia", Icono = "dentistry", Cantidad = 98, IngresosGenerados = 19600000m, PrecioPromedio = 200000m, Tendencia = 8.5 },
-                new() { Nombre = "Tratamiento de Conducto", Icono = "health_and_safety", Cantidad = 45, IngresosGenerados = 20250000m, PrecioPromedio = 450000m, Tendencia = -2.1 },
-                new() { Nombre = "Blanqueamiento LED", Icono = "auto_awesome", Cantidad = 32, IngresosGenerados = 11200000m, PrecioPromedio = 350000m, Tendencia = 18.9 }
-            },
+                Nombre = s.Nombre,
+                Icono = "dentistry",
+                Cantidad = 25,
+                IngresosGenerados = s.Precio * 25,
+                PrecioPromedio = s.Precio,
+                Tendencia = 10.0
+            }).ToList(),
 
             ReportesRecientes = new List<ReporteRecienteItemViewModel>
             {
-                new() { Id = 1, Nombre = "Consolidado Mensual de Ingresos - Julio", Categoria = "Financiero", Icono = "payments", FechaGenerado = DateTime.Now.AddDays(-1), Estado = "Listo" },
-                new() { Id = 2, Nombre = "Estadísticas de Retención y Nuevos Pacientes", Categoria = "Pacientes", Icono = "group", FechaGenerado = DateTime.Now.AddDays(-3), Estado = "Listo" },
-                new() { Id = 3, Nombre = "Eficiencia de Consultorios y Ocupación", Categoria = "Operativo", Icono = "meeting_room", FechaGenerado = DateTime.Now.AddDays(-5), Estado = "Listo" },
-                new() { Id = 4, Nombre = "Inventario e Insumos Dentales Utilizados", Categoria = "Logística", Icono = "inventory_2", FechaGenerado = DateTime.Now.AddDays(-7), Estado = "Listo" }
+                new() { Id = 1, Nombre = "Consolidado Mensual de Ingresos", Categoria = "Financiero", Icono = "payments", FechaGenerado = DateTime.Now.AddDays(-1), Estado = "Listo" },
+                new() { Id = 2, Nombre = "Estadísticas de Retención y Pacientes", Categoria = "Pacientes", Icono = "group", FechaGenerado = DateTime.Now.AddDays(-3), Estado = "Listo" },
+                new() { Id = 3, Nombre = "Eficiencia de Consultorios", Categoria = "Operativo", Icono = "meeting_room", FechaGenerado = DateTime.Now.AddDays(-5), Estado = "Listo" },
+                new() { Id = 4, Nombre = "Inventario de Insumos Dentales", Categoria = "Logística", Icono = "inventory_2", FechaGenerado = DateTime.Now.AddDays(-7), Estado = "Listo" }
             }
         };
 
@@ -118,6 +140,23 @@ public class ReportesController : Controller
         var userName = User.Identity?.Name ?? "Profesional";
         var totalPacientes = await _context.Pacientes.CountAsync();
         var totalCitas = await _context.Citas.CountAsync();
+        var totalIngresos = await _context.Facturas.Where(f => f.Estado == "pagada").SumAsync(f => (decimal?)f.Total) ?? 0m;
+
+        var citasRecientes = await _context.Citas
+            .Include(c => c.Paciente)
+            .Include(c => c.Servicio)
+            .OrderByDescending(c => c.FechaHora)
+            .Take(5)
+            .Select(c => new CitaRecienteViewModel
+            {
+                NombrePaciente = c.Paciente != null ? $"{c.Paciente.Nombres} {c.Paciente.Apellidos}" : "Paciente",
+                IdPaciente = c.IdPaciente,
+                Servicio = c.Servicio != null ? c.Servicio.Nombre : "Consulta general",
+                Hora = c.FechaHora.ToString("hh:mm tt"),
+                Estado = c.Estado,
+                EstadoClase = c.Estado == "Atendida" ? "status--completed" : c.Estado == "Cancelada" ? "status--cancelled" : "status--pending"
+            })
+            .ToListAsync();
 
         var model = new ReportesProfesionalViewModel
         {
@@ -126,18 +165,18 @@ public class ReportesController : Controller
 
             TotalCitas = totalCitas > 0 ? totalCitas : 128,
             TendenciaCitas = 8.4,
-            Ingresos = 18500000m,
+            Ingresos = totalIngresos > 0 ? totalIngresos : 18500000m,
             TendenciaIngresos = 12.1,
             PacientesUnicos = totalPacientes > 0 ? totalPacientes : 64,
-            Cancelaciones = 9,
+            Cancelaciones = await _context.Citas.CountAsync(c => c.Estado == "Cancelada"),
             TasaCancelacion = 4.2,
 
-            DuracionPromedio = "28 min",
+            DuracionPromedio = "30 min",
             TasaPuntualidad = 96,
-            SatisfaccionPaciente = "4.8/5",
+            SatisfaccionPaciente = "4.9/5",
             ResenasTotales = 57,
-            CitasHoy = 6,
-            CitasManana = 8,
+            CitasHoy = await _context.Citas.CountAsync(c => c.FechaHora.Date == DateTime.Today),
+            CitasManana = await _context.Citas.CountAsync(c => c.FechaHora.Date == DateTime.Today.AddDays(1)),
 
             Tratamientos = new List<TratamientoProfViewModel>
             {
@@ -149,25 +188,18 @@ public class ReportesController : Controller
 
             PacientesFrecuentes = new List<PacienteFrecuenteViewModel>
             {
-                new() { Iniciales = "MJ", Color = "blue",   Nombre = "María Jiménez", Tipo = "Fiel",       TipoClase = "patient-badge--loyal",     Citas = 14, Periodo = "últimos 6 meses" },
-                new() { Iniciales = "CR", Color = "purple", Nombre = "Carlos Rodríguez", Tipo = "Recurrente", TipoClase = "patient-badge--recurrent", Citas = 9,  Periodo = "últimos 6 meses" },
-                new() { Iniciales = "LP", Color = "blue",   Nombre = "Laura Pérez",   Tipo = "Recurrente", TipoClase = "patient-badge--recurrent", Citas = 7,  Periodo = "últimos 6 meses" }
+                new() { Iniciales = "JR", Color = "blue",   Nombre = "Julián Restrepo", Tipo = "Fiel",       TipoClase = "patient-badge--loyal",     Citas = 14, Periodo = "últimos 6 meses" },
+                new() { Iniciales = "LT", Color = "purple", Nombre = "Lucía Torres",    Tipo = "Recurrente", TipoClase = "patient-badge--recurrent", Citas = 9,  Periodo = "últimos 6 meses" }
             },
 
             ProximosDias = new List<ProximoDiaViewModel>
             {
-                new() { DiaNombre = "Hoy",     Fecha = DateTime.Now.ToString("dd MMM"),                CantidadCitas = 6, EsHoy = true },
-                new() { DiaNombre = "Mañana",  Fecha = DateTime.Now.AddDays(1).ToString("dd MMM"),     CantidadCitas = 8 },
-                new() { DiaNombre = "Jueves",  Fecha = DateTime.Now.AddDays(2).ToString("dd MMM"),     CantidadCitas = 5 },
-                new() { DiaNombre = "Viernes", Fecha = DateTime.Now.AddDays(3).ToString("dd MMM"),     CantidadCitas = 10, EsPico = true }
+                new() { DiaNombre = "Hoy",     Fecha = DateTime.Now.ToString("dd MMM"),            CantidadCitas = 6, EsHoy = true },
+                new() { DiaNombre = "Mañana",  Fecha = DateTime.Now.AddDays(1).ToString("dd MMM"), CantidadCitas = 8 },
+                new() { DiaNombre = "Siguiente", Fecha = DateTime.Now.AddDays(2).ToString("dd MMM"), CantidadCitas = 5 }
             },
 
-            UltimasCitas = new List<CitaRecienteViewModel>
-            {
-                new() { NombrePaciente = "María Jiménez",    IdPaciente = 1021, Servicio = "Ajuste de ortodoncia", Hora = "09:00 am", Estado = "Completada", EstadoClase = "status--completed" },
-                new() { NombrePaciente = "Carlos Rodríguez",  IdPaciente = 1034, Servicio = "Limpieza dental",      Hora = "10:30 am", Estado = "Pendiente",  EstadoClase = "status--pending" },
-                new() { NombrePaciente = "Laura Pérez",       IdPaciente = 1052, Servicio = "Endodoncia",           Hora = "12:00 pm", Estado = "Cancelada",  EstadoClase = "status--cancelled" }
-            }
+            UltimasCitas = citasRecientes
         };
 
         return View("~/Views/Reportes/vista_prof/index.cshtml", model);

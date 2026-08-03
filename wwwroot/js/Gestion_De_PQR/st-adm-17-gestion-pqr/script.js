@@ -27,7 +27,28 @@ const initSidebar = () => {
   overlay.addEventListener('click', () => toggleMenu(false));
 };
 
-document.addEventListener('DOMContentLoaded', initSidebar);
+document.addEventListener('DOMContentLoaded', () => {
+  initSidebar();
+  if (Array.isArray(window.RAZOR_PQRS) && window.RAZOR_PQRS.length > 0) {
+    window.RAZOR_PQRS.forEach(p => {
+      pqrsData[p.id] = {
+        radicado: p.ticket,
+        titulo: p.subject,
+        tipo: p.type,
+        estado: p.status,
+        prioridad: p.priority,
+        paciente: p.patient,
+        documento: 'N/A',
+        email: 'paciente@smiletrack.co',
+        odontologo: 'Dra. Patricia Mora',
+        fecha: p.date,
+        tiempo: 'Reciente',
+        descripcion: p.description,
+        respuestas: []
+      };
+    });
+  }
+});
 
 
 // ===== LOGICA PROPIA DE GESTION DE PQR =====

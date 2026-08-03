@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Bitácora del Sistema";
 }
 
@@ -489,7 +489,10 @@
     });
   });
 </script>
-  <script src="@Url.Content("~/js/Acceso_Y_Seguridad/st-adm-15-bitacora/bitacora.js")"></script>
+<script>
+  window.RAZOR_BITACORA = @Html.Raw(ViewData["BitacoraJson"] ?? "[]");
+</script>
+<script src="@Url.Content("~/js/Acceso_Y_Seguridad/st-adm-15-bitacora/bitacora.js")"></script>
 </body>
 
 </html>

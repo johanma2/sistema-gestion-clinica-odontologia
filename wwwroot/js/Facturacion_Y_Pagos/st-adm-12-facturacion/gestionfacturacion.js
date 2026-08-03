@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SMILETRACK — GESTIÓN DE FACTURACIÓN (script.js)
  * API-ready + Accesibilidad + Persistencia fallback
  * Filtros funcionales + Drawer accesible + Fechas actualizadas
@@ -56,6 +56,9 @@ const invoicesStorage = {
   key: 'smiletrack_facturas_admin',
   
   load: () => {
+    if (Array.isArray(window.RAZOR_INVOICES) && window.RAZOR_INVOICES.length > 0) {
+      return window.RAZOR_INVOICES;
+    }
     const stored = localStorage.getItem(invoicesStorage.key);
     if (stored) {
       try { return JSON.parse(stored); }

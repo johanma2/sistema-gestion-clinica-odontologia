@@ -17,6 +17,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EstadoCita> EstadosCita => Set<EstadoCita>();
     public DbSet<Cita> Citas => Set<Cita>();
     public DbSet<HistoriaClinica> HistoriasClinicas => Set<HistoriaClinica>();
+    public DbSet<Auditoria> Auditorias => Set<Auditoria>();
+    public DbSet<Factura> Facturas => Set<Factura>();
+    public DbSet<PqrEntity> PQRs => Set<PqrEntity>();
+    public DbSet<Inventario> Inventarios => Set<Inventario>();
+    public DbSet<Equipo> Equipos => Set<Equipo>();
+    public DbSet<ConfiguracionGeneral> ConfiguracionesGenerales => Set<ConfiguracionGeneral>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -207,6 +213,127 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                   .WithOne()
                   .HasForeignKey<HistoriaClinica>(h => h.IdPaciente)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Auditoria>(entity =>
+        {
+            entity.ToTable("Auditoria");
+            entity.HasKey(a => a.IdAuditoria);
+            entity.Property(a => a.IdAuditoria).HasColumnName("id_auditoria");
+            entity.Property(a => a.IdUsuario).HasColumnName("id_usuario");
+            entity.Property(a => a.TablaAfectada).HasColumnName("tabla_afectada");
+            entity.Property(a => a.IdRegistro).HasColumnName("id_registro");
+            entity.Property(a => a.Accion).HasColumnName("accion");
+            entity.Property(a => a.IpOrigen).HasColumnName("ip_origen");
+            entity.Property(a => a.DatosAnteriores).HasColumnName("datos_anteriores");
+            entity.Property(a => a.DatosNuevos).HasColumnName("datos_nuevos");
+            entity.Property(a => a.Descripcion).HasColumnName("descripcion");
+            entity.Property(a => a.Fecha).HasColumnName("fecha");
+
+            entity.HasOne(a => a.Usuario)
+                  .WithMany()
+                  .HasForeignKey(a => a.IdUsuario)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Factura>(entity =>
+        {
+            entity.ToTable("Factura");
+            entity.HasKey(f => f.IdFactura);
+            entity.Property(f => f.IdFactura).HasColumnName("id_factura");
+            entity.Property(f => f.NumeroFactura).HasColumnName("numero_factura");
+            entity.Property(f => f.FechaFactura).HasColumnName("fecha_factura");
+            entity.Property(f => f.Subtotal).HasColumnName("subtotal").HasPrecision(12, 2);
+            entity.Property(f => f.Total).HasColumnName("total").HasPrecision(12, 2);
+            entity.Property(f => f.Estado).HasColumnName("estado");
+            entity.Property(f => f.IdPaciente).HasColumnName("id_paciente");
+            entity.Property(f => f.Notas).HasColumnName("notas");
+            entity.Property(f => f.GeneradaPor).HasColumnName("generada_por");
+
+            entity.HasOne(f => f.Paciente)
+                  .WithMany()
+                  .HasForeignKey(f => f.IdPaciente)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(f => f.GeneradaPorUsuario)
+                  .WithMany()
+                  .HasForeignKey(f => f.GeneradaPor)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PqrEntity>(entity =>
+        {
+            entity.ToTable("PQR");
+            entity.HasKey(p => p.IdPqr);
+            entity.Property(p => p.IdPqr).HasColumnName("id_pqr");
+            entity.Property(p => p.IdPaciente).HasColumnName("id_paciente");
+            entity.Property(p => p.IdUsuario).HasColumnName("id_usuario");
+            entity.Property(p => p.Tipo).HasColumnName("tipo");
+            entity.Property(p => p.Asunto).HasColumnName("asunto");
+            entity.Property(p => p.Descripcion).HasColumnName("descripcion");
+            entity.Property(p => p.Estado).HasColumnName("estado");
+            entity.Property(p => p.Prioridad).HasColumnName("prioridad");
+            entity.Property(p => p.FechaCreacion).HasColumnName("fecha_creacion");
+            entity.Property(p => p.FechaRespuesta).HasColumnName("fecha_respuesta");
+            entity.Property(p => p.Respuesta).HasColumnName("respuesta");
+            entity.Property(p => p.AtendidaPor).HasColumnName("atendida_por");
+            entity.Property(p => p.EvidenciaAdjunto).HasColumnName("evidencia_adjunto");
+
+            entity.HasOne(p => p.Paciente)
+                  .WithMany()
+                  .HasForeignKey(p => p.IdPaciente)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(p => p.Usuario)
+                  .WithMany()
+                  .HasForeignKey(p => p.IdUsuario)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(p => p.AtendidaPorUsuario)
+                  .WithMany()
+                  .HasForeignKey(p => p.AtendidaPor)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Inventario>(entity =>
+        {
+            entity.ToTable("Inventario");
+            entity.HasKey(i => i.IdItem);
+            entity.Property(i => i.IdItem).HasColumnName("id_item");
+            entity.Property(i => i.Codigo).HasColumnName("codigo");
+            entity.Property(i => i.Nombre).HasColumnName("nombre");
+            entity.Property(i => i.Categoria).HasColumnName("categoria");
+            entity.Property(i => i.StockActual).HasColumnName("stock_actual");
+            entity.Property(i => i.StockMinimo).HasColumnName("stock_minimo");
+            entity.Property(i => i.UnidadMedida).HasColumnName("unidad_medida");
+            entity.Property(i => i.PrecioUnitario).HasColumnName("precio_unitario").HasPrecision(12, 2);
+            entity.Property(i => i.FechaVencimiento).HasColumnName("fecha_vencimiento");
+            entity.Property(i => i.Estado).HasColumnName("estado");
+        });
+
+        modelBuilder.Entity<Equipo>(entity =>
+        {
+            entity.ToTable("Equipo");
+            entity.HasKey(e => e.IdEquipo);
+            entity.Property(e => e.IdEquipo).HasColumnName("id_equipo");
+            entity.Property(e => e.Nombre).HasColumnName("nombre");
+            entity.Property(e => e.Modelo).HasColumnName("modelo");
+            entity.Property(e => e.Serie).HasColumnName("serie");
+            entity.Property(e => e.Status).HasColumnName("status");
+            entity.Property(e => e.UltimoMantenimiento).HasColumnName("ultimo_mantenimiento");
+            entity.Property(e => e.ProximoMantenimiento).HasColumnName("proximo_mantenimiento");
+            entity.Property(e => e.Ubicacion).HasColumnName("ubicacion");
+        });
+
+        modelBuilder.Entity<ConfiguracionGeneral>(entity =>
+        {
+            entity.ToTable("Configuracion_General");
+            entity.HasKey(c => c.IdConfiguracion);
+            entity.Property(c => c.IdConfiguracion).HasColumnName("id_configuracion");
+            entity.Property(c => c.Clave).HasColumnName("clave");
+            entity.Property(c => c.Valor).HasColumnName("valor");
+            entity.Property(c => c.Descripcion).HasColumnName("descripcion");
+            entity.Property(c => c.Modulo).HasColumnName("modulo");
         });
     }
 }

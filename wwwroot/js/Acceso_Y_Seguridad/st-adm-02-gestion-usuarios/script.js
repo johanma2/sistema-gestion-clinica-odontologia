@@ -61,7 +61,7 @@ const SAMPLE_USERS = [
   { id: 15, name: 'Roberto Díaz', initials: 'RD', email: 'rdiaz@smiletrack.co', role: 'Auxiliar', status: 'Activo', lastAccess: '2026-05-26T15:00:00', color: 'pink' },
 ];
 
-let users = [...SAMPLE_USERS];
+let users = Array.isArray(window.RAZOR_USERS) && window.RAZOR_USERS.length > 0 ? window.RAZOR_USERS : [...SAMPLE_USERS];
 let searchQuery = '';
 let selectedRole = '';
 let selectedStatus = '';

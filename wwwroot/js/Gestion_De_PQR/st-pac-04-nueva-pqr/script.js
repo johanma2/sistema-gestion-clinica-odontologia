@@ -31,6 +31,12 @@ document.addEventListener('DOMContentLoaded', initSidebar);
 
 
 // ===== LOGICA PROPIA DEL FORMULARIO PQR =====
+
+// Mapeo entre el tipo mostrado en las tarjetas y el valor esperado por el backend
+const PQR_TYPE_MAP = { petition: 'peticion', complaint: 'queja', claim: 'reclamo' };
+const PQR_TYPE_LABEL = { peticion: 'Petición', queja: 'Queja', reclamo: 'Reclamo' };
+let selectedPqrType = 'petition';
+
 // Select Request Type
 function selectRequestType(element, type) {
     // Remove selected class from all cards
@@ -42,31 +48,82 @@ function selectRequestType(element, type) {
     element.classList.add('selected');
 
     // Store selected type
-    console.log('Selected request type:', type);
+    selectedPqrType = type;
 }
 
-// Form Submission
-document.getElementById('pqrForm').addEventListener('submit', function (e) {
+// Renderiza el listado de "Radicados recientes" con datos reales de la BD
+function renderRecentPqrs() {
+    const container = document.getElementById('recentPqrList');
+    if (!container) return;
+
+    const pqrs = Array.isArray(window.RAZOR_MIS_PQRS) ? window.RAZOR_MIS_PQRS : [];
+    if (pqrs.length === 0) return; // conserva los ejemplos estáticos si el paciente aún no tiene PQR
+
+    const badgeByStatus = {
+        recibida: { label: 'Recibido', cls: 'process' },
+        en_proceso: { label: 'En proceso', cls: 'process' },
+        resuelta: { label: 'Resuelto', cls: 'resolved' },
+        cerrada: { label: 'Cerrado', cls: 'closed' }
+    };
+
+    container.innerHTML = pqrs.slice(0, 5).map(p => {
+        const badge = badgeByStatus[p.Estado] || { label: p.Estado, cls: 'process' };
+        const tipoLabel = PQR_TYPE_LABEL[p.Tipo] || p.Tipo;
+        const fecha = p.FechaCreacion ? new Date(p.FechaCreacion).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+        return `
+            <div class="recent-item">
+                <div class="recent-code">PQR-${String(p.IdPqr).padStart(4, '0')}</div>
+                <div class="recent-title">${p.Asunto || ''}</div>
+                <div class="recent-date">${tipoLabel} · ${fecha}</div>
+                <span class="badge ${badge.cls}">${badge.label}</span>
+            </div>`;
+    }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', renderRecentPqrs);
+
+// Form Submission — envía la PQR real al backend (PqrController.CrearPqr)
+document.getElementById('pqrForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    // Show loading state
     const submitBtn = this.querySelector('.btn-submit');
     const originalContent = submitBtn.innerHTML;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
     submitBtn.disabled = true;
 
-    // Simulate form submission
-    setTimeout(() => {
-        alert('¡Solicitud radicada exitosamente!\n\nNúmero de radicado: PQR-2024-' + Math.floor(Math.random() * 10000));
+    const asunto = document.getElementById('pqrAsunto')?.value?.trim() || 'Sin asunto';
+    const descripcion = document.getElementById('pqrDescripcion')?.value?.trim() || '';
+    const tipo = PQR_TYPE_MAP[selectedPqrType] || 'peticion';
+
+    const formData = new FormData();
+    formData.append('tipo', tipo);
+    formData.append('asunto', asunto);
+    formData.append('descripcion', descripcion);
+
+    try {
+        const response = await fetch('/gestion-de-pqr/crear', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: formData
+        });
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            alert(`¡Solicitud radicada exitosamente!\n\nNúmero de radicado: PQR-${String(result.id).padStart(4, '0')}`);
+            this.reset();
+            document.querySelectorAll('.request-card').forEach(card => card.classList.remove('selected'));
+            document.querySelector('.request-card.petition')?.classList.add('selected');
+            selectedPqrType = 'petition';
+        } else {
+            showToast(result.message || 'No se pudo radicar la solicitud', 'error');
+        }
+    } catch (err) {
+        console.error('Error al radicar PQR:', err);
+        showToast('Error de conexión al radicar la solicitud', 'error');
+    } finally {
         submitBtn.innerHTML = originalContent;
         submitBtn.disabled = false;
-        this.reset();
-
-        // Remove selected class from request cards
-        document.querySelectorAll('.request-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-    }, 2000);
+    }
 });
 
 // File Upload Preview

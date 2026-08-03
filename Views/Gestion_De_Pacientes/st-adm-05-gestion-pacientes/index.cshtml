@@ -215,6 +215,9 @@
     });
   });
 </script>
-  <script src="@Url.Content("~/js/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/script.js")"></script>
+<script>
+  window.RAZOR_PATIENTS = @Html.Raw(pacientesJson);
+</script>
+<script src="@Url.Content("~/js/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/script.js")"></script>
 </body>
-</Html
+</html>

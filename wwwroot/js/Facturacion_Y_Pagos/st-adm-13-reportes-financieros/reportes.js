@@ -56,6 +56,9 @@ const financialStorage = {
   key: 'smiletrack_reportes_financieros',
   
   load: () => {
+    if (window.RAZOR_FINANCIAL_REPORT && Array.isArray(window.RAZOR_FINANCIAL_REPORT.transactions)) {
+      return window.RAZOR_FINANCIAL_REPORT;
+    }
     const stored = localStorage.getItem(financialStorage.key);
     if (stored) {
       try { return JSON.parse(stored); }

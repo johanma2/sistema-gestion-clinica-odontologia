@@ -330,6 +330,121 @@ _ = Task.Run(async () =>
         sw.Stop();
         logger.LogInformation("⏱ EnsureCreated tardó {Ms}ms", sw.ElapsedMilliseconds);
 
+        // Migración idempotente para asegurar columnas y tablas faltantes en esquemas existentes
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                IF COL_LENGTH(N'dbo.Usuario', N'intentos_fallidos') IS NULL
+                    ALTER TABLE dbo.Usuario ADD intentos_fallidos INT NOT NULL DEFAULT 0;
+                IF COL_LENGTH(N'dbo.Usuario', N'ultimo_logout') IS NULL
+                    ALTER TABLE dbo.Usuario ADD ultimo_logout DATETIME NULL;
+                IF COL_LENGTH(N'dbo.Usuario', N'codigo_recuperacion') IS NULL
+                    ALTER TABLE dbo.Usuario ADD codigo_recuperacion VARCHAR(10) NULL;
+                IF COL_LENGTH(N'dbo.Usuario', N'fecha_expiracion_codigo') IS NULL
+                    ALTER TABLE dbo.Usuario ADD fecha_expiracion_codigo DATETIME NULL;
+
+                IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.Auditoria') AND type = N'U')
+                BEGIN
+                    CREATE TABLE dbo.Auditoria (
+                        id_auditoria INT IDENTITY(1,1) PRIMARY KEY,
+                        id_usuario INT NULL,
+                        tabla_afectada VARCHAR(100) NOT NULL,
+                        id_registro INT NULL,
+                        accion VARCHAR(45) NOT NULL,
+                        ip_origen VARCHAR(45) NULL,
+                        datos_anteriores VARCHAR(MAX) NULL,
+                        datos_nuevos VARCHAR(MAX) NULL,
+                        descripcion VARCHAR(255) NULL,
+                        fecha DATETIME NOT NULL DEFAULT GETDATE(),
+                        CONSTRAINT FK_Auditoria_Usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario)
+                    );
+                END
+
+                IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.Factura') AND type = N'U')
+                BEGIN
+                    CREATE TABLE dbo.Factura (
+                        id_factura INT IDENTITY(1,1) PRIMARY KEY,
+                        numero_factura VARCHAR(20) NOT NULL UNIQUE,
+                        fecha_factura DATE NOT NULL DEFAULT CAST(GETDATE() AS DATE),
+                        subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                        total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                        estado VARCHAR(10) NOT NULL DEFAULT 'pendiente',
+                        id_paciente INT NOT NULL,
+                        notas VARCHAR(MAX) NULL,
+                        generada_por INT NOT NULL,
+                        CONSTRAINT FK_Factura_Paciente FOREIGN KEY (id_paciente) REFERENCES Paciente(id_paciente),
+                        CONSTRAINT FK_Factura_GeneradaPor FOREIGN KEY (generada_por) REFERENCES Usuario(id_usuario)
+                    );
+                END
+
+                IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.PQR') AND type = N'U')
+                BEGIN
+                    CREATE TABLE dbo.PQR (
+                        id_pqr INT IDENTITY(1,1) PRIMARY KEY,
+                        id_paciente INT NOT NULL,
+                        id_usuario INT NULL,
+                        tipo VARCHAR(20) NOT NULL,
+                        asunto VARCHAR(200) NOT NULL,
+                        descripcion VARCHAR(MAX) NOT NULL,
+                        estado VARCHAR(20) NOT NULL DEFAULT 'recibida',
+                        prioridad VARCHAR(10) NOT NULL DEFAULT 'media',
+                        fecha_creacion DATETIME NOT NULL DEFAULT GETDATE(),
+                        fecha_respuesta DATETIME NULL,
+                        respuesta VARCHAR(MAX) NULL,
+                        atendida_por INT NULL,
+                        evidencia_adjunto VARCHAR(255) NULL,
+                        CONSTRAINT FK_PQR_Paciente FOREIGN KEY (id_paciente) REFERENCES Paciente(id_paciente),
+                        CONSTRAINT FK_PQR_Usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario)
+                    );
+                END
+
+                IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.Inventario') AND type = N'U')
+                BEGIN
+                    CREATE TABLE dbo.Inventario (
+                        id_item INT IDENTITY(1,1) PRIMARY KEY,
+                        codigo VARCHAR(50) NOT NULL UNIQUE,
+                        nombre VARCHAR(150) NOT NULL,
+                        categoria VARCHAR(100) NULL,
+                        stock_actual INT NOT NULL DEFAULT 0,
+                        stock_minimo INT NOT NULL DEFAULT 0,
+                        unidad_medida VARCHAR(50) NULL,
+                        precio_unitario DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                        fecha_vencimiento DATE NULL,
+                        estado VARCHAR(20) NOT NULL DEFAULT 'disponible'
+                    );
+                END
+
+                IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.Equipo') AND type = N'U')
+                BEGIN
+                    CREATE TABLE dbo.Equipo (
+                        id_equipo INT IDENTITY(1,1) PRIMARY KEY,
+                        nombre VARCHAR(150) NOT NULL,
+                        modelo VARCHAR(100) NULL,
+                        serie VARCHAR(100) NULL,
+                        status VARCHAR(20) NOT NULL DEFAULT 'operativo',
+                        ultimo_mantenimiento DATE NULL,
+                        proximo_mantenimiento DATE NULL,
+                        ubicacion VARCHAR(150) NULL
+                    );
+                END
+
+                IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.Configuracion_General') AND type = N'U')
+                BEGIN
+                    CREATE TABLE dbo.Configuracion_General (
+                        id_configuracion INT IDENTITY(1,1) PRIMARY KEY,
+                        clave VARCHAR(100) NOT NULL UNIQUE,
+                        valor VARCHAR(MAX) NOT NULL,
+                        descripcion VARCHAR(255) NULL,
+                        modulo VARCHAR(50) NOT NULL DEFAULT 'general'
+                    );
+                END
+            ");
+        }
+        catch (Exception exMigration)
+        {
+            logger.LogWarning(exMigration, "⚠️ No se pudieron aplicar algunas alteraciones de columnas/tablas automáticas: {Mensaje}", exMigration.Message);
+        }
+
         // ⚡ 1 sola query para verificar si hay datos
         if (await db.Roles.AnyAsync() &&
             await db.Usuarios.AnyAsync() &&

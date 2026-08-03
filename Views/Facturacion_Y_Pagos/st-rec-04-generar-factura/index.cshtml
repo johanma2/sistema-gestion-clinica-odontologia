@@ -78,8 +78,8 @@
       <div class="invoice-info">
         <div class="invoice-info-section">
           <p class="invoice-info-label">Paciente</p>
-          <p class="invoice-info-value">Pedro García</p>
-          <p class="invoice-info-sub">CC 1045678901</p>
+          <p class="invoice-info-value" id="invoicePatientName">Seleccione un paciente</p>
+          <p class="invoice-info-sub" id="invoicePatientDoc">—</p>
         </div>
         <div class="invoice-info-section">
           <p class="invoice-info-label">Profesional</p>
@@ -89,8 +89,22 @@
       </div>
     </section>
 
+    @{
+      var pacientesFactura = ViewData["Pacientes"] as List<SmileTrack_MVC.Models.Entities.Paciente> ?? new List<SmileTrack_MVC.Models.Entities.Paciente>();
+      var serviciosFactura = ViewData["Servicios"] as List<SmileTrack_MVC.Models.Entities.Servicio> ?? new List<SmileTrack_MVC.Models.Entities.Servicio>();
+    }
     <!-- Formulario de selección con aria-labels en controles -->
     <div class="form-row no-print">
+      <div class="form-group">
+        <label class="form-label" for="pacienteSelect">Paciente</label>
+        <select id="pacienteSelect" class="form-select" aria-label="Seleccionar paciente">
+          <option value="" data-doc="">Seleccione un paciente...</option>
+          @foreach (var p in pacientesFactura)
+          {
+            <option value="@p.IdPaciente" data-doc="@p.TipoDocumento @p.Documento">@p.Nombres @p.Apellidos</option>
+          }
+        </select>
+      </div>
       <div class="form-group">
         <label class="form-label" for="profesionalSelect">Profesional</label>
         <select id="profesionalSelect" class="form-select" aria-label="Seleccionar profesional">
@@ -103,14 +117,17 @@
         <label class="form-label" for="servicioSelect">Añadir Servicio</label>
         <div style="display:flex;gap:8px;">
           <select id="servicioSelect" class="form-select" aria-label="Seleccionar servicio a añadir">
-            <option value="consulta" data-price="50000" data-desc="Valoración y diagnóstico">Consulta General - $50.000
-            </option>
-            <option value="control" data-price="30000" data-desc="Pieza 23 — Seguimiento endodoncia">Control de
-              tratamiento - $30.000</option>
-            <option value="resina" data-price="90000" data-desc="Pieza 14 — Resina simple posterior">Resina dental
-              compuesta - $90.000</option>
-            <option value="limpieza" data-price="60000" data-desc="Profilaxis y remoción de cálculo">Limpieza
-              ultrasónica - $60.000</option>
+            @if (serviciosFactura.Count > 0)
+            {
+              @foreach (var s in serviciosFactura)
+              {
+                <option value="@s.IdServicio" data-price="@s.Precio" data-desc="@s.Descripcion">@s.Nombre - $@(s.Precio.ToString("N0"))</option>
+              }
+            }
+            else
+            {
+              <option value="consulta" data-price="50000" data-desc="Valoración y diagnóstico">Consulta General - $50.000</option>
+            }
           </select>
           <button class="btn-add" id="btnAddService" aria-label="Añadir servicio seleccionado a la factura">➕
             Añadir</button>

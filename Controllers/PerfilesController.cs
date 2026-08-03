@@ -1,23 +1,50 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SmileTrack_MVC.Data;
 
 namespace SmileTrack_MVC.Controllers;
 
 public class PerfilesController : Controller
 {
+    private readonly AppDbContext _context;
+
+    public PerfilesController(AppDbContext context)
+    {
+        _context = context;
+    }
+
     [HttpGet]
     [Authorize(Roles = "Auxiliar")]
     [Route("perfiles/st-aux-11-perfil-auxiliar")]
-    public IActionResult Staux11PerfilAuxiliar() => View("~/Views/Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.cshtml");
+    public async Task<IActionResult> Staux11PerfilAuxiliar()
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out var userId);
+        var usuario = await _context.Usuarios.Include(u => u.Rol).FirstOrDefaultAsync(u => u.IdUsuario == userId);
+        return View("~/Views/Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.cshtml", usuario);
+    }
 
     [HttpGet]
     [Authorize(Roles = "Paciente")]
     [Route("perfiles/st-pac-perfil-paciente")]
-    // Archivo renombrado de "perfil paciente.cshtml" a "perfil-paciente.cshtml" para eliminar espacio en nombre de archivo
-    public IActionResult StpacPerfilPaciente() => View("~/Views/Perfiles/st-pac-perfil-Paciente/perfil-paciente.cshtml");
+    public async Task<IActionResult> StpacPerfilPaciente()
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out var userId);
+        var paciente = await _context.Pacientes.Include(p => p.Usuario).FirstOrDefaultAsync(p => p.IdUsuario == userId);
+        return View("~/Views/Perfiles/st-pac-perfil-Paciente/perfil-paciente.cshtml", paciente);
+    }
 
     [HttpGet]
     [Authorize(Roles = "Recepcionista")]
     [Route("perfiles/st-rec-06-perfil-recepcionista")]
-    public IActionResult Strec06PerfilRecepcionista() => View("~/Views/Perfiles/st-rec-06-perfil-recepcionista/perfilrecepcionista.cshtml");
+    public async Task<IActionResult> Strec06PerfilRecepcionista()
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out var userId);
+        var usuario = await _context.Usuarios.Include(u => u.Rol).FirstOrDefaultAsync(u => u.IdUsuario == userId);
+        return View("~/Views/Perfiles/st-rec-06-perfil-recepcionista/perfilrecepcionista.cshtml", usuario);
+    }
 }

@@ -337,12 +337,43 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     [HttpGet]
     [Authorize(Roles = "Administrador")]
     [Route("acceso-y-seguridad/st-adm-02-gestion-usuarios")]
-    public IActionResult Stadm02GestionUsuarios() => View("~/Views/Acceso_Y_Seguridad/st-adm-02-gestion-usuarios/index.cshtml");
+    public async Task<IActionResult> Stadm02GestionUsuarios()
+    {
+        var usuariosDb = await _context.Usuarios.Include(u => u.Rol).ToListAsync();
+        var rolesColor = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Administrador", "purple" },
+            { "Recepcionista", "orange" },
+            { "Profesional", "green" },
+            { "Auxiliar", "pink" },
+            { "Paciente", "blue" }
+        };
+
+        var usuarios = usuariosDb.Select(u => new
+        {
+            id = u.IdUsuario,
+            name = $"{u.Nombre} {u.Apellidos}".Trim(),
+            initials = $"{u.Nombre?.Trim().FirstOrDefault()}{u.Apellidos?.Trim().FirstOrDefault()}".ToUpper(),
+            email = u.Correo,
+            role = u.Rol?.NombreRol ?? "Sin Rol",
+            status = string.IsNullOrWhiteSpace(u.Estado) ? "Activo" : char.ToUpper(u.Estado[0]) + u.Estado[1..],
+            lastAccess = u.UltimoLogin,
+            color = u.Rol != null && rolesColor.TryGetValue(u.Rol.NombreRol, out var col) ? col : "blue"
+        }).ToList();
+
+        ViewData["UsuariosJson"] = System.Text.Json.JsonSerializer.Serialize(usuarios);
+        return View("~/Views/Acceso_Y_Seguridad/st-adm-02-gestion-usuarios/index.cshtml", usuarios);
+    }
 
     [HttpGet]
     [Authorize(Roles = "Administrador")]
     [Route("acceso-y-seguridad/st-adm-03-gestion-roles")]
-    public IActionResult Stadm03GestionRoles() => View("~/Views/Acceso_Y_Seguridad/st-adm-03-gestion-roles/index.cshtml");
+    public async Task<IActionResult> Stadm03GestionRoles()
+    {
+        var rolesDb = await _context.Roles.ToListAsync();
+        ViewData["RolesJson"] = System.Text.Json.JsonSerializer.Serialize(rolesDb);
+        return View("~/Views/Acceso_Y_Seguridad/st-adm-03-gestion-roles/index.cshtml", rolesDb);
+    }
 
     [HttpGet]
     [Authorize(Roles = "Administrador")]
@@ -352,5 +383,26 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     [HttpGet]
     [Authorize(Roles = "Administrador")]
     [Route("acceso-y-seguridad/st-adm-15-bitacora")]
-    public IActionResult Stadm15Bitacora() => View("~/Views/Acceso_Y_Seguridad/st-adm-15-bitacora/index.cshtml");
+    public async Task<IActionResult> Stadm15Bitacora()
+    {
+        var bitacoraDb = await _context.Auditorias
+            .Include(a => a.Usuario)
+            .OrderByDescending(a => a.Fecha)
+            .Take(100)
+            .Select(a => new
+            {
+                id = a.IdAuditoria,
+                usuario = a.Usuario != null ? $"{a.Usuario.Nombre} {a.Usuario.Apellidos}" : "Sistema",
+                accion = a.Accion,
+                tabla = a.TablaAfectada,
+                descripcion = a.Descripcion ?? $"Registro en {a.TablaAfectada}",
+                ip = a.IpOrigen ?? "127.0.0.1",
+                fecha = a.Fecha
+            })
+            .ToListAsync();
+
+        ViewData["BitacoraJson"] = System.Text.Json.JsonSerializer.Serialize(bitacoraDb);
+        return View("~/Views/Acceso_Y_Seguridad/st-adm-15-bitacora/index.cshtml", bitacoraDb);
+    }
 }
+

@@ -367,6 +367,9 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
+    <script>
+        window.RAZOR_PQRS = @Html.Raw(ViewData["PqrsJson"] ?? "[]");
+    </script>
     <script src="@Url.Content("~/js/Gestion_De_PQR/st-adm-17-gestion-pqr/script.js")"></script>
 </body>
 
