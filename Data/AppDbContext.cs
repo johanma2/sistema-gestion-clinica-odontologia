@@ -17,12 +17,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EstadoCita> EstadosCita => Set<EstadoCita>();
     public DbSet<Cita> Citas => Set<Cita>();
     public DbSet<HistoriaClinica> HistoriasClinicas => Set<HistoriaClinica>();
+<<<<<<< Updated upstream
     public DbSet<Auditoria> Auditorias => Set<Auditoria>();
     public DbSet<Factura> Facturas => Set<Factura>();
     public DbSet<PqrEntity> PQRs => Set<PqrEntity>();
     public DbSet<Inventario> Inventarios => Set<Inventario>();
     public DbSet<Equipo> Equipos => Set<Equipo>();
     public DbSet<ConfiguracionGeneral> ConfiguracionesGenerales => Set<ConfiguracionGeneral>();
+=======
+    public DbSet<CodigoRecuperacion> CodigosRecuperacion => Set<CodigoRecuperacion>();
+    public DbSet<AuditoriaRecuperacion> AuditoriasRecuperacion => Set<AuditoriaRecuperacion>();
+>>>>>>> Stashed changes
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -215,6 +220,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
+<<<<<<< Updated upstream
         modelBuilder.Entity<Auditoria>(entity =>
         {
             entity.ToTable("Auditoria");
@@ -231,10 +237,44 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(a => a.Fecha).HasColumnName("fecha");
 
             entity.HasOne(a => a.Usuario)
+=======
+        modelBuilder.Entity<CodigoRecuperacion>(entity =>
+        {
+            entity.ToTable("CodigoRecuperacion");
+            entity.HasKey(c => c.IdCodigo);
+            entity.Property(c => c.IdCodigo).HasColumnName("id_codigo");
+            entity.Property(c => c.IdUsuario).HasColumnName("id_usuario");
+            entity.Property(c => c.CodigoHash).HasColumnName("codigo_hash");
+            entity.Property(c => c.FechaCreacion).HasColumnName("fecha_creacion");
+            entity.Property(c => c.FechaExpiracion).HasColumnName("fecha_expiracion");
+            entity.Property(c => c.IntentosFallidos).HasColumnName("intentos_fallidos");
+            entity.Property(c => c.Usado).HasColumnName("usado");
+            entity.Property(c => c.IpOrigen).HasColumnName("ip_origen");
+
+            entity.HasOne<Usuario>()
+                  .WithMany()
+                  .HasForeignKey(c => c.IdUsuario)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AuditoriaRecuperacion>(entity =>
+        {
+            entity.ToTable("AuditoriaRecuperacion");
+            entity.HasKey(a => a.IdAuditoria);
+            entity.Property(a => a.IdAuditoria).HasColumnName("id_auditoria");
+            entity.Property(a => a.IdUsuario).HasColumnName("id_usuario");
+            entity.Property(a => a.CorreoSolicitado).HasColumnName("correo_solicitado");
+            entity.Property(a => a.Accion).HasColumnName("accion");
+            entity.Property(a => a.IpOrigen).HasColumnName("ip_origen");
+            entity.Property(a => a.Fecha).HasColumnName("fecha");
+
+            entity.HasOne<Usuario>()
+>>>>>>> Stashed changes
                   .WithMany()
                   .HasForeignKey(a => a.IdUsuario)
                   .OnDelete(DeleteBehavior.SetNull);
         });
+<<<<<<< Updated upstream
 
         modelBuilder.Entity<Factura>(entity =>
         {
@@ -335,5 +375,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(c => c.Descripcion).HasColumnName("descripcion");
             entity.Property(c => c.Modulo).HasColumnName("modulo");
         });
+=======
+>>>>>>> Stashed changes
     }
 }

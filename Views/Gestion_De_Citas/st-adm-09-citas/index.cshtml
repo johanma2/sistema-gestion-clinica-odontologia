@@ -1,643 +1,787 @@
 @* ============================================
-SmileTrack — Gestión Integral de Citas (st-adm-09-citas)
-============================================
-Autor: Johan Santamaria
-Fecha: 29/07/2026
+   SmileTrack — Gestión Integral de Citas (st-adm-09-citas)
+   ============================================
+   Autor: Johan Santamaria
+   Fecha: 29/07/2026
 
-DESCRIPCIÓN:
-Vista principal de administración de citas que permite listar, filtrar, buscar, y gestionar (crear, editar, eliminar) el historial completo de citas.
+   DESCRIPCIÓN:
+   Vista principal de administración de citas con listado paginado,
+   filtros avanzados, modales para CRUD y cambio rápido de estado.
 
-FUNCIONALIDADES PRINCIPALES:
-- Visualización de la grilla de citas con paginación server-side
-- Filtros avanzados y dinámicos por paciente, estado, profesional y fecha
-- Modal de edición y creación de citas integrada con validación CSRF (AntiForgeryToken)
-- Cambio rápido del estado de citas directo en la tabla con recarga y persistencia
-- Panel resumen informativo del total de citas según su estado
+   FUNCIONALIDADES PRINCIPALES:
+   - Listado de citas con paginación server-side
+   - Filtros dinámicos por paciente, estado, profesional y fecha
+   - Modal de creación y edición con validación CSRF
+   - Cambio rápido de estado directo en la tabla
+   - Panel de estadísticas con contadores animados
 
-DEPENDENCIAS TÉCNICAS:
-- Controller: GestionCitasController y Stadm09Citas
-- CSS: ~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css
-- JS: ~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js
-- Partial / Otros: _SidebarAdmin.cshtml
+   DEPENDENCIAS TÉCNICAS:
+   - Controller: GestionCitasController y Stadm09Citas
+   - CSS: ~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css
+   - JS: ~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js
+   - Partial / Otros: _SidebarAdmin.cshtml
 
-NOTAS DE MANTENIMIENTO:
-- Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
-- El formulario modal reutiliza los elementos de ViewData enviados desde el backend para poblar selectores.
+   NOTAS DE MANTENIMIENTO:
+   - Comentarios internos explican el "por qué" de decisiones de diseño
+   - El formulario modal reutiliza ViewData del backend para selectores
 ============================================ *@
-@{ Layout = null;
-  var pacientes = ViewData["Pacientes"] as List<SmileTrack_MVC.Models.Entities.Paciente> ?? new();
-  var profesionales = ViewData["Profesionales"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
-  var servicios = ViewData["Servicios"] as List<SmileTrack_MVC.Models.Entities.Servicio> ?? new();
-  var citas = ViewData["Citas"] as List<SmileTrack_MVC.Models.Entities.Cita> ?? new();
-  var profesionalesFilterOptions = ViewData["ProfesionalesFilterOptions"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
-  var pageResult = ViewData["CitasPage"] as SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.Entities.Cita>;
+
+@{
+    Layout = null;
+
+    // Datos de ViewModels para selectores
+    var pacientes = ViewData["Pacientes"] as List<SmileTrack_MVC.Models.Entities.Paciente> ?? new();
+    var profesionales = ViewData["Profesionales"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
+    var servicios = ViewData["Servicios"] as List<SmileTrack_MVC.Models.Entities.Servicio> ?? new();
+    var citas = ViewData["Citas"] as List<SmileTrack_MVC.Models.Entities.Cita> ?? new();
+    var profesionalesFilterOptions = ViewData["ProfesionalesFilterOptions"] as List<SmileTrack_MVC.Models.Entities.Profesional> ?? new();
+    var pageResult = ViewData["CitasPage"] as SmileTrack_MVC.Models.Shared.PagedResult<SmileTrack_MVC.Models.Entities.Cita>;
+
+    // Datos para modal de edición
+    var editingCita = ViewData["EditingCita"] as SmileTrack_MVC.Models.Entities.Cita;
+    var isEditing = editingCita != null;
 }
 
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Gestiona y supervisa el historial completo de citas en SmileTrack." />
-  <title>SmileTrack  Gestión de Citas</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Gestiona y supervisa el historial completo de citas en SmileTrack." />
+    <title>SmileTrack — Gestión de Citas</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
-    rel="stylesheet" />
-  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css")" />
+    <!-- Preconnect para optimizar carga de fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css")" />
 </head>
+
 <body>
+    <!-- Enlace de accesibilidad: saltar al contenido principal -->
+    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <!-- Enlace para saltar al contenido principal (accesibilidad) -->
-  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+    <!-- Sidebar de navegación principal -->
+    <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+        <div class="sidebar-logo">
+            <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
+        </div>
 
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-    <div class="sidebar-logo">
-      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-    </div>
-    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-      <div class="sidebar-user">
-      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Substring(0, 2).ToUpperInvariant() ?? "U")</div>
-      <div class="user-info">
-        <span class="user-role">@User.Identity?.Name</span>
-        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
-      </div>
-    </div>
-  </aside>
+        @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
 
-
-
-  <!--  HAMBURGER (móvil) -->
-  <button class="hamburger" id="hamburger" aria-label="Abrir men�" aria-expanded="false" aria-controls="sidebar">
-    <span aria-hidden="true"></span>
-    <span aria-hidden="true"></span>
-    <span aria-hidden="true"></span>
-  </button>
-  <div class="overlay" id="overlay" aria-hidden="true"></div>
-
-  <!-- MAIN -->
-  <main class="main" id="main-content">
-
-    <!-- Header -->
-    <header class="page-header">
-      <div class="header-left">
-        <nav class="breadcrumb" aria-label="Ruta de navegaci�n">
-          <span>Administración</span>
-          <span class="bc-sep" aria-hidden="true">?</span>
-          <span class="bc-active">Gestión de Citas</span>
-        </nav>
-        <h1 class="page-title">Gestión Integral de Citas</h1>
-        <p class="page-subtitle">Supervisión y control</p>
-      </div>
-      <button class="btn-primary" id="btnNewCita" aria-label="Programar nueva cita" onclick="document.getElementById('modalCita').classList.add('open');">
-        + Nueva Cita
-      </button>
-    </header>
-
-    <!-- KPI Cards con aria-live para contadores -->
-    <section class="stats-grid" aria-label="Resumen de citas">
-      <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="statTotal" data-target="284" aria-live="polite">0</span>
-        <span class="stat-label">Total Citas</span>
-        <span class="stat-sub">Este mes</span>
-      </div>
-      <div class="stat-card" data-color="green">
-        <span class="stat-number" id="statScheduled" data-target="48" aria-live="polite">0</span>
-        <span class="stat-label">Programadas</span>
-        <span class="stat-sub">? +12 vs semana pasada</span>
-      </div>
-      <div class="stat-card" data-color="red">
-        <span class="stat-number" id="statCancelled" data-target="12" aria-live="polite">0</span>
-        <span class="stat-label">Canceladas</span>
-        <span class="stat-sub">Tasa: 4.2%</span>
-      </div>
-      <div class="stat-card" data-color="orange">
-        <span class="stat-number" id="statAttended" data-target="224" aria-live="polite">0</span>
-        <span class="stat-label">Atendidas</span>
-        <span class="stat-sub">? 79% asistencia</span>
-      </div>
-    </section>
-
-    <!-- El formulario en l�nea fue removido y convertido en Modal -->
-
-    <section class="table-section" aria-labelledby="tableTitle">
-      <h2 class="visually-hidden" id="tableTitle">Lista de citas</h2>
-
-      <!-- Tabs accesibles -->
-      <div class="table-tabs" role="tablist" aria-label="Filtrar citas por estado">
-        <button class="tab-btn active" data-tab="all" role="tab" aria-selected="true" aria-controls="citasBody">Todas
-          las citas</button>
-        <button class="tab-btn" data-tab="cancelled" role="tab" aria-selected="false"
-          aria-controls="citasBody">Cancelaciones</button>
-        <button class="tab-btn" data-tab="no-show" role="tab" aria-selected="false" aria-controls="citasBody">No
-          asistió</button>
-      </div>
-
-      <!-- Filtros -->
-      <section class="filters-section" aria-label="Filtros de búsqueda">
-        <form method="get" class="filters-row">
-          <div class="search-wrap">
-            <span class="search-icon" aria-hidden="true">🔍</span>
-            <input type="search" id="searchAppointments" name="search" class="search-input" placeholder="Buscar paciente..."
-              aria-label="Buscar paciente" value="@ViewData["SearchFilter"]">
-          </div>
-          <div class="filter-wrap">
-            <select id="filterStatus" name="estado" class="status-select" aria-label="Filtrar por estado">
-              <option value="">Todos los estados</option>
-              @if (ViewData["EstadoFilter"]?.ToString() == "programada")
-              {
-                <option value="programada" selected>Programada</option>
-              }
-              else
-              {
-                <option value="programada">Programada</option>
-              }
-              @if (ViewData["EstadoFilter"]?.ToString() == "confirmada")
-              {
-                <option value="confirmada" selected>Confirmada</option>
-              }
-              else
-              {
-                <option value="confirmada">Confirmada</option>
-              }
-              @if (ViewData["EstadoFilter"]?.ToString() == "atendida")
-              {
-                <option value="atendida" selected>Atendida</option>
-              }
-              else
-              {
-                <option value="atendida">Atendida</option>
-              }
-              @if (ViewData["EstadoFilter"]?.ToString() == "cancelada")
-              {
-                <option value="cancelada" selected>Cancelada</option>
-              }
-              else
-              {
-                <option value="cancelada">Cancelada</option>
-              }
-            </select>
-          </div>
-          <div class="filter-wrap">
-            <select id="filterProfessional" name="profesional" class="status-select" aria-label="Filtrar por profesional">
-              <option value="">Cualquier profesional</option>
-              @foreach (var profesional in profesionalesFilterOptions)
-              {
-                if (ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString())
-                {
-                  <option value="@profesional.IdProfesional" selected>@profesional.NombreProfesional</option>
-                }
-                else
-                {
-                  <option value="@profesional.IdProfesional">@profesional.NombreProfesional</option>
-                }
-              }
-            </select>
-          </div>
-          <div class="filter-wrap">
-            <input type="date" id="filterDate" name="fecha" class="status-select" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]">
-          </div>
-          <input type="hidden" name="page" value="1" />
-          <button class="btn-primary" type="submit">Aplicar</button>
-          <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">Limpiar</a>
-        </form>
-      </section>
-
-      <!-- Cabecera de tabla accesible -->
-      <div class="table-header" role="row">
-        <div class="table-col col-fecha" role="columnheader">Fecha</div>
-        <div class="table-col col-hora" role="columnheader">Hora</div>
-        <div class="table-col col-paciente" role="columnheader">Paciente</div>
-        <div class="table-col col-profesional" role="columnheader">Profesional</div>
-        <div class="table-col col-servicio" role="columnheader">Servicio</div>
-        <div class="table-col col-estado text-center" role="columnheader">Estado</div>
-        <div class="table-col col-acciones text-right" role="columnheader">Acciones</div>
-      </div>
-
-      <!-- Cuerpo de tabla con aria-live -->
-      <div id="citasBody" class="table-body" role="rowgroup" aria-live="polite">
-        @foreach (var cita in citas)
-        {
-          <div class="table-row" role="row">
-            <div class="table-col col-fecha" role="cell">@cita.Fecha.ToString("dd/MM/yyyy")</div>
-            <div class="table-col col-hora" role="cell">@(cita.HoraInicio?.ToString("hh\\:mm") ?? "—")</div>
-          @{
-            var pacNombre = cita.Paciente?.NombresCompleto ?? "?";
-            var pacInitials = string.Concat(pacNombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
-            var pacColors = new[] { "#2563eb", "#059669", "#d97706", "#7c3aed", "#db2777" };
-            var pacColor = pacColors[Math.Abs(pacNombre.GetHashCode()) % pacColors.Length];
-            var profNombre = cita.Profesional?.NombreProfesional ?? string.Empty;
-            var profInitials = string.IsNullOrEmpty(profNombre) ? "—" : string.Concat(profNombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
-            var profColor = string.IsNullOrEmpty(profNombre) ? "#94a3b8" : pacColors[Math.Abs(profNombre.GetHashCode()) % pacColors.Length];
-            var especialidadPrincipal = cita.Profesional?.Especialidades?.FirstOrDefault(pe => pe.Principal)?.Especialidad?.Nombre ?? cita.Profesional?.Especialidades?.FirstOrDefault()?.Especialidad?.Nombre ?? "General";
-          }
-            <div class="table-col col-paciente" role="cell">
-              <div class="patient-info">
-                <div class="patient-avatar" style="background:@pacColor;">@pacInitials</div>
-                <div><span class="patient-name">@pacNombre</span></div>
-              </div>
+        <div class="sidebar-user">
+            <div class="user-avatar" aria-hidden="true">
+                @(User.Identity?.Name?.Length >= 2 
+                    ? User.Identity.Name.Substring(0, 2).ToUpperInvariant() 
+                    : "U")
             </div>
-            <div class="table-col col-profesional" role="cell">
-              <div class="patient-info">
-                <div class="patient-avatar" style="background:@profColor; opacity:@(string.IsNullOrEmpty(profNombre) ? "0.4" : "1");">@profInitials</div>
-                <div style="display:flex; flex-direction:column; align-items:flex-start;">
-                  <span class="patient-name">@(string.IsNullOrEmpty(profNombre) ? "Sin asignar" : profNombre)</span>
-                  @if (!string.IsNullOrEmpty(profNombre)) {
-                    <span class="badge-spec @((especialidadPrincipal).ToLowerInvariant())" style="font-size: 0.65rem; padding: 2px 6px; margin-top: 2px;">@especialidadPrincipal</span>
-                  }
-                </div>
-              </div>
+            <div class="user-info">
+                <span class="user-role">@User.Identity?.Name</span>
+                <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
             </div>
-            <div class="table-col col-servicio" role="cell">@cita.MotivoConsulta</div>
-            <div class="table-col col-estado text-center" role="cell">
-              <form method="post" action="/gestion-de-citas/guardar-cita" class="form-estado-inline" style="display:inline-block; margin:0;">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="IdCita" value="@cita.IdCita" />
-                <input type="hidden" name="IdPaciente" value="@cita.IdPaciente" />
-                <input type="hidden" name="FechaHora" value="@cita.FechaHora.ToString("yyyy-MM-ddTHH:mm:ss")" />
-                <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-                <select name="Estado" class="status-badge status-select-inline @((cita.Estado ?? string.Empty).ToLowerInvariant())" onchange="this.form.submit()" aria-label="Cambiar estado de la cita">
-                  @foreach (var estado in new[] { "Programada", "Confirmada", "Atendida", "Cancelada" })
-                  {
-                    if (string.Equals(cita.Estado, estado, StringComparison.OrdinalIgnoreCase))
+        </div>
+    </aside>
+
+    <!-- Botón hamburguesa para dispositivos móviles -->
+    <button 
+        class="hamburger" 
+        id="hamburger" 
+        aria-label="Abrir menú" 
+        aria-expanded="false" 
+        aria-controls="sidebar">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+    </button>
+    <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+    <!-- Contenido principal -->
+    <main class="main" id="main-content">
+        <!-- Encabezado de página -->
+        <header class="page-header">
+            <div class="header-left">
+                <nav class="breadcrumb" aria-label="Ruta de navegación">
+                    <span>Administración</span>
+                    <span class="bc-sep" aria-hidden="true">→</span>
+                    <span class="bc-active">Gestión de Citas</span>
+                </nav>
+                <h1 class="page-title">Gestión Integral de Citas</h1>
+                <p class="page-subtitle">Supervisión y control</p>
+            </div>
+            <button 
+                class="btn-primary" 
+                id="btnNewCita" 
+                aria-label="Programar nueva cita"
+                onclick="openModalCita()">
+                + Nueva Cita
+            </button>
+        </header>
+
+        <!-- KPI Cards con contadores animados -->
+        <section class="stats-grid" aria-label="Resumen de citas">
+            <div class="stat-card" data-color="blue">
+                <span class="stat-number" id="statTotal" data-target="284" aria-live="polite">0</span>
+                <span class="stat-label">Total Citas</span>
+                <span class="stat-sub">Este mes</span>
+            </div>
+            <div class="stat-card" data-color="green">
+                <span class="stat-number" id="statScheduled" data-target="48" aria-live="polite">0</span>
+                <span class="stat-label">Programadas</span>
+                <span class="stat-sub">↑ +12 vs semana pasada</span>
+            </div>
+            <div class="stat-card" data-color="red">
+                <span class="stat-number" id="statCancelled" data-target="12" aria-live="polite">0</span>
+                <span class="stat-label">Canceladas</span>
+                <span class="stat-sub">Tasa: 4.2%</span>
+            </div>
+            <div class="stat-card" data-color="orange">
+                <span class="stat-number" id="statAttended" data-target="224" aria-live="polite">0</span>
+                <span class="stat-label">Atendidas</span>
+                <span class="stat-sub">↓ 79% asistencia</span>
+            </div>
+        </section>
+
+        <!-- Sección de tabla de citas -->
+        <section class="table-section" aria-labelledby="tableTitle">
+            <h2 class="visually-hidden" id="tableTitle">Lista de citas</h2>
+
+            <!-- Tabs accesibles para filtrado rápido -->
+            <div class="table-tabs" role="tablist" aria-label="Filtrar citas por estado">
+                <button 
+                    class="tab-btn active" 
+                    data-tab="all" 
+                    role="tab" 
+                    aria-selected="true" 
+                    aria-controls="citasBody">
+                    Todas las citas
+                </button>
+                <button 
+                    class="tab-btn" 
+                    data-tab="cancelled" 
+                    role="tab" 
+                    aria-selected="false"
+                    aria-controls="citasBody">
+                    Cancelaciones
+                </button>
+                <button 
+                    class="tab-btn" 
+                    data-tab="no-show" 
+                    role="tab" 
+                    aria-selected="false" 
+                    aria-controls="citasBody">
+                    No asistió
+                </button>
+            </div>
+
+            <!-- Filtros de búsqueda -->
+            <section class="filters-section" aria-label="Filtros de búsqueda">
+                <form method="get" class="filters-row">
+                    <div class="search-wrap">
+                        <span class="search-icon" aria-hidden="true">🔍</span>
+                        <input 
+                            type="search" 
+                            id="searchAppointments" 
+                            name="search" 
+                            class="search-input" 
+                            placeholder="Buscar paciente..."
+                            aria-label="Buscar paciente" 
+                            value="@ViewData["SearchFilter"]">
+                    </div>
+
+                    <div class="filter-wrap">
+                        <select id="filterStatus" name="estado" class="status-select" aria-label="Filtrar por estado">
+                            <option value="">Todos los estados</option>
+                            @{
+                                var estadoFilter = ViewData["EstadoFilter"]?.ToString();
+                                var estados = new[] { "programada", "confirmada", "atendida", "cancelada" };
+                                foreach (var estado in estados)
+                                {
+                                    var selected = estadoFilter == estado ? "selected" : "";
+                                    <option value="@estado" selected="@selected">@char.ToUpper(estado[0])@estado.Substring(1)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="filter-wrap">
+                        <select id="filterProfessional" name="profesional" class="status-select" aria-label="Filtrar por profesional">
+                            <option value="">Cualquier profesional</option>
+                            @foreach (var profesional in profesionalesFilterOptions)
+                            {
+                                var selected = ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString() 
+                                    ? "selected" 
+                                    : "";
+                                <option value="@profesional.IdProfesional" selected="@selected">
+                                    @profesional.NombreProfesional
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="filter-wrap">
+                        <input 
+                            type="date" 
+                            id="filterDate" 
+                            name="fecha" 
+                            class="status-select" 
+                            aria-label="Filtrar por fecha" 
+                            value="@ViewData["FechaFilter"]">
+                    </div>
+
+                    <input type="hidden" name="page" value="1" />
+                    <button class="btn-primary" type="submit">Aplicar</button>
+                    <a class="btn-secondary" href="@Url.Action("Stadm09Citas", "GestionCitas")">Limpiar</a>
+                </form>
+            </section>
+
+            <!-- Cabecera de tabla accesible -->
+            <div class="table-header" role="row">
+                <div class="table-col col-fecha" role="columnheader">Fecha</div>
+                <div class="table-col col-hora" role="columnheader">Hora</div>
+                <div class="table-col col-paciente" role="columnheader">Paciente</div>
+                <div class="table-col col-profesional" role="columnheader">Profesional</div>
+                <div class="table-col col-servicio" role="columnheader">Servicio</div>
+                <div class="table-col col-estado text-center" role="columnheader">Estado</div>
+                <div class="table-col col-acciones text-right" role="columnheader">Acciones</div>
+            </div>
+
+            <!-- Cuerpo de tabla con citas -->
+            <div id="citasBody" class="table-body" role="rowgroup" aria-live="polite">
+                @foreach (var cita in citas)
+                {
+                    // Calcular datos del paciente
+                    var pacienteNombre = cita.Paciente?.NombresCompleto ?? "?";
+                    var pacienteIniciales = string.Concat(
+                        pacienteNombre.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                            .Take(2)
+                            .Select(s => s[0])
+                    ).ToUpperInvariant();
+
+                    var coloresAvatar = new[] { "#2563eb", "#059669", "#d97706", "#7c3aed", "#db2777" };
+                    var pacienteColor = coloresAvatar[Math.Abs(pacienteNombre.GetHashCode()) % coloresAvatar.Length];
+
+                    // Calcular datos del profesional
+                    var profesionalNombre = cita.Profesional?.NombreProfesional ?? string.Empty;
+                    var profesionalIniciales = string.IsNullOrEmpty(profesionalNombre) 
+                        ? "—" 
+                        : string.Concat(
+                            profesionalNombre.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                .Take(2)
+                                .Select(s => s[0])
+                        ).ToUpperInvariant();
+                    var profesionalColor = string.IsNullOrEmpty(profesionalNombre) 
+                        ? "#94a3b8" 
+                        : coloresAvatar[Math.Abs(profesionalNombre.GetHashCode()) % coloresAvatar.Length];
+                    var profesionalOpacity = string.IsNullOrEmpty(profesionalNombre) ? "0.4" : "1";
+
+                    // Obtener especialidad principal
+                    var especialidadPrincipal = cita.Profesional?.Especialidades?
+                        .FirstOrDefault(pe => pe.Principal)?.Especialidad?.Nombre 
+                        ?? cita.Profesional?.Especialidades?
+                        .FirstOrDefault()?.Especialidad?.Nombre 
+                        ?? "General";
+
+                    <div class="table-row" role="row">
+                        <div class="table-col col-fecha" role="cell">
+                            @cita.Fecha.ToString("dd/MM/yyyy")
+                        </div>
+                        <div class="table-col col-hora" role="cell">
+                            @(cita.HoraInicio?.ToString("hh\\:mm") ?? "—")
+                        </div>
+
+                        <!-- Paciente -->
+                        <div class="table-col col-paciente" role="cell">
+                            <div class="patient-info">
+                                <div class="patient-avatar" style="background:@pacienteColor;">
+                                    @pacienteIniciales
+                                </div>
+                                <div>
+                                    <span class="patient-name">@pacienteNombre</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Profesional -->
+                        <div class="table-col col-profesional" role="cell">
+                            <div class="patient-info">
+                                <div class="patient-avatar" style="background:@profesionalColor; opacity:@profesionalOpacity;">
+                                    @profesionalIniciales
+                                </div>
+                                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                                    <span class="patient-name">
+                                        @(string.IsNullOrEmpty(profesionalNombre) ? "Sin asignar" : profesionalNombre)
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(profesionalNombre))
+                                    {
+                                        <span 
+                                            class="badge-spec @especialidadPrincipal.ToLowerInvariant()" 
+                                            style="font-size: 0.65rem; padding: 2px 6px; margin-top: 2px;">
+                                            @especialidadPrincipal
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Servicio -->
+                        <div class="table-col col-servicio" role="cell">
+                            @cita.MotivoConsulta
+                        </div>
+
+                        <!-- Estado (cambio rápido inline) -->
+                        <div class="table-col col-estado text-center" role="cell">
+                            <form 
+                                method="post" 
+                                action="/gestion-de-citas/guardar-cita" 
+                                class="form-estado-inline" 
+                                style="display:inline-block; margin:0;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="IdCita" value="@cita.IdCita" />
+                                <input type="hidden" name="IdPaciente" value="@cita.IdPaciente" />
+                                <input type="hidden" name="FechaHora" value="@cita.FechaHora.ToString("yyyy-MM-ddTHH:mm:ss")" />
+                                <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+                                <select 
+                                    name="Estado" 
+                                    class="status-badge status-select-inline @((cita.Estado ?? string.Empty).ToLowerInvariant())" 
+                                    onchange="this.form.submit()" 
+                                    aria-label="Cambiar estado de la cita">
+                                    @foreach (var estado in new[] { "Programada", "Confirmada", "Atendida", "Cancelada" })
+                                    {
+                                        var isSelected = string.Equals(cita.Estado, estado, StringComparison.OrdinalIgnoreCase);
+                                        <option value="@estado.ToLower()" selected="@(isSelected ? "selected" : "")">
+                                            @estado
+                                        </option>
+                                    }
+                                </select>
+                            </form>
+                        </div>
+
+                        <!-- Acciones -->
+                        <div class="table-col col-acciones text-right" role="cell">
+                            <a 
+                                class="action-btn" 
+                                href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" 
+                                title="Editar">
+                                ✏️
+                            </a>
+                            <form method="post" action="/gestion-de-citas/eliminar-cita" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="IdCita" value="@cita.IdCita" />
+                                <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+                                <button 
+                                    class="action-btn btn-delete" 
+                                    type="submit" 
+                                    onclick="return confirm('¿Eliminar esta cita?');" 
+                                    title="Eliminar">
+                                    ❌
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Paginación accesible -->
+            <footer class="table-footer" aria-label="Navegación de páginas">
+                @{
+                    var mostrando = Math.Min(pageResult?.PageSize ?? 10, pageResult?.Items?.Count ?? 0);
+                    var total = pageResult?.TotalCount ?? 0;
+                }
+                <span>
+                    Mostrando <strong id="pageShowing">@mostrando</strong> de <strong id="pageTotal">@total</strong> citas
+                </span>
+                <nav class="pagination" aria-label="Páginas de resultados">
+                    @if (pageResult != null && pageResult.HasPreviousPage)
                     {
-                      <option value="@estado.ToLower()" selected>@estado</option>
+                        <a 
+                            class="pagination-btn" 
+                            aria-label="Página anterior" 
+                            href="@Url.Action("Stadm09Citas", "GestionCitas", new { 
+                                page = pageResult.Page - 1, 
+                                pageSize = pageResult.PageSize, 
+                                search = ViewData["SearchFilter"], 
+                                estado = ViewData["EstadoFilter"], 
+                                profesional = ViewData["ProfesionalFilter"], 
+                                fecha = ViewData["FechaFilter"] 
+                            })">
+                            ‹
+                        </a>
                     }
                     else
                     {
-                      <option value="@estado.ToLower()">@estado</option>
+                        <button class="pagination-btn" aria-label="Página anterior" disabled>‹</button>
                     }
-                  }
-                </select>
-              </form>
+
+                    @for (var i = 1; i <= (pageResult?.TotalPages ?? 1); i++)
+                    {
+                        var isActive = i == (pageResult?.Page ?? 1);
+                        <a 
+                            class="pagination-btn @(isActive ? "active" : string.Empty)" 
+                            aria-current="@(isActive ? "page" : null)" 
+                            aria-label="Página @i" 
+                            href="@Url.Action("Stadm09Citas", "GestionCitas", new { 
+                                page = i, 
+                                pageSize = pageResult?.PageSize ?? 10, 
+                                search = ViewData["SearchFilter"], 
+                                estado = ViewData["EstadoFilter"], 
+                                profesional = ViewData["ProfesionalFilter"], 
+                                fecha = ViewData["FechaFilter"] 
+                            })">
+                            @i
+                        </a>
+                    }
+
+                    @if (pageResult != null && pageResult.HasNextPage)
+                    {
+                        <a 
+                            class="pagination-btn" 
+                            aria-label="Página siguiente" 
+                            href="@Url.Action("Stadm09Citas", "GestionCitas", new { 
+                                page = pageResult.Page + 1, 
+                                pageSize = pageResult.PageSize, 
+                                search = ViewData["SearchFilter"], 
+                                estado = ViewData["EstadoFilter"], 
+                                profesional = ViewData["ProfesionalFilter"], 
+                                fecha = ViewData["FechaFilter"] 
+                            })">
+                            ›
+                        </a>
+                    }
+                    else
+                    {
+                        <button class="pagination-btn" aria-label="Página siguiente" disabled>›</button>
+                    }
+                </nav>
+            </footer>
+        </section>
+
+        <!-- Banner informativo con estadísticas -->
+        <section class="info-banner" role="complementary" aria-label="Resumen de disponibilidad">
+            <div class="banner-content">
+                <h3 class="banner-title">Resumen de Citas del Mes</h3>
+                <p class="banner-text">
+                    @{
+                        var totalCitas = citas.Count;
+                        var atendidas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Atendida", StringComparison.OrdinalIgnoreCase));
+                        var canceladas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Cancelada", StringComparison.OrdinalIgnoreCase));
+                        var programadas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Agendada", StringComparison.OrdinalIgnoreCase));
+                    }
+                    Total en vista: <strong>@totalCitas</strong> citas —
+                    <span style="color:#22c55e">✅ @atendidas atendidas</span> —
+                    <span style="color:#f59e0b">📅 @programadas programadas</span> —
+                    <span style="color:#ef4444">❌ @canceladas canceladas</span>
+                </p>
             </div>
-            <div class="table-col col-acciones text-right" role="cell">
-              <a class="action-btn" href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" title="Editar">✏️</a>
-              <form method="post" action="/gestion-de-citas/eliminar-cita" style="display:inline;">
+        </section>
+    </main>
+
+    <!-- Modal: Detalle de Cita -->
+    <div 
+        class="modal-overlay" 
+        id="modalAppointment" 
+        role="dialog" 
+        aria-modal="true"
+        aria-labelledby="modalAppointmentTitle" 
+        aria-hidden="true" 
+        inert>
+        <div class="modal">
+            <button class="modal-close" id="modalAppointmentClose" aria-label="Cerrar ventana">×</button>
+            <h2 class="modal-title" id="modalAppointmentTitle">Detalle de Cita</h2>
+            <div id="modalAppointmentContent" class="modal-content" role="document"></div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="modalAppointmentCancel">Cerrar</button>
+                <button class="btn-primary" id="modalAppointmentEdit">Editar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación inferior para móviles -->
+    <nav class="mobile-nav" aria-label="Navegación móvil">
+        <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
+            <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+            <span>Dashboard</span>
+        </a>
+        <a href="#" class="mobile-nav-item active" aria-current="page">
+            <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
+            <span>Citas</span>
+        </a>
+        <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item">
+            <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+            <span>Agenda</span>
+        </a>
+    </nav>
+
+    <!-- Contenedor de notificaciones toast -->
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Modal: Crear/Editar Cita -->
+    <div 
+        class="modal-overlay" 
+        id="modalCita" 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="modalCitaTitle" 
+        aria-hidden="true">
+        <div class="modal">
+            <button 
+                class="modal-close" 
+                onclick="closeModalCita()" 
+                aria-label="Cerrar ventana">
+                ×
+            </button>
+            <h2 class="modal-title" id="modalCitaTitle">
+                @(isEditing ? "Editar Cita" : "Nueva Cita")
+            </h2>
+            <form method="post" action="/gestion-de-citas/guardar-cita">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="IdCita" value="@cita.IdCita" />
                 <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-                <button class="action-btn btn-delete" type="submit" onclick="return confirm('¿Eliminar esta cita?');" title="Eliminar">❌</button>
-              </form>
-            </div>
-          </div>
-        }
-      </div>
+                <input type="hidden" name="IdCita" value="@(editingCita?.IdCita ?? 0)" />
+                
+                <div class="form-grid">
+                    <!-- Paciente -->
+                    <div class="form-group">
+                        <label class="form-label">Paciente *</label>
+                        <select name="IdPaciente" class="form-input" required>
+                            <option value="">Seleccione paciente</option>
+                            @foreach (var paciente in pacientes)
+                            {
+                                var selected = editingCita?.IdPaciente == paciente.IdPaciente ? "selected" : "";
+                                <option value="@paciente.IdPaciente" selected="@selected">
+                                    @paciente.NombresCompleto
+                                </option>
+                            }
+                        </select>
+                    </div>
 
-      <!-- Paginación accesible -->
-      <footer class="table-footer" aria-label="Navegación de páginas">
-        @{ }
-        <span>Mostrando <strong id="pageShowing">@Math.Min(pageResult?.PageSize ?? 10, pageResult?.Items.Count ?? 0)</strong> de <strong id="pageTotal">@pageResult?.TotalCount</strong> citas</span>
-        <nav class="pagination" aria-label="Páginas de resultados">
-          @if (pageResult != null && pageResult.HasPreviousPage)
-          {
-            <a class="pagination-btn" aria-label="Página anterior" href="@Url.Action("Stadm09Citas", "GestionCitas", new { page = pageResult.Page - 1, pageSize = pageResult.PageSize, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">‹</a>
-          }
-          else
-          {
-            <button class="pagination-btn" aria-label="Página anterior" disabled>‹</button>
-          }
-          @for (var i = 1; i <= (pageResult?.TotalPages ?? 1); i++)
-          {
-            var isActive = i == (pageResult?.Page ?? 1);
-            <a class="pagination-btn @(isActive ? "active" : string.Empty)" aria-current="@(isActive ? "page" : null)" aria-label="Página @i" href="@Url.Action("Stadm09Citas", "GestionCitas", new { page = i, pageSize = pageResult?.PageSize ?? 10, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">@i</a>
-          }
-          @if (pageResult != null && pageResult.HasNextPage)
-          {
-            <a class="pagination-btn" aria-label="Página siguiente" href="@Url.Action("Stadm09Citas", "GestionCitas", new { page = pageResult.Page + 1, pageSize = pageResult.PageSize, search = ViewData["SearchFilter"], estado = ViewData["EstadoFilter"], profesional = ViewData["ProfesionalFilter"], fecha = ViewData["FechaFilter"] })">›</a>
-          }
-          else
-          {
-            <button class="pagination-btn" aria-label="Página siguiente" disabled>›</button>
-          }
-        </nav>
-      </footer>
-    </section>
+                    <!-- Profesional -->
+                    <div class="form-group">
+                        <label class="form-label">Profesional</label>
+                        <select name="IdProfesional" class="form-input">
+                            <option value="">Seleccione profesional</option>
+                            @foreach (var profesional in profesionales)
+                            {
+                                var selected = editingCita?.IdProfesional == profesional.IdProfesional ? "selected" : "";
+                                <option value="@profesional.IdProfesional" selected="@selected">
+                                    @profesional.NombreProfesional
+                                </option>
+                            }
+                        </select>
+                    </div>
 
-    <!-- Banner con datos reales del controller -->
-    <section class="info-banner" role="complementary" aria-label="Resumen de disponibilidad">
-      <div class="banner-content">
-        <h3 class="banner-title">Resumen de Citas del Mes</h3>
-        <p class="banner-text">
-          @{
-            var totalCitas = citas.Count;
-            var atendidas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Atendida", StringComparison.OrdinalIgnoreCase));
-            var canceladas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Cancelada", StringComparison.OrdinalIgnoreCase));
-            var programadas = citas.Count(c => string.Equals(c.EstadoCita?.NombreEstado, "Agendada", StringComparison.OrdinalIgnoreCase));
-          }
-          Total en vista: <strong>@totalCitas</strong> citas —
-          <span style="color:#22c55e">✅ @atendidas atendidas</span> —
-          <span style="color:#f59e0b">📅 @programadas programadas</span> —
-          <span style="color:#ef4444">❌ @canceladas canceladas</span>
-        </p>
-      </div>
-    </section>
+                    <!-- Consultorio -->
+                    <div class="form-group">
+                        <label class="form-label">Consultorio</label>
+                        <select name="IdConsultorio" class="form-input">
+                            <option value="">Seleccione consultorio</option>
+                            @foreach (var consultorio in (ViewData["Consultorios"] as List<SmileTrack_MVC.Models.Entities.Consultorio> ?? new()))
+                            {
+                                var selected = editingCita?.IdConsultorio == consultorio.IdConsultorio ? "selected" : "";
+                                <option value="@consultorio.IdConsultorio" selected="@selected">
+                                    @consultorio.Nombre
+                                </option>
+                            }
+                        </select>
+                    </div>
 
-  </main>
+                    <!-- Fecha -->
+                    <div class="form-group">
+                        <label class="form-label">Fecha *</label>
+                        <input 
+                            type="date" 
+                            name="Fecha" 
+                            class="form-input" 
+                            value="@(editingCita?.Fecha.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" 
+                            required />
+                    </div>
 
-  <!-- Modal: Detalle de Cita -->
-  <div class="modal-overlay" id="modalAppointment" role="dialog" aria-modal="true"
-    aria-labelledby="modalAppointmentTitle" aria-hidden="true" inert>
-    <div class="modal">
-      <button class="modal-close" id="modalAppointmentClose" aria-label="Cerrar ventana">×</button>
-      <h2 class="modal-title" id="modalAppointmentTitle">Detalle de Cita</h2>
-      <div id="modalAppointmentContent" class="modal-content" role="document"></div>
-      <div class="modal-footer">
-        <button class="btn-secondary" id="modalAppointmentCancel">Cerrar</button>
-        <button class="btn-primary" id="modalAppointmentEdit">Editar</button>
-      </div>
-    </div>
-  </div>
+                    <!-- Hora Inicio y Fin (ancho completo) -->
+                    <div class="form-group full-width">
+                        <label class="form-label">Hora Inicio</label>
+                        <input 
+                            type="time" 
+                            name="HoraInicio" 
+                            class="form-input" 
+                            value="@(editingCita?.HoraInicio?.ToString("hh\\:mm") ?? "09:00")" />
 
-  <!-- Mobile bottom nav -->
-  <nav class="mobile-nav" aria-label="Navegación móvil">
-    <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
-      <span>Dashboard</span>
-    </a>
-    <a href="#" class="mobile-nav-item active" aria-current="page">
-      <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
-      <span>Citas</span>
-    </a>
-    <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
-      <span>Agenda</span>
-    </a>
-  </nav>
+                        <label class="form-label">Hora Fin</label>
+                        <input 
+                            type="time" 
+                            name="HoraFin" 
+                            class="form-input" 
+                            value="@(editingCita?.HoraFin?.ToString("hh\\:mm") ?? "09:30")" />
 
-  <!-- Toast para notificaciones accesibles -->
-  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+                        <label class="form-label">Estado *</label>
+                        <select name="IdEstado" class="form-input">
+                            @foreach (var estado in (ViewData["EstadosCita"] as List<SmileTrack_MVC.Models.Entities.EstadoCita> ?? new()))
+                            {
+                                var selected = editingCita?.IdEstado == estado.IdEstado ? "selected" : "";
+                                <option value="@estado.IdEstado" selected="@selected">
+                                    @estado.NombreEstado
+                                </option>
+                            }
+                        </select>
+                    </div>
 
-  <!-- Estilos para screen readers -->
-  <style>
-    .skip-link {
-      position: absolute;
-      top: -40px;
-      left: 0;
-      background: var(--primary);
-      color: #fff;
-      padding: 8px 16px;
-      z-index: 1000;
-      transition: top var(--tr);
-    }
+                    <!-- Motivo y Notas (ancho completo) -->
+                    <div class="form-group full-width">
+                        <label class="form-label">Motivo consulta</label>
+                        <textarea 
+                            name="MotivoConsulta" 
+                            class="form-input" 
+                            rows="2" 
+                            placeholder="Motivo principal de la cita...">
+                            @editingCita?.MotivoConsulta
+                        </textarea>
 
-    .skip-link:focus {
-      top: 0;
-      outline: 2px solid #fff;
-      outline-offset: 2px;
-    }
+                        <label class="form-label">Notas previas</label>
+                        <textarea 
+                            name="NotasPrevias" 
+                            class="form-input" 
+                            rows="2" 
+                            placeholder="Observaciones de la cita...">
+                            @editingCita?.NotasPrevias
+                        </textarea>
 
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
+                        <label class="form-label">Tipo de cita</label>
+                        <input 
+                            type="text" 
+                            name="TipoCita" 
+                            class="form-input" 
+                            value="@(editingCita?.TipoCita ?? "Consulta")" />
+                    </div>
+                </div>
 
-    /* Modal Styles */
-    .modal-overlay {
-      position: fixed !important;
-      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-      background: rgba(15, 32, 87, 0.55);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 99999;
-    }
-    .modal-overlay.open { display: flex !important; }
-    .modal {
-      background: #fff;
-      border-radius: 14px;
-      padding: 24px 22px;
-      width: 95%;
-      max-width: 500px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,.35);
-      position: relative;
-      margin: auto;
-      animation: fadeInModal .2s ease;
-    }
-    @@keyframes fadeInModal { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
-    /* Avatar en tabla de citas */
-    .patient-info { display: flex; align-items: center; gap: 10px; }
-    .patient-avatar {
-      width: 40px; height: 40px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: .75rem; color: #fff;
-      flex-shrink: 0;
-    }
-    .patient-name { font-weight: 600; color: var(--text); font-size: .85rem; }
-    .modal-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-bottom: 20px; }
-    .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; transition: color 0.2s; }
-    .modal-close:hover { color: var(--danger); }
-    .form-group { margin-bottom: 16px; }
-    .form-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-    .form-input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--font); font-size: 0.85rem; transition: border-color 0.2s; }
-    .form-input:focus { border-color: var(--primary); outline: none; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
-    
-    /* Inline Status Select (Badge) */
-    select.status-select-inline {
-      appearance: none;
-      -webkit-appearance: none;
-      background-color: transparent;
-      border: none;
-      color: inherit;
-      font-family: inherit;
-      font-size: inherit;
-      font-weight: inherit;
-      padding: 0;
-      margin: 0;
-      cursor: pointer;
-      text-align: center;
-      text-transform: capitalize;
-    }
-    select.status-select-inline:focus {
-      outline: 2px solid var(--primary);
-      outline-offset: 2px;
-      border-radius: 4px;
-    }
-    select.status-select-inline option {
-      background-color: #fff;
-      color: #333;
-    }
-  </style>
-
-  <!-- Modal: Crear/Editar Cita -->
-  <div class="modal-overlay" id="modalCita" role="dialog" aria-modal="true" aria-labelledby="modalCitaTitle" aria-hidden="true">
-    <div class="modal">
-      <button class="modal-close" onclick="document.getElementById('modalCita').classList.remove('open');" aria-label="Cerrar ventana">×</button>
-      <h2 class="modal-title" id="modalCitaTitle">@(ViewData["EditingCita"] != null ? "Editar Cita" : "Nueva Cita")</h2>
-      <form method="post" action="/gestion-de-citas/guardar-cita">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-        <input type="hidden" name="IdCita" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.IdCita ?? 0)" />
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;">
-          <div class="form-group">
-            <label class="form-label">Paciente *</label>
-            <select name="IdPaciente" class="form-input" required>
-              <option value="">Seleccione paciente</option>
-              @foreach (var paciente in pacientes)
-              {
-                var editingCita = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"];
-                var selected = editingCita?.IdPaciente == paciente.IdPaciente ? "selected" : "";
-                <option value="@paciente.IdPaciente" selected="@(selected)">@paciente.NombresCompleto</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Profesional</label>
-            <select name="IdProfesional" class="form-input">
-              <option value="">Seleccione profesional</option>
-              @foreach (var profesional in profesionales)
-              {
-                var editingCita = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"];
-                var selected = editingCita?.IdProfesional == profesional.IdProfesional ? "selected" : "";
-                <option value="@profesional.IdProfesional" selected="@(selected)">@profesional.NombreProfesional</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Servicio</label>
-            <select name="IdConsultorio" class="form-input">
-              <option value="">Seleccione consultorio</option>
-              @foreach (var consultorio in (ViewData["Consultorios"] as List<SmileTrack_MVC.Models.Entities.Consultorio> ?? new()))
-              {
-                var editingCita = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"];
-                var selected = editingCita?.IdConsultorio == consultorio.IdConsultorio ? "selected" : "";
-                <option value="@consultorio.IdConsultorio" selected="@(selected)">@consultorio.Nombre</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Fecha *</label>
-            <input type="date" name="Fecha" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.Fecha.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" required />
-          </div>
-
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label class="form-label">Hora Inicio</label>
-            <input type="time" name="HoraInicio" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.HoraInicio?.ToString("hh\\:mm") ?? "09:00")" />
-
-            <label class="form-label">Hora Fin</label>
-            <input type="time" name="HoraFin" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.HoraFin?.ToString("hh\\:mm") ?? "09:30")" />
-
-            <label class="form-label">Estado *</label>
-            <select name="IdEstado" class="form-input">
-              @{ var editingCitaEstado = (SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"]; }
-              @foreach (var estado in (ViewData["EstadosCita"] as List<SmileTrack_MVC.Models.Entities.EstadoCita> ?? new()))
-              {
-                var selected = editingCitaEstado?.IdEstado == estado.IdEstado ? "selected" : "";
-                <option value="@estado.IdEstado" selected="@(selected)">@estado.NombreEstado</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label class="form-label">Motivo consulta</label>
-            <textarea name="MotivoConsulta" class="form-input" rows="2" placeholder="Motivo principal de la cita...">@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.MotivoConsulta)</textarea>
-
-            <label class="form-label">Notas previas</label>
-            <textarea name="NotasPrevias" class="form-input" rows="2" placeholder="Observaciones de la cita...">@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.NotasPrevias)</textarea>
-
-            <label class="form-label">Tipo de cita</label>
-            <input type="text" name="TipoCita" class="form-input" value="@(((SmileTrack_MVC.Models.Entities.Cita?)ViewData["EditingCita"])?.TipoCita ?? "Consulta")" />
-          </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModalCita()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        @(isEditing ? "Guardar cambios" : "Crear cita")
+                    </button>
+                </div>
+            </form>
         </div>
+    </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary" onclick="document.getElementById('modalCita').classList.remove('open');">Cancelar</button>
-          <button type="submit" class="btn-primary">@(ViewData["EditingCita"] != null ? "Guardar cambios" : "Crear cita")</button>
+    <!-- Footer dinámico -->
+    <footer id="dynamic-footer" class="site-footer" role="contentinfo">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+            <span style="font-size:1rem;">🦷</span>
+            <p>© 2025 Smile Track. Todos los derechos reservados.</p>
         </div>
-      </form>
-    </div>
-  </div>
+        <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+        <script src="@Url.Content("~/js/footer.js")"></script>
+        <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
+    </footer>
 
-  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
-      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
-    </div>
-    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
-    <script src="@Url.Content("~/js/footer.js")"></script>
-    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
-  </footer>
+    <!-- Script principal de la gestión de citas -->
+    <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js")"></script>
 
+    <!-- Script de inicialización específico de la vista -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ═══ FILTROS AUTO-ENVÍO ═══
+            const filterForm = document.querySelector('form[method="get"]');
+            if (filterForm) {
+                const filterSelects = filterForm.querySelectorAll('select');
+                filterSelects.forEach(select => {
+                    select.addEventListener('change', () => {
+                        filterForm.submit();
+                    });
+                });
+            }
 
-  <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js")"></script>
+            // ═══ TABS DE FILTRADO RÁPIDO ═══
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tableRows = document.querySelectorAll('#citasBody .table-row');
 
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Filtros se auto-envian al cambiar select 
-    const filterForm = document.querySelector('form[method="get"]');
-    if (filterForm) {
-      filterForm.querySelectorAll('select').forEach(sel => {
-        sel.addEventListener('change', () => filterForm.submit());
-      });
-    }
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Actualizar estado visual de tabs
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-selected', 'false');
+                    });
+                    button.classList.add('active');
+                    button.setAttribute('aria-selected', 'true');
 
-    // Tabs filtran la tabla por estado
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const rows = document.querySelectorAll('#citasBody .table-row');
+                    // Filtrar filas según el tab seleccionado
+                    const currentTab = button.dataset.tab;
+                    tableRows.forEach(row => {
+                        const statusBadge = row.querySelector('.status-badge');
+                        const estado = statusBadge ? statusBadge.textContent.trim().toLowerCase() : '';
 
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        tabBtns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
-        btn.classList.add('active');
-        btn.setAttribute('aria-selected', 'true');
+                        if (currentTab === 'all') {
+                            row.style.display = '';
+                        } else if (currentTab === 'cancelled') {
+                            row.style.display = estado === 'cancelada' ? '' : 'none';
+                        } else if (currentTab === 'no-show') {
+                            row.style.display = (estado === 'no asistió' || estado === 'inasistencia') ? '' : 'none';
+                        }
+                    });
+                });
+            });
 
-        const tab = btn.dataset.tab;
-        rows.forEach(row => {
-          const badge = row.querySelector('.status-badge');
-          const estado = badge ? badge.textContent.trim().toLowerCase() : '';
-          if (tab === 'all') {
-            row.style.display = '';
-          } else if (tab === 'cancelled') {
-            row.style.display = estado === 'cancelada' ? '' : 'none';
-          } else if (tab === 'no-show') {
-            row.style.display = estado === 'no asistió' || estado === 'inasistencia' ? '' : 'none';
-          }
+            // ═══ SIDEBAR: GRUPOS DE NAVEGACIÓN COLAPSABLES ═══
+            document.querySelectorAll('.nav-group-header').forEach(header => {
+                const itemsContainer = header.nextElementSibling;
+                const arrowIcon = header.querySelector('.nav-arrow');
+
+                if (!itemsContainer || !arrowIcon) return;
+
+                // Función para actualizar estado visual y aria-expanded
+                const setExpandedState = (isExpanded) => {
+                    itemsContainer.style.maxHeight = isExpanded ? `${itemsContainer.scrollHeight}px` : '0px';
+                    arrowIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+                    header.setAttribute('aria-expanded', String(isExpanded));
+                };
+
+                // Estado inicial: colapsado
+                setExpandedState(false);
+
+                // Alternar estado al hacer clic
+                const toggleMenu = () => {
+                    const currentState = header.getAttribute('aria-expanded') === 'true';
+                    setExpandedState(!currentState);
+                };
+
+                // Eventos de interacción
+                header.addEventListener('click', toggleMenu);
+                header.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleMenu();
+                    }
+                });
+            });
+
+            // ═══ AUTO-ABRIR MODAL SI ESTAMOS EDITANDO ═══
+            const isEditingCita = '@(isEditing ? "true" : "false")' === 'true';
+            if (isEditingCita) {
+                openModalCita();
+            }
         });
-      });
-    });
 
-    // ─── Sidebar nav-group collapsible ───
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-      if (!items || !arrow) return;
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-      setExpanded(false);
-      const toggle = () => { const isExpanded = header.getAttribute('aria-expanded') === 'true'; setExpanded(!isExpanded); };
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
-    });
+        // ═══ FUNCIONES GLOBALES PARA MODAL DE CITA ═══
+        function openModalCita() {
+            const modal = document.getElementById('modalCita');
+            if (modal) {
+                modal.classList.add('open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+        }
 
-    // Auto-abrir modal de cita si estamos en edición
-    const isEditingCita = '@(ViewData["EditingCita"] != null ? "true" : "false")' === 'true';
-    if (isEditingCita) {
-      document.getElementById('modalCita').classList.add('open');
-    }
-  });
-  </script>
+        function closeModalCita() {
+            const modal = document.getElementById('modalCita');
+            if (modal) {
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+        }
+    </script>
 </body>
-
 </html>
-
-

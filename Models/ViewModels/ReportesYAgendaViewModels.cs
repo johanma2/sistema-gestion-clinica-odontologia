@@ -28,11 +28,19 @@ namespace SmileTrack_MVC.Models.ViewModels
     public class AgendaCitaViewModel
     {
         public int Id { get; set; }
+        public int IdPaciente { get; set; }
+        public int IdProfesional { get; set; }
+        public int IdConsultorio { get; set; }
+        public int IdServicio { get; set; }
+        public DateTime Fecha { get; set; }
         public string Hora { get; set; } = string.Empty;
+        public string HoraInicio { get; set; } = string.Empty;
+        public string HoraFin { get; set; } = string.Empty;
         public string Paciente { get; set; } = string.Empty;
         public string Servicio { get; set; } = string.Empty;
         public string Consultorio { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
         public string ClaseEstado { get; set; } = "confirmed";
+        public string Notas { get; set; } = string.Empty;
     }
 }

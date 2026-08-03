@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Date: Mon, 03 Aug 2026 21:25:30 GMT
+Server: Kestrel
+Cache-Control: no-cache, no-store
+Pragma: no-cache
+Set-Cookie: XSRF-TOKEN=CfDJ8KPsV4xdZwdHsWozJmSx5h-8sS13c5Y_2yq9V_dfCTRBJnOQIkFuuZxnD5jr_3YknJDqVc2RYyzeP5gY7mEoE-STVgM7pVTrJgeZsg_Anwzjz86ZwoYhzpe7JzWZiW_CgYUUyEJEvdUuNUMTcZq5meM; path=/; samesite=lax
+Transfer-Encoding: chunked
+X-Request-ID: 0HNNHKM4HS096:00000001
+X-Frame-Options: SAMEORIGIN
+

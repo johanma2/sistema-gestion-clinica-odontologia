@@ -3,6 +3,9 @@
 <!DOCTYPE html>
 <html class="light" lang="es">
 <head>
+    @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+    @{ var tokens = Antiforgery.GetAndStoreTokens(Context); }
+    <meta name="csrf-request-token" content="@tokens.RequestToken" />
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -121,6 +124,7 @@
                             <p id="passLength" class="text-xs text-white/60 flex items-center gap-1">• Mínimo 8 caracteres</p>
                             <p id="passUpper" class="text-xs text-white/60 flex items-center gap-1">• Al menos una mayúscula</p>
                             <p id="passNumber" class="text-xs text-white/60 flex items-center gap-1">• Al menos un número</p>
+                            <p id="passSymbol" class="text-xs text-white/60 flex items-center gap-1">• Al menos un símbolo (ej. !#$%)</p>
                         </div>
                     </div>
                     <div>

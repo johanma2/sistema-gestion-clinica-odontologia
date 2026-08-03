@@ -128,13 +128,13 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     [HttpGet]
     [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/st-adm-08-agenda")]
-    public async Task<IActionResult> Stadm08Agenda([FromQuery] int? editId, CancellationToken ct = default)
+    public async Task<IActionResult> Stadm08Agenda([FromQuery] int? editId, [FromQuery] DateTime? weekStart, [FromQuery] int? professionalId, [FromQuery] int? officeId, CancellationToken ct = default)
     {
         // TRY/CATCH ESTRATIFICADO: mismo patrón que Stadm01Dashboard para consistencia en manejo de errores
         try
         {
             await CargarDatosCitas(editId, "/gestion-de-citas/st-adm-08-agenda", null, ct);
-            await CargarDatosAgenda(ct);
+            await CargarDatosAgenda(weekStart, professionalId, officeId, ct);
 
             // WHY: Cargar dropdowns con filtros de estado activo para evitar opciones inválidas en UI
             ViewBag.Pacientes = await _context.Pacientes
@@ -202,8 +202,22 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "ApiOrCookie")]
+    [Route("api/appointments")]
+    public async Task<IActionResult> CrearCitaDesdeAppointments([FromBody] CitaAgendaDto dto, CancellationToken ct = default)
+    {
+        return await CrearCitaDesdeAgendaInterna(dto, ct);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "ApiOrCookie")]
     [Route("api/citas/agenda")]
     public async Task<IActionResult> CrearCitaDesdeAgenda([FromBody] CitaAgendaDto dto, CancellationToken ct = default)
+    {
+        return await CrearCitaDesdeAgendaInterna(dto, ct);
+    }
+
+    private async Task<IActionResult> CrearCitaDesdeAgendaInterna(CitaAgendaDto dto, CancellationToken ct)
     {
         // WHY: Validar ModelState primero para evitar procesamiento de datos inválidos
         if (!ModelState.IsValid)
@@ -251,7 +265,8 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 .AnyAsync(c => c.IdProfesional == dto.IdProfesional
                     && c.Estado != "Cancelada"
                     && c.FechaHora < finDto
-                    && c.FechaHora.AddMinutes(30) > inicioDto, ct);
+                    && c.FechaHora.AddMinutes(30) > inicioDto
+                    && (!dto.IdCita.HasValue || c.IdCita != dto.IdCita.Value), ct);
 
             if (hayConflicto)
             {
@@ -260,21 +275,43 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 return Conflict(new { message = "El profesional ya tiene una cita programada en este horario. Por favor seleccione otro horario." });
             }
 
-            var nuevaCita = new Cita
+            Cita citaEntidad;
+            if (dto.IdCita.HasValue && dto.IdCita.Value > 0)
             {
-                IdPaciente = dto.IdPaciente,
-                IdProfesional = dto.IdProfesional,
-                IdConsultorio = dto.IdConsultorio,
-                IdServicio = dto.IdServicio,
-                FechaHora = inicioDto,
-                HoraInicio = dto.HoraInicio,
-                HoraFin = dto.HoraFin,
-                Estado = dto.Estado,
-                Notas = dto.Notas,
-                MotivoConsulta = "Consulta generada desde Agenda"
-            };
+                citaEntidad = await _context.Citas.FirstOrDefaultAsync(c => c.IdCita == dto.IdCita.Value, ct)
+                    ?? throw new InvalidOperationException("Cita no encontrada");
 
-            _context.Citas.Add(nuevaCita);
+                citaEntidad.IdPaciente = dto.IdPaciente;
+                citaEntidad.IdProfesional = dto.IdProfesional;
+                citaEntidad.IdConsultorio = dto.IdConsultorio;
+                citaEntidad.IdServicio = dto.IdServicio;
+                citaEntidad.FechaHora = inicioDto;
+                citaEntidad.HoraInicio = dto.HoraInicio;
+                citaEntidad.HoraFin = dto.HoraFin;
+                citaEntidad.Estado = dto.Estado;
+                citaEntidad.Notas = dto.Notas;
+                citaEntidad.MotivoConsulta = "Consulta actualizada desde Agenda";
+                _context.Citas.Update(citaEntidad);
+            }
+            else
+            {
+                citaEntidad = new Cita
+                {
+                    IdPaciente = dto.IdPaciente,
+                    IdProfesional = dto.IdProfesional,
+                    IdConsultorio = dto.IdConsultorio,
+                    IdServicio = dto.IdServicio,
+                    FechaHora = inicioDto,
+                    HoraInicio = dto.HoraInicio,
+                    HoraFin = dto.HoraFin,
+                    Estado = dto.Estado,
+                    Notas = dto.Notas,
+                    MotivoConsulta = "Consulta generada desde Agenda"
+                };
+
+                _context.Citas.Add(citaEntidad);
+            }
+
             var guardados = await _context.SaveChangesAsync(ct);
 
             if (guardados <= 0)
@@ -287,13 +324,13 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             // WHY: Loguear éxito con datos mínimos necesarios para auditoría, sin exponer PII completa
             _logger.LogInformation(
                 "Cita agendada correctamente desde Agenda: IdCita={IdCita}, IdPaciente={IdPaciente}, IdProfesional={IdProfesional}, FechaHora={FechaHora}, UsuarioSolicitante={Usuario}",
-                nuevaCita.IdCita,
-                nuevaCita.IdPaciente,
-                nuevaCita.IdProfesional,
-                nuevaCita.FechaHora,
+                citaEntidad.IdCita,
+                citaEntidad.IdPaciente,
+                citaEntidad.IdProfesional,
+                citaEntidad.FechaHora,
                 User.Identity?.Name ?? "anonimo");
 
-            return Ok(new { message = "Cita agendada exitosamente", id = nuevaCita.IdCita });
+            return Ok(new { success = true, message = dto.IdCita.HasValue && dto.IdCita.Value > 0 ? "Cita actualizada exitosamente" : "Cita agendada exitosamente", id = citaEntidad.IdCita, updated = dto.IdCita.HasValue && dto.IdCita.Value > 0 });
         }
         catch (OperationCanceledException ocex)
         {
@@ -771,13 +808,17 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
      * WHY: Separa lógica de carga de datos para mantener el action limpio y testeable.
      * MANEJO DE ERRORES: Catch por día para que un error en un día no rompa toda la semana.
      */
-    private async Task CargarDatosAgenda(CancellationToken ct = default)
+    private async Task CargarDatosAgenda(DateTime? weekStart = null, int? professionalId = null, int? officeId = null, CancellationToken ct = default)
     {
         try
         {
             // WHY: Calcular inicio de semana (lunes) para iterar 7 días consecutivos
             var hoy = DateTime.Today;
-            var inicioSemana = hoy.AddDays(-(int)hoy.DayOfWeek + (int)DayOfWeek.Monday);
+            var inicioSemana = weekStart?.Date ?? hoy;
+            if (inicioSemana.DayOfWeek != DayOfWeek.Monday)
+            {
+                inicioSemana = inicioSemana.AddDays(-(int)inicioSemana.DayOfWeek + (int)DayOfWeek.Monday);
+            }
             var agendaDias = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
 
             for (var i = 0; i < 7; i++)
@@ -786,12 +827,24 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 try
                 {
                     // WHY: Incluir relaciones necesarias para mostrar datos completos en vista
-                    var citasDia = await _context.Citas
+                    var citasDiaQuery = _context.Citas
                         .Include(c => c.Paciente)
                         .Include(c => c.Profesional).ThenInclude(p => p!.Usuario)
                         .Include(c => c.Consultorio)
                         .Include(c => c.EstadoCita)
-                        .Where(c => c.FechaHora.Date == fecha.Date)
+                        .Where(c => c.FechaHora.Date == fecha.Date);
+
+                    if (professionalId.HasValue)
+                    {
+                        citasDiaQuery = citasDiaQuery.Where(c => c.IdProfesional == professionalId.Value);
+                    }
+
+                    if (officeId.HasValue)
+                    {
+                        citasDiaQuery = citasDiaQuery.Where(c => c.IdConsultorio == officeId.Value);
+                    }
+
+                    var citasDia = await citasDiaQuery
                         .OrderBy(c => c.FechaHora).ThenBy(c => c.FechaHora.TimeOfDay)
                         .ToListAsync(ct);
 
@@ -805,7 +858,14 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                         Citas = citasDia.Select(cita => new global::SmileTrack_MVC.Models.ViewModels.AgendaCitaViewModel
                         {
                             Id = cita.IdCita,
+                            IdPaciente = cita.IdPaciente,
+                            IdProfesional = cita.IdProfesional ?? 0,
+                            IdConsultorio = cita.IdConsultorio ?? 0,
+                            IdServicio = cita.IdServicio ?? 0,
+                            Fecha = cita.FechaHora.Date,
                             Hora = cita.HoraInicio?.ToString("hh\\:mm") ?? "—",
+                            HoraInicio = cita.HoraInicio?.ToString("HH:mm") ?? "00:00",
+                            HoraFin = cita.HoraFin?.ToString("HH:mm") ?? "00:00",
                             Paciente = $"{cita.Paciente?.Nombres} {cita.Paciente?.Apellidos}".Trim(),
                             Servicio = cita.MotivoConsulta ?? "Consulta",
                             Consultorio = cita.Consultorio?.Nombre ?? "Sin asignar",
@@ -816,7 +876,8 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                                 "cancelada" => "cancelled",
                                 "agendada" => "confirmed",
                                 _ => "confirmed"
-                            }
+                            },
+                            Notas = cita.Notas ?? string.Empty
                         }).ToList()
                     });
                 }

@@ -8,6 +8,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.Entities;
+using SmileTrack_MVC.Services.Email;
 using System.Security.Claims;
 using System.Net;
 using System.Globalization;
@@ -32,6 +33,8 @@ if (string.IsNullOrWhiteSpace(connectionString))
 {
     connectionString = "Server=(localdb)\\mssqllocaldb;Database=SmileTrackDB;Trusted_Connection=True;TrustServerCertificate=True;";
 }
+
+
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure(
@@ -179,8 +182,12 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SmileTrack_MVC.Services.IAuthService, SmileTrack_MVC.Services.AuthService>();
+builder.Services.Configure<SmileTrack_MVC.Services.Email.EmailServiceOptions>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddScoped<SmileTrack_MVC.Services.Email.IEmailService, SmileTrack_MVC.Services.Email.EmailService>();
 
 var app = builder.Build();
+
+await EnsureDatabaseSchemaAsync(app.Services, app.Logger);
 
 app.Use(async (context, next) =>
 {
@@ -290,8 +297,16 @@ a{{color:#0f766e;text-decoration:none;font-weight:600;}}
         if (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
         {
             var antiforgery = context.RequestServices.GetRequiredService<IAntiforgery>();
-            // GetAndStoreTokens already handles setting the antiforgery cookie.
-            antiforgery.GetAndStoreTokens(context);
+            var tokens = antiforgery.GetAndStoreTokens(context);
+            if (!string.IsNullOrWhiteSpace(tokens.CookieToken))
+            {
+                context.Response.Cookies.Append("XSRF-TOKEN", tokens.CookieToken, new CookieOptions
+                {
+                    HttpOnly = false,
+                    SameSite = SameSiteMode.Lax,
+                    Secure = context.Request.IsHttps
+                });
+            }
         }
 
         await next();
@@ -312,6 +327,68 @@ a{{color:#0f766e;text-decoration:none;font-weight:600;}}
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
+
+static async Task EnsureDatabaseSchemaAsync(IServiceProvider services, ILogger logger)
+{
+    using var scope = services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    try
+    {
+        await db.Database.EnsureCreatedAsync();
+
+        var statements = new[]
+        {
+            """
+            IF COL_LENGTH(N'dbo.Usuario', N'codigo_recuperacion') IS NULL
+            BEGIN
+                ALTER TABLE [dbo].[Usuario] ADD [codigo_recuperacion] VARCHAR(255) NULL;
+            END
+            """,
+            """
+            IF COL_LENGTH(N'dbo.Usuario', N'fecha_expiracion_codigo') IS NULL
+            BEGIN
+                ALTER TABLE [dbo].[Usuario] ADD [fecha_expiracion_codigo] DATETIME NULL;
+            END
+            """,
+            """
+            IF COL_LENGTH(N'dbo.Usuario', N'intentos_fallidos') IS NULL
+            BEGIN
+                ALTER TABLE [dbo].[Usuario] ADD [intentos_fallidos] INT NOT NULL CONSTRAINT [DF_Usuario_IntentosFallidos] DEFAULT 0;
+            END
+            """,
+            """
+            IF COL_LENGTH(N'dbo.Usuario', N'ultimo_logout') IS NULL
+            BEGIN
+                ALTER TABLE [dbo].[Usuario] ADD [ultimo_logout] DATETIME NULL;
+            END
+            """,
+            """
+            IF COL_LENGTH(N'dbo.Cita', N'estado') IS NULL
+            BEGIN
+                ALTER TABLE [dbo].[Cita] ADD [estado] VARCHAR(30) NOT NULL CONSTRAINT [DF_Cita_Estado] DEFAULT 'programada';
+            END
+            """,
+            """
+            IF COL_LENGTH(N'dbo.Cita', N'notas') IS NULL
+            BEGIN
+                ALTER TABLE [dbo].[Cita] ADD [notas] NVARCHAR(MAX) NULL;
+            END
+            """
+        };
+
+        foreach (var statement in statements)
+        {
+            await db.Database.ExecuteSqlRawAsync(statement);
+        }
+
+        logger.LogInformation("✅ Esquema de base de datos verificado y corregido para login y citas.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "No fue posible ajustar automáticamente el esquema de base de datos. El login puede seguir fallando si la tabla Usuario/Cita no tiene las columnas esperadas.");
+    }
+}
 
 // ⚡ Seed en background: el servidor arranca INMEDIATAMENTE
 // La inicialización de BD ocurre en paralelo sin bloquear el startup

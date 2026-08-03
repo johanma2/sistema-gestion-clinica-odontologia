@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Antiforgery.Internal;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.ViewModels;
@@ -10,10 +12,11 @@ using SmileTrack_MVC.Services;
 
 namespace SmileTrack_MVC.Controllers;
 
-public class AccesoYSeguridadController(AppDbContext context, IAuthService authService) : Controller
+public class AccesoYSeguridadController(AppDbContext context, IAuthService authService, IAntiforgery antiforgery) : Controller
 {
-       private readonly AppDbContext _context = context;
-       private readonly IAuthService _authService = authService;
+    private readonly AppDbContext _context = context;
+    private readonly IAuthService _authService = authService;
+    private readonly IAntiforgery _antiforgery = antiforgery;
 
     [HttpGet]
     [Route("acceso-y-seguridad/login")]
@@ -260,13 +263,28 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     public IActionResult Recover() => View("~/Views/Acceso_Y_Seguridad/recover/index.cshtml");
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     [Route("acceso-y-seguridad/recover/send-code")]
     public async Task<IActionResult> RecoverSendCode([FromBody] Models.ViewModels.RecoverPasswordRequest request)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.Correo))
+        try
         {
-            return BadRequest(new { Success = false, Message = "El correo es obligatorio." });
+            await _antiforgery.ValidateRequestAsync(HttpContext);
+        }
+        catch (AntiforgeryValidationException ex)
+        {
+            return BadRequest(new { Success = false, Message = "Antiforgery validation failed.", Details = ex.Message });
+        }
+
+        if (request == null)
+        {
+            return BadRequest(new { Success = false, Message = "El body es obligatorio." });
+        }
+
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Where(kvp => kvp.Value.Errors.Count > 0)
+                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+            return BadRequest(new { Success = false, Message = "Model validation failed.", Errors = errors });
         }
 
         var result = await _authService.RecoverPasswordAsync(request);
@@ -274,16 +292,88 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
+    [Route("acceso-y-seguridad/recover/verify-code")]
+    public async Task<IActionResult> RecoverVerifyCode([FromBody] Models.ViewModels.VerifyRecoveryCodeRequest request)
+    {
+        try
+        {
+            await _antiforgery.ValidateRequestAsync(HttpContext);
+        }
+        catch (AntiforgeryValidationException ex)
+        {
+            return BadRequest(new { Success = false, Message = "Antiforgery validation failed.", Details = ex.Message });
+        }
+
+        if (request == null)
+        {
+            return BadRequest(new { Success = false, Message = "El body es obligatorio." });
+        }
+
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Where(kvp => kvp.Value.Errors.Count > 0)
+                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+            return BadRequest(new { Success = false, Message = "Model validation failed.", Errors = errors });
+        }
+
+        var result = await _authService.VerifyRecoveryCodeAsync(request);
+        return Ok(new { result.Success, result.Message, result.RecoveryToken });
+    }
+
+    [HttpPost]
     [Route("acceso-y-seguridad/recover/reset-password")]
     public async Task<IActionResult> RecoverResetPassword([FromBody] Models.ViewModels.ResetPasswordRequest request)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.Correo) || string.IsNullOrWhiteSpace(request.Codigo) || string.IsNullOrWhiteSpace(request.NuevaContrasena))
+        try
         {
-            return BadRequest(new { Success = false, Message = "Todos los campos son obligatorios." });
+            await _antiforgery.ValidateRequestAsync(HttpContext);
+        }
+        catch (AntiforgeryValidationException ex)
+        {
+            return BadRequest(new { Success = false, Message = "Antiforgery validation failed.", Details = ex.Message });
         }
 
-        var result = await _authService.ResetPasswordAsync(request);
+        if (request == null)
+        {
+            return BadRequest(new { Success = false, Message = "El body es obligatorio." });
+        }
+
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Where(kvp => kvp.Value.Errors.Count > 0)
+                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+            return BadRequest(new { Success = false, Message = "Model validation failed.", Errors = errors });
+        }
+
+        var tokenTemporal = request.TokenTemporal ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(tokenTemporal) && !string.IsNullOrWhiteSpace(request.Correo) && !string.IsNullOrWhiteSpace(request.Codigo))
+        {
+            var verificationResult = await _authService.VerifyRecoveryCodeAsync(new Models.ViewModels.VerifyRecoveryCodeRequest
+            {
+                Correo = request.Correo,
+                Codigo = request.Codigo
+            });
+
+            if (!verificationResult.Success)
+            {
+                return Ok(new { verificationResult.Success, verificationResult.Message });
+            }
+
+            tokenTemporal = verificationResult.RecoveryToken ?? string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(tokenTemporal))
+        {
+            return BadRequest(new { Success = false, Message = "El token temporal es obligatorio." });
+        }
+
+        var result = await _authService.ResetPasswordAsync(new Models.ViewModels.ResetPasswordRequest
+        {
+            TokenTemporal = tokenTemporal,
+            NuevaContrasena = request.NuevaContrasena,
+            ConfirmarContrasena = request.ConfirmarContrasena
+        });
+
         return Ok(new { result.Success, result.Message });
     }
 

@@ -4,6 +4,8 @@ namespace SmileTrack_MVC.Models.ViewModels
 {
     public class CitaAgendaDto : IValidatableObject
     {
+        public int? IdCita { get; set; }
+
         [Required(ErrorMessage = "El paciente es obligatorio")]
         public int IdPaciente { get; set; }
 

@@ -47,17 +47,32 @@ namespace SmileTrack_MVC.Models.ViewModels
         public string Correo { get; set; } = string.Empty;
     }
 
-    public class ResetPasswordRequest
+    public class VerifyRecoveryCodeRequest
     {
         [Required(ErrorMessage = "El correo es obligatorio")]
         [EmailAddress(ErrorMessage = "Formato de correo inválido")]
         public string Correo { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El código es obligatorio")]
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "El código debe tener 6 dígitos")]
         public string Codigo { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordRequest
+    {
+        public string TokenTemporal { get; set; } = string.Empty;
+
+        [EmailAddress(ErrorMessage = "Formato de correo inválido")]
+        public string? Correo { get; set; }
+
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "El código debe tener 6 dígitos")]
+        public string? Codigo { get; set; }
 
         [Required(ErrorMessage = "La nueva contraseña es obligatoria")]
         public string NuevaContrasena { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La confirmación de contraseña es obligatoria")]
+        public string ConfirmarContrasena { get; set; } = string.Empty;
     }
 
     public class ChangePasswordRequest
@@ -83,6 +98,7 @@ namespace SmileTrack_MVC.Models.ViewModels
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
         public string? Token { get; set; }
+        public string? RecoveryToken { get; set; }
         public object? User { get; set; }
     }
 }

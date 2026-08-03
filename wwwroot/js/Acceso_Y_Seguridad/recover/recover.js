@@ -152,10 +152,13 @@ class PasswordRecovery {
         this.setLoading(this.form2.querySelector('button[type="submit"]'), true);
         
         try {
-            // Simular verificación (acepta cualquier código de 6 dígitos)
-            await this.verifyCode(code);
-            
-            this.showToast('Código verificado', 'success');
+            const response = await this.verifyCode(code);
+            if (!response.success) {
+                this.showError(this.codeError, response.message || 'Código incorrecto o expirado.');
+                return;
+            }
+
+            this.showToast(response.message || 'Código verificado', 'success');
             this.goToStep(3);
             this.newPassInput.focus();
         } catch (error) {
@@ -165,17 +168,24 @@ class PasswordRecovery {
         }
     }
 
-    resendCode() {
+    async resendCode() {
         if (!this.userEmail) return;
         this.resendBtn.disabled = true;
         this.resendBtn.textContent = 'Enviando...';
-        
-        setTimeout(() => {
-            this.verificationCode = this.generateCode();
-            this.showToast('Nuevo código enviado', 'info');
+
+        try {
+            const response = await this.sendRecoveryCode(this.userEmail);
+            if (!response.success) {
+                this.showToast(response.message || 'No se pudo reenviar el código.', 'error');
+            } else {
+                this.showToast(response.message || 'Nuevo código enviado', 'info');
+            }
+        } catch (error) {
+            this.showToast('No se pudo reenviar el código.', 'error');
+        } finally {
             this.resendBtn.disabled = false;
             this.resendBtn.textContent = '¿No recibiste el código? Reenviar';
-        }, 1500);
+        }
     }
 
     // ── PASO 3: NUEVA CONTRASEÑA ────────────────────────
@@ -183,13 +193,14 @@ class PasswordRecovery {
         const checks = {
             length: { el: document.getElementById('passLength'), test: v => v.length >= 8 },
             upper: { el: document.getElementById('passUpper'), test: v => /[A-Z]/.test(v) },
-            number: { el: document.getElementById('passNumber'), test: v => /[0-9]/.test(v) }
+            number: { el: document.getElementById('passNumber'), test: v => /[0-9]/.test(v) },
+            symbol: { el: document.getElementById('passSymbol'), test: v => /[^A-Za-z0-9]/.test(v) }
         };
         
         this.newPassInput?.addEventListener('input', () => {
             const val = this.newPassInput.value;
             Object.entries(checks).forEach(([key, check]) => {
-                check.el.classList.toggle('valid', check.test(val));
+                if (check.el) check.el.classList.toggle('valid', check.test(val));
             });
             this.validatePasswordMatch();
         });
@@ -268,7 +279,7 @@ class PasswordRecovery {
 
     validatePasswordRequirements() {
         const val = this.newPassInput.value;
-        return val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val);
+        return val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val) && /[^A-Za-z0-9]/.test(val);
     }
 
     togglePassword(e) {
@@ -308,10 +319,15 @@ class PasswordRecovery {
     }
 
     generateCode() {
+        // Deprecated: generation of codes is handled server-side using a cryptographically secure RNG.
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
     getCsrfToken() {
+        // Prefer the request token exposed by the server in a meta tag (safer for SPA),
+        // fall back to the cookie for backwards compatibility.
+        const meta = document.querySelector('meta[name="csrf-request-token"]');
+        if (meta && meta.content) return meta.content;
         const match = document.cookie.match(/(^|; )XSRF-TOKEN=([^;]+)/);
         return match ? decodeURIComponent(match[2]) : null;
     }
@@ -356,6 +372,25 @@ class PasswordRecovery {
 
         if (!response.ok) {
             return { success: false, message: 'No se pudo enviar el código. Intenta más tarde.' };
+        }
+
+        return response.json();
+    }
+
+    async verifyCode(code) {
+        const response = await fetch('/acceso-y-seguridad/recover/verify-code', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': this.getCsrfToken()
+            },
+            body: JSON.stringify({ correo: this.userEmail, codigo: code })
+        });
+
+        if (!response.ok) {
+            const body = await response.json().catch(() => null);
+            return { success: false, message: body?.message ?? 'No se pudo verificar el código.' };
         }
 
         return response.json();

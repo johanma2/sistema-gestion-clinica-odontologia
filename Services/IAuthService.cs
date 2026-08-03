@@ -9,6 +9,7 @@ namespace SmileTrack_MVC.Services
         Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default);
         Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default);
         Task<AuthResponse> RecoverPasswordAsync(RecoverPasswordRequest request, CancellationToken ct = default);
+        Task<AuthResponse> VerifyRecoveryCodeAsync(VerifyRecoveryCodeRequest request, CancellationToken ct = default);
         Task<AuthResponse> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default);
         Task<AuthResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default);
     }

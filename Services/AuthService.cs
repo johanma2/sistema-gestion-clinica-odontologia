@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -7,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.Entities;
 using SmileTrack_MVC.Models.ViewModels;
+using SmileTrack_MVC.Services.Email;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -25,22 +28,41 @@ namespace SmileTrack_MVC.Services
         private const string MensajeCredencialesInvalidas = "Correo o contraseña incorrectos";
         private const string MensajeCuentaBloqueada = "Cuenta bloqueada por 5 intentos fallidos. Contacta al administrador para reactivarla.";
         private const string MensajeUsuarioNoDisponible = "El acceso no está disponible en este momento. Intente nuevamente más tarde.";
+        private const string MensajeRecuperacionGenerico = "Si el correo está registrado, recibirás un código.";
+        private const string MensajeCodigoInvalidoOExpirado = "Código inválido o expirado.";
+        private const string MensajeTokenRecuperacionInvalido = "La sesión de recuperación no es válida o expiró. Solicita un nuevo código.";
+        private const int VigenciaCodigoRecuperacionMinutos = 15;
+        private const int VentanaRateLimitMinutos = 10;
+        private const int MaxSolicitudesRecuperacionPorVentana = 2;
+        private const int MaxIntentosCodigoRecuperacion = 3;
+        private static readonly EmailAddressAttribute ValidadorCorreo = new();
+        private static readonly Regex RegexContrasenaRecuperacion = new(
+            @"^(?=.{8,}$)(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).+$",
+            RegexOptions.Compiled,
+            TimeSpan.FromMilliseconds(500));
 
         private readonly IConfiguration _configuration;
         private readonly AppDbContext _context;
         private readonly ILogger<AuthService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IEmailService _emailService;
+        private readonly IDataProtector _passwordRecoveryProtector;
 
         public AuthService(
             IConfiguration configuration,
             AppDbContext context,
             ILogger<AuthService> logger,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IEmailService emailService,
+            IDataProtectionProvider dataProtectionProvider)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+            _passwordRecoveryProtector = (dataProtectionProvider ?? throw new ArgumentNullException(nameof(dataProtectionProvider)))
+                .CreateProtector("SmileTrack.PasswordRecovery");
         }
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
@@ -462,34 +484,62 @@ namespace SmileTrack_MVC.Services
         public async Task<AuthResponse> RecoverPasswordAsync(RecoverPasswordRequest request, CancellationToken ct = default)
         {
             string ipCliente = ObtenerIpCliente();
-            string correoNormalizado = request?.Correo?.Trim() ?? string.Empty;
+            string correoNormalizado = NormalizarCorreo(request?.Correo);
 
             try
             {
                 _logger.LogInformation("Solicitud de recuperación de contraseña. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
 
-                if (string.IsNullOrWhiteSpace(request?.Correo))
+                if (string.IsNullOrWhiteSpace(correoNormalizado))
                 {
                     _logger.LogWarning("Recuperar contraseña: correo vacío. IpCliente={IpCliente}", ipCliente);
                     return new AuthResponse { Success = false, Message = "El correo es obligatorio." };
                 }
 
-                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == request.Correo, ct);
-                if (user == null)
+                if (!EsCorreoValido(correoNormalizado))
                 {
-                    _logger.LogWarning("Recuperar contraseña: correo no registrado. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
-                    return new AuthResponse
-                    {
-                        Success = true,
-                        Message = "Si el correo se encuentra registrado, recibirá un código de verificación en breve."
-                    };
+                    return new AuthResponse { Success = false, Message = "Ingresa un correo electrónico válido." };
                 }
 
-                var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
-                user.CodigoRecuperacion = code;
-                user.FechaExpiracionCodigo = DateTime.UtcNow.AddMinutes(15);
+                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == correoNormalizado, ct);
+                if (user == null)
+                {
+                    await RegistrarAuditoriaRecuperacionAsync(null, correoNormalizado, "solicitud", ipCliente, ct);
+                    _logger.LogWarning("Recuperar contraseña: correo no registrado. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
+                    return new AuthResponse { Success = true, Message = MensajeRecuperacionGenerico };
+                }
 
-                _context.Usuarios.Update(user);
+                var limiteVentana = DateTime.UtcNow.AddMinutes(-VentanaRateLimitMinutos);
+                var solicitudesRecientes = await _context.AuditoriasRecuperacion
+                    .AsNoTracking()
+                    .CountAsync(a =>
+                        a.CorreoSolicitado == correoNormalizado &&
+                        a.Accion == "solicitud" &&
+                        a.Fecha >= limiteVentana,
+                        ct);
+
+                if (solicitudesRecientes >= MaxSolicitudesRecuperacionPorVentana)
+                {
+                    await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "rate_limit_excedido", ipCliente, ct);
+                    _logger.LogWarning("Rate limit de recuperación excedido. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
+                        user.IdUsuario, correoNormalizado, ipCliente);
+                    return new AuthResponse { Success = true, Message = MensajeRecuperacionGenerico };
+                }
+
+                var code = RandomNumberGenerator.GetInt32(0, 1000000).ToString("D6");
+                var ahora = DateTime.UtcNow;
+                var recoveryCode = new CodigoRecuperacion
+                {
+                    IdUsuario = user.IdUsuario,
+                    CodigoHash = BCrypt.Net.BCrypt.HashPassword(code, workFactor: 11),
+                    FechaCreacion = ahora,
+                    FechaExpiracion = ahora.AddMinutes(VigenciaCodigoRecuperacionMinutos),
+                    IntentosFallidos = 0,
+                    Usado = false,
+                    IpOrigen = ipCliente
+                };
+
+                _context.CodigosRecuperacion.Add(recoveryCode);
 
                 try
                 {
@@ -497,13 +547,9 @@ namespace SmileTrack_MVC.Services
                 }
                 catch (DbUpdateConcurrencyException concEx)
                 {
-                    _logger.LogWarning(concEx, "Recuperar contraseña: concurrencia actualizando código. IdUsuario={IdUsuario}, IpCliente={IpCliente}",
+                    _logger.LogWarning(concEx, "Recuperar contraseña: concurrencia guardando código. IdUsuario={IdUsuario}, IpCliente={IpCliente}",
                         user.IdUsuario, ipCliente);
-                    return new AuthResponse
-                    {
-                        Success = true,
-                        Message = "Si el correo se encuentra registrado, recibirá un código de verificación en breve."
-                    };
+                    return new AuthResponse { Success = true, Message = MensajeRecuperacionGenerico };
                 }
                 catch (SqlException sqlEx)
                 {
@@ -512,14 +558,25 @@ namespace SmileTrack_MVC.Services
                     return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
                 }
 
+                try
+                {
+                    await _emailService.SendRecoveryCodeAsync(user.Correo, code, ct);
+                }
+                catch (Exception mailEx)
+                {
+                    recoveryCode.Usado = true;
+                    _context.CodigosRecuperacion.Update(recoveryCode);
+                    await _context.SaveChangesAsync(ct);
+                    _logger.LogWarning(mailEx, "Recuperar contraseña: no se pudo enviar el correo. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
+                        user.IdUsuario, correoNormalizado, ipCliente);
+                }
+
+                await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "solicitud", ipCliente, ct);
+
                 _logger.LogInformation("Código de recuperación generado correctamente. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
                     user.IdUsuario, correoNormalizado, ipCliente);
 
-                return new AuthResponse
-                {
-                    Success = true,
-                    Message = $"Si el correo se encuentra registrado, recibirá un código de verificación. (Código pruebas: {code})"
-                };
+                return new AuthResponse { Success = true, Message = MensajeRecuperacionGenerico };
             }
             catch (OperationCanceledException)
             {
@@ -533,48 +590,154 @@ namespace SmileTrack_MVC.Services
             }
         }
 
-        public async Task<AuthResponse> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
+        public async Task<AuthResponse> VerifyRecoveryCodeAsync(VerifyRecoveryCodeRequest request, CancellationToken ct = default)
         {
             string ipCliente = ObtenerIpCliente();
-            string correoNormalizado = request?.Correo?.Trim() ?? string.Empty;
+            string correoNormalizado = NormalizarCorreo(request?.Correo);
 
             try
             {
-                _logger.LogInformation("Solicitud de restablecimiento de contraseña. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
-
-                if (string.IsNullOrWhiteSpace(request?.Correo) ||
-                    string.IsNullOrWhiteSpace(request.Codigo) ||
-                    string.IsNullOrWhiteSpace(request.NuevaContrasena))
+                if (string.IsNullOrWhiteSpace(correoNormalizado) || string.IsNullOrWhiteSpace(request?.Codigo))
                 {
-                    _logger.LogWarning("Restablecer contraseña: campos obligatorios vacíos. IpCliente={IpCliente}", ipCliente);
                     return new AuthResponse { Success = false, Message = "Todos los campos son obligatorios." };
                 }
 
-                if (request.NuevaContrasena.Length < 8)
+                if (!EsCorreoValido(correoNormalizado))
                 {
-                    _logger.LogWarning("Restablecer contraseña: longitud mínima. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
-                    return new AuthResponse { Success = false, Message = "La nueva contraseña debe tener al menos 8 caracteres." };
+                    return new AuthResponse { Success = false, Message = "Ingresa un correo electrónico válido." };
                 }
 
-                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == request.Correo, ct);
+                if (!Regex.IsMatch(request.Codigo.Trim(), @"^\d{6}$", RegexOptions.None, TimeSpan.FromMilliseconds(200)))
+                {
+                    return new AuthResponse { Success = false, Message = "Ingresa un código válido de 6 dígitos." };
+                }
+
+                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == correoNormalizado, ct);
                 if (user == null)
                 {
-                    _logger.LogWarning("Restablecer: usuario no encontrado. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
-                    return new AuthResponse { Success = false, Message = "Solicitud inválida." };
+                    await RegistrarAuditoriaRecuperacionAsync(null, correoNormalizado, "codigo_fallido", ipCliente, ct);
+                    return new AuthResponse { Success = false, Message = MensajeCodigoInvalidoOExpirado };
                 }
 
-                if (!string.Equals(user.CodigoRecuperacion, request.Codigo, StringComparison.Ordinal))
+                var codigoRecuperacion = await _context.CodigosRecuperacion
+                    .Where(c => c.IdUsuario == user.IdUsuario && !c.Usado)
+                    .OrderByDescending(c => c.FechaCreacion)
+                    .FirstOrDefaultAsync(ct);
+
+                if (codigoRecuperacion == null)
                 {
-                    _logger.LogWarning("Restablecer: código inválido. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
-                        user.IdUsuario, correoNormalizado, ipCliente);
-                    return new AuthResponse { Success = false, Message = "El código de verificación es inválido." };
+                    await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "codigo_fallido", ipCliente, ct);
+                    return new AuthResponse { Success = false, Message = MensajeCodigoInvalidoOExpirado };
                 }
 
-                if (!user.FechaExpiracionCodigo.HasValue || user.FechaExpiracionCodigo.Value < DateTime.UtcNow)
+                if (codigoRecuperacion.FechaExpiracion < DateTime.UtcNow)
                 {
-                    _logger.LogWarning("Restablecer: código expirado. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
-                        user.IdUsuario, correoNormalizado, ipCliente);
-                    return new AuthResponse { Success = false, Message = "El código ha expirado, solicite uno nuevo." };
+                    codigoRecuperacion.Usado = true;
+                    _context.CodigosRecuperacion.Update(codigoRecuperacion);
+                    await _context.SaveChangesAsync(ct);
+                    await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "codigo_fallido", ipCliente, ct);
+                    return new AuthResponse { Success = false, Message = MensajeCodigoInvalidoOExpirado };
+                }
+
+                var codigoValido = BCrypt.Net.BCrypt.Verify(request.Codigo.Trim(), codigoRecuperacion.CodigoHash);
+                if (!codigoValido)
+                {
+                    codigoRecuperacion.IntentosFallidos += 1;
+
+                    if (codigoRecuperacion.IntentosFallidos >= MaxIntentosCodigoRecuperacion)
+                    {
+                        codigoRecuperacion.Usado = true;
+                    }
+
+                    _context.CodigosRecuperacion.Update(codigoRecuperacion);
+                    await _context.SaveChangesAsync(ct);
+                    await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "codigo_fallido", ipCliente, ct);
+
+                    if (codigoRecuperacion.IntentosFallidos >= MaxIntentosCodigoRecuperacion)
+                    {
+                        await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "bloqueo_por_intentos", ipCliente, ct);
+                        return new AuthResponse
+                        {
+                            Success = false,
+                            Message = "Demasiados intentos fallidos, solicita un nuevo código."
+                        };
+                    }
+
+                    return new AuthResponse { Success = false, Message = MensajeCodigoInvalidoOExpirado };
+                }
+
+                await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "codigo_verificado", ipCliente, ct);
+
+                return new AuthResponse
+                {
+                    Success = true,
+                    Message = "Código verificado correctamente.",
+                    RecoveryToken = GenerarTokenRecuperacion(codigoRecuperacion)
+                };
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Verificación de código cancelada. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
+                return new AuthResponse { Success = false, Message = "Operación cancelada." };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado en VerifyRecoveryCodeAsync. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
+                return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
+            }
+        }
+
+        public async Task<AuthResponse> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
+        {
+            string ipCliente = ObtenerIpCliente();
+
+            try
+            {
+                _logger.LogInformation("Solicitud de restablecimiento de contraseña recibida. IpCliente={IpCliente}", ipCliente);
+
+                if (request is null ||
+                    string.IsNullOrWhiteSpace(request.TokenTemporal) ||
+                    string.IsNullOrWhiteSpace(request.NuevaContrasena) ||
+                    string.IsNullOrWhiteSpace(request.ConfirmarContrasena))
+                {
+                    return new AuthResponse { Success = false, Message = "Todos los campos son obligatorios." };
+                }
+
+                if (!string.Equals(request.NuevaContrasena, request.ConfirmarContrasena, StringComparison.Ordinal))
+                {
+                    return new AuthResponse { Success = false, Message = "La nueva contraseña y la confirmación no coinciden." };
+                }
+
+                if (!RegexContrasenaRecuperacion.IsMatch(request.NuevaContrasena))
+                {
+                    return new AuthResponse
+                    {
+                        Success = false,
+                        Message = "La nueva contraseña debe tener al menos 8 caracteres e incluir una letra, un número y un símbolo."
+                    };
+                }
+
+                var tokenRecuperacion = LeerTokenRecuperacion(request.TokenTemporal);
+                if (tokenRecuperacion == null || tokenRecuperacion.ExpiraUnix < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+                {
+                    return new AuthResponse { Success = false, Message = MensajeTokenRecuperacionInvalido };
+                }
+
+                var codigoRecuperacion = await _context.CodigosRecuperacion
+                    .FirstOrDefaultAsync(c =>
+                        c.IdCodigo == tokenRecuperacion.IdCodigo &&
+                        c.IdUsuario == tokenRecuperacion.IdUsuario,
+                        ct);
+
+                if (codigoRecuperacion == null || codigoRecuperacion.Usado || codigoRecuperacion.FechaExpiracion < DateTime.UtcNow)
+                {
+                    return new AuthResponse { Success = false, Message = MensajeTokenRecuperacionInvalido };
+                }
+
+                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == codigoRecuperacion.IdUsuario, ct);
+                if (user == null)
+                {
+                    return new AuthResponse { Success = false, Message = MensajeTokenRecuperacionInvalido };
                 }
 
                 string nuevoHash;
@@ -592,12 +755,16 @@ namespace SmileTrack_MVC.Services
                 user.Contrasena = nuevoHash;
                 user.CodigoRecuperacion = null;
                 user.FechaExpiracionCodigo = null;
+                user.IntentosFallidos = 0;
+                codigoRecuperacion.Usado = true;
 
                 _context.Usuarios.Update(user);
+                _context.CodigosRecuperacion.Update(codigoRecuperacion);
 
                 try
                 {
                     await _context.SaveChangesAsync(ct);
+                    await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, user.Correo, "password_restablecida", ipCliente, ct);
                 }
                 catch (DbUpdateConcurrencyException concEx)
                 {
@@ -613,7 +780,7 @@ namespace SmileTrack_MVC.Services
                 }
 
                 _logger.LogInformation("Contraseña restablecida exitosamente. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
-                    user.IdUsuario, correoNormalizado, ipCliente);
+                    user.IdUsuario, user.Correo, ipCliente);
 
                 return new AuthResponse
                 {
@@ -623,13 +790,78 @@ namespace SmileTrack_MVC.Services
             }
             catch (OperationCanceledException)
             {
-                _logger.LogWarning("Restablecer contraseña cancelado. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
+                _logger.LogWarning("Restablecer contraseña cancelado. IpCliente={IpCliente}", ipCliente);
                 return new AuthResponse { Success = false, Message = "Operación cancelada." };
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                _logger.LogWarning("Timeout validando la nueva contraseña en recuperación. IpCliente={IpCliente}", ipCliente);
+                return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error inesperado en ResetPasswordAsync. Correo={Correo}, IpCliente={IpCliente}", correoNormalizado, ipCliente);
+                _logger.LogError(ex, "Error inesperado en ResetPasswordAsync. IpCliente={IpCliente}", ipCliente);
                 return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
+            }
+        }
+
+        private sealed record RecoveryTokenPayload(int IdCodigo, int IdUsuario, long ExpiraUnix);
+
+        private static string NormalizarCorreo(string? correo)
+        {
+            return correo?.Trim() ?? string.Empty;
+        }
+
+        private static bool EsCorreoValido(string correo)
+        {
+            return !string.IsNullOrWhiteSpace(correo) && ValidadorCorreo.IsValid(correo);
+        }
+
+        private async Task RegistrarAuditoriaRecuperacionAsync(int? idUsuario, string correoSolicitado, string accion, string ipCliente, CancellationToken ct)
+        {
+            var auditoria = new AuditoriaRecuperacion
+            {
+                IdUsuario = idUsuario,
+                CorreoSolicitado = correoSolicitado,
+                Accion = accion,
+                IpOrigen = ipCliente,
+                Fecha = DateTime.UtcNow
+            };
+
+            _context.AuditoriasRecuperacion.Add(auditoria);
+            await _context.SaveChangesAsync(ct);
+        }
+
+        private string GenerarTokenRecuperacion(CodigoRecuperacion codigoRecuperacion)
+        {
+            var expiraUnix = new DateTimeOffset(codigoRecuperacion.FechaExpiracion).ToUnixTimeSeconds();
+            var payload = $"{codigoRecuperacion.IdCodigo}|{codigoRecuperacion.IdUsuario}|{expiraUnix}|{Guid.NewGuid():N}";
+            return _passwordRecoveryProtector.Protect(payload);
+        }
+
+        private RecoveryTokenPayload? LeerTokenRecuperacion(string tokenTemporal)
+        {
+            try
+            {
+                var payload = _passwordRecoveryProtector.Unprotect(tokenTemporal);
+                var parts = payload.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length != 4)
+                {
+                    return null;
+                }
+
+                if (!int.TryParse(parts[0], out var idCodigo) ||
+                    !int.TryParse(parts[1], out var idUsuario) ||
+                    !long.TryParse(parts[2], out var expiraUnix))
+                {
+                    return null;
+                }
+
+                return new RecoveryTokenPayload(idCodigo, idUsuario, expiraUnix);
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -726,6 +958,18 @@ namespace SmileTrack_MVC.Services
                 _logger.LogError(ex, "Error inesperado en ChangePasswordAsync. IdUsuario={IdUsuario}, IpCliente={IpCliente}", request?.IdUsuario, ipCliente);
                 return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
             }
+        }
+
+        private static string HashRecoveryCode(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return string.Empty;
+            }
+
+            using var sha256 = SHA256.Create();
+            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(code.Trim()));
+            return Convert.ToHexString(bytes);
         }
 
         private string ObtenerIpCliente()
