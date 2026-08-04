@@ -152,7 +152,7 @@ NOTAS DE MANTENIMIENTO:
             @foreach (var especialidad in especialidades)
             {
               var selected = ViewData["EspecialidadFilter"]?.ToString() == especialidad.Nombre ? "selected" : "";
-              <option value="@especialidad.Nombre" @selected>@especialidad.Nombre</option>
+              <option value="@especialidad.Nombre" @(selected)>@especialidad.Nombre</option>
             }
           </select>
         </div>
@@ -165,8 +165,14 @@ NOTAS DE MANTENIMIENTO:
               var estadosProf = new[] { ("activo", "Activo"), ("vacaciones", "Vacaciones"), ("inactivo", "Inactivo") };
               foreach (var (clave, texto) in estadosProf)
               {
-                var sel = estadoActual == clave ? "selected" : null;
-                <option value="@clave" selected="@sel">@texto</option>
+                if (estadoActual == clave)
+                {
+                  <option value="@clave" selected>@texto</option>
+                }
+                else
+                {
+                  <option value="@clave">@texto</option>
+                }
               }
             }
           </select>
@@ -330,15 +336,18 @@ NOTAS DE MANTENIMIENTO:
         <input type="hidden" name="IdProfesional" id="formIdProfesional" value="@(editingProfesional?.IdProfesional ?? 0)" />
         <div class="form-group">
           <label class="form-label" for="formNombres">Nombres *</label>
-          <input type="text" id="formNombres" name="Nombres" class="form-input" required placeholder="Ej. Carlos" value="@(editingProfesional?.Nombres)">
+          <input type="text" id="formNombres" name="Nombres" class="form-input" required aria-required="true" aria-describedby="error-formNombres" placeholder="Ej. Carlos" value="@(editingProfesional?.Nombres)">
+          <span class="error-message" id="error-formNombres" role="alert">Por favor ingresa los nombres.</span>
         </div>
         <div class="form-group">
           <label class="form-label" for="formApellidos">Apellidos *</label>
-          <input type="text" id="formApellidos" name="Apellidos" class="form-input" required placeholder="Ej. Méndez Ruiz" value="@(editingProfesional?.Apellidos)">
+          <input type="text" id="formApellidos" name="Apellidos" class="form-input" required aria-required="true" aria-describedby="error-formApellidos" placeholder="Ej. Méndez Ruiz" value="@(editingProfesional?.Apellidos)">
+          <span class="error-message" id="error-formApellidos" role="alert">Por favor ingresa los apellidos.</span>
         </div>
         <div class="form-group">
           <label class="form-label" for="formRegistroMedico">Registro Médico *</label>
-          <input type="text" id="formRegistroMedico" name="RegistroMedico" class="form-input" required placeholder="Ej. RM-2026-001" value="@(editingProfesional?.RegistroMedico)">
+          <input type="text" id="formRegistroMedico" name="RegistroMedico" class="form-input" required aria-required="true" aria-describedby="error-formRegistroMedico" placeholder="Ej. RM-2026-001" value="@(editingProfesional?.RegistroMedico)">
+          <span class="error-message" id="error-formRegistroMedico" role="alert">Por favor ingresa el registro médico.</span>
         </div>
         <div class="form-group">
           <label class="form-label" for="formCategoria">Categoría</label>
@@ -354,8 +363,15 @@ NOTAS DE MANTENIMIENTO:
             <option value="">Sin especialidad</option>
             @foreach (var especialidad in especialidades)
             {
-              var espSelected = editingProfesional?.Especialidades.Any(pe => pe.IdEspecialidad == especialidad.IdEspecialidad) == true ? "selected" : null;
-              <option value="@especialidad.IdEspecialidad" selected="@espSelected">@especialidad.Nombre</option>
+              var espSelected = editingProfesional?.Especialidades.Any(pe => pe.IdEspecialidad == especialidad.IdEspecialidad) == true;
+              if (espSelected)
+              {
+                <option value="@especialidad.IdEspecialidad" selected>@especialidad.Nombre</option>
+              }
+              else
+              {
+                <option value="@especialidad.IdEspecialidad">@especialidad.Nombre</option>
+              }
             }
           </select>
         </div>
@@ -365,18 +381,47 @@ NOTAS DE MANTENIMIENTO:
             <option value="0">Sin usuario</option>
             @foreach (var usuario in usuarios)
             {
-              var usrSelected = editingProfesional?.IdUsuario == usuario.IdUsuario ? "selected" : null;
-              <option value="@usuario.IdUsuario" selected="@usrSelected">@usuario.Nombre @usuario.Apellidos</option>
+              var usrSelected = editingProfesional?.IdUsuario == usuario.IdUsuario;
+              if (usrSelected)
+              {
+                <option value="@usuario.IdUsuario" selected>@usuario.Nombre @usuario.Apellidos</option>
+              }
+              else
+              {
+                <option value="@usuario.IdUsuario">@usuario.Nombre @usuario.Apellidos</option>
+              }
             }
           </select>
         </div>
         <div class="form-group">
           <label class="form-label" for="formStatus">Estado *</label>
-          <select id="formStatus" name="Estado" class="form-input" required>
-            <option value="activo" selected="@(editingProfesional?.Estado == "activo" ? "selected" : null)">Activo</option>
-            <option value="vacaciones" selected="@(editingProfesional?.Estado == "vacaciones" ? "selected" : null)">Vacaciones</option>
-            <option value="inactivo" selected="@(editingProfesional?.Estado == "inactivo" ? "selected" : null)">Inactivo</option>
+          <select id="formStatus" name="Estado" class="form-input" required aria-required="true" aria-describedby="error-formStatus">
+            @if (editingProfesional?.Estado == "activo")
+            {
+              <option value="activo" selected>Activo</option>
+            }
+            else
+            {
+              <option value="activo">Activo</option>
+            }
+            @if (editingProfesional?.Estado == "vacaciones")
+            {
+              <option value="vacaciones" selected>Vacaciones</option>
+            }
+            else
+            {
+              <option value="vacaciones">Vacaciones</option>
+            }
+            @if (editingProfesional?.Estado == "inactivo")
+            {
+              <option value="inactivo" selected>Inactivo</option>
+            }
+            else
+            {
+              <option value="inactivo">Inactivo</option>
+            }
           </select>
+          <span class="error-message" id="error-formStatus" role="alert">Por favor selecciona un estado.</span>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" id="modalFormCancel">Cancelar</button>

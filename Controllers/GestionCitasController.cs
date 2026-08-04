@@ -542,7 +542,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         var operacion = (idCitaOperacion > 0) ? "Actualizacion" : "Creacion";
 
         // WHY: Validar ModelState antes de cualquier lógica de negocio para feedback inmediato al usuario
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || model == null)
         {
             var firstError = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage;
             var mensaje = firstError ?? "Datos inválidos en el formulario.";
@@ -553,6 +553,17 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
         try
         {
+            if (model.FechaHora == default && model.Fecha != default && model.HoraInicio.HasValue)
+            {
+                model.FechaHora = model.Fecha.Date.Add(model.HoraInicio.Value);
+            }
+
+            if (model.HoraFin.HasValue && model.HoraInicio.HasValue && model.HoraFin <= model.HoraInicio)
+            {
+                TempData["ErrorValidacion"] = "La hora de fin debe ser posterior a la hora de inicio.";
+                return Redirect(returnUrlSafe);
+            }
+
             // VALIDACIONES DE INTEGRIDAD:
             // 1. Paciente y profesional deben existir y estar activos
             // 2. FechaHora debe ser válida (no en pasado)
@@ -583,7 +594,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             if (model.IdCita is > 0)
             {
                 // WHY: Para actualización, verificar que la cita existe antes de modificar
-                var cita = await _context.Citas.FindAsync([model.IdCita.Value], ct);
+                var cita = await _context.Citas.FindAsync(model.IdCita.Value, ct);
                 if (cita == null)
                 {
                     TempData["ErrorValidacion"] = "La cita que intenta actualizar no existe.";
@@ -595,7 +606,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 var hayConflicto = await _context.Citas
                     .AnyAsync(c => c.IdCita != model.IdCita.Value
                         && c.IdProfesional == model.IdProfesional
-                        && c.Estado != "Cancelada"
+                        && !string.Equals(c.Estado, "Cancelada", StringComparison.OrdinalIgnoreCase)
                         && c.FechaHora < model.FechaHora.AddMinutes(30)
                         && c.FechaHora.AddMinutes(30) > model.FechaHora, ct);
 
@@ -607,13 +618,14 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                     return Redirect(returnUrlSafe);
                 }
 
-                // WHY: Actualizar solo campos permitidos para prevenir mass-assignment attacks
                 cita.IdPaciente = model.IdPaciente;
                 cita.IdProfesional = model.IdProfesional;
                 cita.IdServicio = model.IdServicio;
+                cita.IdConsultorio = model.IdConsultorio;
+                cita.IdEstado = model.IdEstado;
                 cita.FechaHora = model.FechaHora;
-                cita.Estado = model.Estado ?? "programada";
-                cita.Notas = string.IsNullOrWhiteSpace(model.Notas) ? null : model.Notas;
+                cita.Estado = await BuildEstadoNombreAsync(model.IdEstado, model.Estado, cita.Estado, ct);
+                cita.Notas = BuildNotasCita(model);
 
                 _context.Citas.Update(cita);
             }
@@ -622,7 +634,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 // WHY: Para creación, validar conflicto con todas las citas activas del profesional
                 var hayConflicto = await _context.Citas
                     .AnyAsync(c => c.IdProfesional == model.IdProfesional
-                        && c.Estado != "Cancelada"
+                        && !string.Equals(c.Estado, "Cancelada", StringComparison.OrdinalIgnoreCase)
                         && c.FechaHora < model.FechaHora.AddMinutes(30)
                         && c.FechaHora.AddMinutes(30) > model.FechaHora, ct);
 
@@ -637,9 +649,11 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                     IdPaciente = model.IdPaciente,
                     IdProfesional = model.IdProfesional,
                     IdServicio = model.IdServicio,
+                    IdConsultorio = model.IdConsultorio,
+                    IdEstado = model.IdEstado,
                     FechaHora = model.FechaHora,
-                    Estado = model.Estado ?? "programada",
-                    Notas = string.IsNullOrWhiteSpace(model.Notas) ? null : model.Notas,
+                    Estado = await BuildEstadoNombreAsync(model.IdEstado, model.Estado, "programada", ct),
+                    Notas = BuildNotasCita(model),
                     MotivoConsulta = "Consulta programada desde gestion"
                 };
 
@@ -708,6 +722,29 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         return Redirect(returnUrlSafe);
     }
 
+    private static string? BuildNotasCita(CitaViewModel model)
+    {
+        if (!string.IsNullOrWhiteSpace(model.MotivoConsulta)) return model.MotivoConsulta.Trim();
+        if (!string.IsNullOrWhiteSpace(model.Notas)) return model.Notas.Trim();
+        if (!string.IsNullOrWhiteSpace(model.NotasPrevias)) return model.NotasPrevias.Trim();
+        return null;
+    }
+
+    private async Task<string> BuildEstadoNombreAsync(int? idEstado, string? estadoFallback, string estadoActual, CancellationToken ct)
+    {
+        if (idEstado.HasValue && idEstado.Value > 0)
+        {
+                var estado = await _context.EstadosCita.FindAsync(idEstado.Value, ct);
+        }
+
+        if (!string.IsNullOrWhiteSpace(estadoFallback))
+        {
+            return estadoFallback.Trim();
+        }
+
+        return estadoActual ?? "programada";
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrador,Recepcionista")]
@@ -728,7 +765,7 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                 return Redirect(returnUrlSafe);
             }
 
-            var cita = await _context.Citas.FindAsync([IdCita], ct);
+            var cita = await _context.Citas.FindAsync(IdCita, ct);
             if (cita == null)
             {
                 // WHY: Loguear con Warning porque es flujo esperado (cita ya eliminada o ID inválido)

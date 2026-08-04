@@ -101,13 +101,10 @@ NOTAS DE MANTENIMIENTO:
     </header>
 
     <!-- View toggles -->
-    <div class="view-toggles" role="tablist" aria-label="Vistas de citas">
-      <button class="view-toggle active" data-view="table" role="tab" aria-selected="true" aria-controls="panel-table"
-        tabindex="0">📊 Tabla</button>
-      <button class="view-toggle" data-view="calendar" role="tab" aria-selected="false" aria-controls="panel-calendar"
-        tabindex="-1">📅 Calendario</button>
-      <button class="view-toggle" data-view="paused" role="tab" aria-selected="false" aria-controls="panel-paused"
-        tabindex="-1">⏸️ Pausado (1)</button>
+    <div class="view-toggles" role="group" aria-label="Alternar vista de citas">
+      <button type="button" class="view-toggle active" data-view="table" aria-pressed="true" tabindex="0">📊 Tabla</button>
+      <button type="button" class="view-toggle" data-view="calendar" aria-pressed="false" tabindex="-1">📅 Calendario</button>
+      <button type="button" class="view-toggle" data-view="paused" aria-pressed="false" tabindex="-1">⏸️ Pausado (1)</button>
     </div>
 
     <!-- Stats Grid -->
@@ -140,8 +137,8 @@ NOTAS DE MANTENIMIENTO:
         <option value="">Todos los profesionales</option>
         @foreach (var profesional in profesionalesFilterOptions)
         {
-          var selected = ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString() ? "selected" : "";
-          <option value="@profesional.IdProfesional" selected="@selected">@profesional.NombreProfesional</option>
+          var isSelected = ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString();
+          <option value="@profesional.IdProfesional" @(isSelected ? "selected" : "")>@profesional.NombreProfesional</option>
         }
       </select>
       <input type="date" class="status-select" id="filterDate" name="fecha" aria-label="Filtrar por fecha" value="@ViewData["FechaFilter"]" />
@@ -152,8 +149,8 @@ NOTAS DE MANTENIMIENTO:
           var estadosFiltrar = new[] { "programada", "confirmada", "atendida", "cancelada" };
           foreach (var e in estadosFiltrar)
           {
-            var selected = estadoActual == e ? "selected" : "";
-            <option value="@e" selected="@selected">@char.ToUpperInvariant(e[0])@e.Substring(1)</option>
+            var isSelected = estadoActual == e;
+            <option value="@e" @(isSelected ? "selected" : "")>@char.ToUpperInvariant(e[0])@e.Substring(1)</option>
           }
         }
       </select>
@@ -169,7 +166,7 @@ NOTAS DE MANTENIMIENTO:
     </div>
 
     <!-- Panel de tabla (visible por defecto) -->
-    <div id="panel-table" role="tabpanel" aria-labelledby="">
+    <div id="panel-table">
       <div class="table-wrap">
         <table class="table-base" aria-label="Listado de citas">
           <thead>
@@ -233,7 +230,7 @@ NOTAS DE MANTENIMIENTO:
           }
           else
           {
-            <button class="pagination-btn" id="prevPage" disabled aria-label="Página anterior">← Anterior</button>
+            <button class="pagination-btn" disabled aria-label="Página anterior">← Anterior</button>
           }
           <div class="pagination-numbers" role="list" aria-label="Números de página">
             @for (var i = 1; i <= (pageResult?.TotalPages ?? 1); i++)
@@ -248,7 +245,7 @@ NOTAS DE MANTENIMIENTO:
           }
           else
           {
-            <button class="pagination-btn" id="nextPage" aria-label="Página siguiente" disabled>Siguiente →</button>
+            <button class="pagination-btn" disabled aria-label="Página siguiente">Siguiente →</button>
           }
         </div>
       </div>
@@ -296,7 +293,7 @@ NOTAS DE MANTENIMIENTO:
           <div class="form-group">
             <label class="form-label" for="newPatient">Paciente <span class="required"
                 aria-hidden="true">*</span></label>
-            <select id="newPatient" name="IdPaciente" class="form-select form-input" required>
+            <select id="newPatient" name="IdPaciente" class="form-select form-input" required aria-required="true" aria-describedby="error-newPatient">
               <option value="">Seleccione paciente</option>
               @foreach (var p in pacientes)
               {
@@ -307,20 +304,20 @@ NOTAS DE MANTENIMIENTO:
           </div>
           <div class="form-group">
             <label class="form-label" for="newDate">Fecha <span class="required" aria-hidden="true">*</span></label>
-            <input type="date" id="newDate" name="Fecha" class="form-input" required
+            <input type="date" id="newDate" name="Fecha" class="form-input" required aria-required="true" aria-describedby="error-newDate"
               min="@DateTime.Today.ToString("yyyy-MM-dd")"
               value="@DateTime.Today.ToString("yyyy-MM-dd")" />
             <span class="error-message" id="error-newDate" role="alert">Por favor selecciona una fecha válida</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="newTime">Hora <span class="required" aria-hidden="true">*</span></label>
-            <input type="time" id="newTime" name="HoraInicio" class="form-input" required value="09:00" />
+            <input type="time" id="newTime" name="HoraInicio" class="form-input" required aria-required="true" aria-describedby="error-newTime" value="09:00" />
             <span class="error-message" id="error-newTime" role="alert">Por favor selecciona una hora válida</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="newDoctor">Profesional <span class="required"
                 aria-hidden="true">*</span></label>
-            <select id="newDoctor" name="IdProfesional" class="form-select form-input" required>
+            <select id="newDoctor" name="IdProfesional" class="form-select form-input" required aria-required="true" aria-describedby="error-newDoctor">
               <option value="">Seleccionar profesional</option>
               @foreach (var p in profesionales)
               {
@@ -332,7 +329,7 @@ NOTAS DE MANTENIMIENTO:
           <div class="form-group">
             <label class="form-label" for="newService">Servicio <span class="required"
                 aria-hidden="true">*</span></label>
-            <select id="newService" name="IdServicio" class="form-select form-input" required>
+            <select id="newService" name="IdServicio" class="form-select form-input" required aria-required="true" aria-describedby="error-newService">
               <option value="">Seleccionar servicio</option>
               @foreach (var s in servicios)
               {
@@ -344,7 +341,7 @@ NOTAS DE MANTENIMIENTO:
           <div class="form-group">
             <label class="form-label" for="newOffice">Consultorio <span class="required"
                 aria-hidden="true">*</span></label>
-            <select id="newOffice" name="IdConsultorio" class="form-select form-input" required>
+            <select id="newOffice" name="IdConsultorio" class="form-select form-input" required aria-required="true" aria-describedby="error-newOffice">
               <option value="">Seleccionar consultorio</option>
               @foreach (var c in consultorios)
               {
@@ -395,38 +392,38 @@ NOTAS DE MANTENIMIENTO:
           <div class="form-group">
             <label class="form-label" for="editPatient">Paciente <span class="required"
                 aria-hidden="true">*</span></label>
-            <select id="editPatient" name="IdPaciente" class="form-select form-input" required>
+            <select id="editPatient" name="IdPaciente" class="form-select form-input" required aria-required="true" aria-describedby="error-editPatient">
               <option value="">Seleccione paciente</option>
               @foreach (var p in pacientes)
               {
-                var sel = editingCita?.IdPaciente == p.IdPaciente ? "selected" : "";
-                <option value="@p.IdPaciente" selected="@sel">@p.NombresCompleto</option>
+                var isSelected = editingCita?.IdPaciente == p.IdPaciente;
+                <option value="@p.IdPaciente" @(isSelected ? "selected" : "")>@p.NombresCompleto</option>
               }
             </select>
             <span class="error-message" id="error-editPatient" role="alert">Por favor selecciona un paciente</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="editDate">Fecha <span class="required" aria-hidden="true">*</span></label>
-            <input type="date" id="editDate" name="Fecha" class="form-input" required
+            <input type="date" id="editDate" name="Fecha" class="form-input" required aria-required="true" aria-describedby="error-editDate"
               min="@DateTime.Today.ToString("yyyy-MM-dd")"
               value="@(editingCita?.Fecha.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" />
             <span class="error-message" id="error-editDate" role="alert">Por favor selecciona una fecha válida</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="editTime">Hora <span class="required" aria-hidden="true">*</span></label>
-            <input type="time" id="editTime" name="HoraInicio" class="form-input" required
+            <input type="time" id="editTime" name="HoraInicio" class="form-input" required aria-required="true" aria-describedby="error-editTime"
               value="@(editingCita?.HoraInicio?.ToString("hh\\:mm") ?? "09:00")" />
             <span class="error-message" id="error-editTime" role="alert">Por favor selecciona una hora válida</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="editDoctor">Profesional <span class="required"
                 aria-hidden="true">*</span></label>
-            <select id="editDoctor" name="IdProfesional" class="form-select form-input" required>
+            <select id="editDoctor" name="IdProfesional" class="form-select form-input" required aria-required="true" aria-describedby="error-editDoctor">
               <option value="">Seleccionar profesional</option>
               @foreach (var p in profesionales)
               {
-                var sel = editingCita?.IdProfesional == p.IdProfesional ? "selected" : "";
-                <option value="@p.IdProfesional" selected="@sel">@p.NombreProfesional</option>
+                var isSelected = editingCita?.IdProfesional == p.IdProfesional;
+                <option value="@p.IdProfesional" @(isSelected ? "selected" : "")>@p.NombreProfesional</option>
               }
             </select>
             <span class="error-message" id="error-editDoctor" role="alert">Por favor selecciona un profesional</span>
@@ -434,12 +431,12 @@ NOTAS DE MANTENIMIENTO:
           <div class="form-group">
             <label class="form-label" for="editService">Servicio <span class="required"
                 aria-hidden="true">*</span></label>
-            <select id="editService" name="IdServicio" class="form-select form-input" required>
+            <select id="editService" name="IdServicio" class="form-select form-input" required aria-required="true" aria-describedby="error-editService">
               <option value="">Seleccionar servicio</option>
               @foreach (var s in servicios)
               {
-                var sel = editingCita?.IdServicio == s.IdServicio ? "selected" : "";
-                <option value="@s.IdServicio" selected="@sel">@s.Nombre</option>
+                var isSelected = editingCita?.IdServicio == s.IdServicio;
+                <option value="@s.IdServicio" @(isSelected ? "selected" : "")>@s.Nombre</option>
               }
             </select>
             <span class="error-message" id="error-editService" role="alert">Por favor selecciona un servicio</span>
@@ -447,27 +444,27 @@ NOTAS DE MANTENIMIENTO:
           <div class="form-group">
             <label class="form-label" for="editOffice">Consultorio <span class="required"
                 aria-hidden="true">*</span></label>
-            <select id="editOffice" name="IdConsultorio" class="form-select form-input" required>
+            <select id="editOffice" name="IdConsultorio" class="form-select form-input" required aria-required="true" aria-describedby="error-editOffice">
               <option value="">Seleccionar consultorio</option>
               @foreach (var c in consultorios)
               {
-                var sel = editingCita?.IdConsultorio == c.IdConsultorio ? "selected" : "";
-                <option value="@c.IdConsultorio" selected="@sel">@c.Nombre</option>
+                var isSelected = editingCita?.IdConsultorio == c.IdConsultorio;
+                <option value="@c.IdConsultorio" @(isSelected ? "selected" : "")>@c.Nombre</option>
               }
             </select>
             <span class="error-message" id="error-editOffice" role="alert">Por favor selecciona un consultorio</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="editStatus">Estado</label>
-            <select id="editStatus" name="IdEstado" class="form-select form-input">
+            <select id="editStatus" name="IdEstado" class="form-select form-input" aria-describedby="error-editStatus">
               <option value="">Sin cambio</option>
               @foreach (var ec in estadosCita)
               {
-                var sel = editingCita?.IdEstado == ec.IdEstado ? "selected"
-                        : (editingCita?.EstadoCita?.NombreEstado == ec.NombreEstado ? "selected" : "");
-                <option value="@ec.IdEstado" selected="@sel">@ec.NombreEstado</option>
+                var isSelected = editingCita?.IdEstado == ec.IdEstado || editingCita?.EstadoCita?.NombreEstado == ec.NombreEstado;
+                <option value="@ec.IdEstado" @(isSelected ? "selected" : "")>@ec.NombreEstado</option>
               }
             </select>
+            <span class="error-message" id="error-editStatus" role="alert">Por favor selecciona un estado válido.</span>
           </div>
         </div>
         <div class="form-group">

@@ -5,20 +5,20 @@ Autor: Johan Santamaria
 Fecha: 29/07/2026 (actualizado 2026-07-31)
 
 DESCRIPCIÓN:
-Módulo principal de recepcionista. Consume y modifica citas REALES a través de la API REST
-/api/citas. El backend NO filtra por rol aquí (Recepcionista/Admin ven TODO) — solo se aplican
-los filtros de búsqueda/estado/profesional/fecha elegidos por el usuario en la UI.
+Módulo principal de recepcionista. Carga la UI de citas con datos renderizados por SSR o fallback
+a LocalStorage cuando no hay un endpoint de listado disponible, y escribe cambios de alta/edición/cancelación
+mediante los controladores MVC existentes, no mediante API REST PUT/DELETE remotos directos.
 
 FUNCIONALIDADES PRINCIPALES:
-- Carga de citas reales desde GET /api/citas (Admin/Recepcionista ven todas)
+- Carga de citas renderizadas por servidor o fallback LocalStorage cuando la API de listado no está disponible
 - Filtros combinados (búsqueda texto, profesional, fecha, estado)
-- CRUD UI: ver detalle, editar (PUT /api/citas/{id}), cancelar (DELETE /api/citas/{id}),
-           nueva cita (POST /api/citas endpoint HTML form + JSON)
+- CRUD UI: ver detalle y edición mediante formularios HTML a /gestion-de-citas/guardar-cita;
+           cancelación mediante POST a /gestion-de-citas/eliminar-cita
 - Persistencia LocalStorage transparente como fallback offline
 
 DEPENDENCIAS TÉCNICAS:
-- Controller: GestionCitasController → ApiListarCitas, ApiActualizarCita, ApiEliminarCita
-- Endpoints: GET/PUT/DELETE /api/citas, POST CrearCitaDesdeAgenda (si está disponible)
+- Controller: GestionCitasController → GuardarCita/EliminarCita para escritura (listado no expuesto vía API genérica)
+- Endpoints: POST /gestion-de-citas/guardar-cita y POST /gestion-de-citas/eliminar-cita para guardado
 - CSS: ~/css/Gestion_De_Citas/st-rec-03-gestion-citas/styles.css
 - JS: ~/js/Gestion_De_Citas/st-rec-03-gestion-citas/app.js
 - Partial / Otros: index.cshtml
@@ -254,7 +254,7 @@ const modalManager = {
     m.classList.add('open');
     m.setAttribute('aria-hidden', 'false');
     m.removeAttribute('inert');
-    const f = m.querySelector('input, select, textarea, button:not(.modal-close)');
+    const f = m.querySelector('input:not([type=hidden]), select, textarea, button:not(.modal-close)');
     if (f) f.focus();
     document.body.style.overflow = 'hidden';
   },
@@ -277,12 +277,15 @@ const validateField = (input) => {
   if (!group) return true;
   const err = group.querySelector('.error-message');
   let ok = true;
-  if (input.required && !String(input.value || '').trim()) ok = false;
-  else if (input.type === 'email' && input.value.trim())
-    ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim());
-  else if (input.type === 'date' && input.value) {
-    const s = new Date(input.value); const h = new Date(); h.setHours(0,0,0,0);
-    ok = s.getTime() >= h.getTime();
+  const value = String(input.value || '').trim();
+  if (input.required && !value) ok = false;
+  else if (input.type === 'email' && value)
+    ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  else if (input.type === 'date' && value) {
+    const s = new Date(value);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    ok = s.getTime() >= today.getTime();
   }
   input.classList.toggle('error', !ok);
   if (err) err.classList.toggle('visible', !ok);
@@ -439,38 +442,38 @@ const handleTableAction = async (e) => {
   if (action === 'cancel') {
     if (!confirm('¿Estás seguro de cancelar esta cita?')) return;
 
-    // Optimistic update (marca Cancelada en UI primero)
-    const before = appointmentStorage.findById(id);
-    appointmentStorage.delete(id);
-    updateMetrics();
-    filterAppointments();
-
-    let success = false;
-    let msg = null;
-    try {
-      const res = await fetch(`${API_BASE}/citas/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      let payload;
-      try { payload = await res.json(); } catch { payload = { success: res.ok }; }
-      success = res.ok && payload.success;
-      msg = payload.message;
-    } catch (err) {
-      console.warn('[SmileTrack] Cancel cita offline:', err);
-      success = true; // Se guardó en LocalStorage, se sincroniza luego
-      msg = 'Cancelación guardada localmente';
+    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (!tokenInput) {
+      showToast('No se pudo cancelar la cita: token antiforgery no encontrado.', 'error');
+      return;
     }
 
-    if (success) {
-      showToast(msg || 'Cita cancelada exitosamente', before?.status === 'Cancelada' ? 'warning' : 'success');
-    } else {
-      // Rollback si server no aceptó
-      if (before) appointmentStorage.update(id, { status: before.status, statusClass: before.statusClass, noShow: before.noShow });
-      updateMetrics();
-      filterAppointments();
-      showToast(msg || 'No fue posible cancelar la cita en el servidor', 'error');
-    }
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/gestion-de-citas/eliminar-cita';
+    form.style.display = 'none';
+
+    const tokenField = document.createElement('input');
+    tokenField.type = 'hidden';
+    tokenField.name = '__RequestVerificationToken';
+    tokenField.value = tokenInput.value;
+    form.appendChild(tokenField);
+
+    const idField = document.createElement('input');
+    idField.type = 'hidden';
+    idField.name = 'IdCita';
+    idField.value = id;
+    form.appendChild(idField);
+
+    const returnUrlField = document.createElement('input');
+    returnUrlField.type = 'hidden';
+    returnUrlField.name = 'ReturnUrl';
+    returnUrlField.value = window.location.pathname + window.location.search;
+    form.appendChild(returnUrlField);
+
+    document.body.appendChild(form);
+    form.submit();
+    return;
   }
 };
 
@@ -528,69 +531,17 @@ const openEditModal = (id) => {
   modalManager.open('modalEditAppointment');
 };
 
-const submitEditAppointment = async (e) => {
-  e.preventDefault();
+const submitEditAppointment = (e) => {
   const form = e.currentTarget;
-  if (!validateForm(form)) { showToast('Por favor completa los campos requeridos', 'error'); return; }
-
-  const id = safeGetElement('editAppointmentId').value;
-  const dateVal = safeGetElement('editDate').value;
-  const timeVal = safeGetElement('editTime').value;
-  const newStatus = safeGetElement('editStatus').value;
-  const notes = safeGetElement('editNotes').value.trim();
-  const dateFormatted = new Date(dateVal + 'T12:00:00').toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
-  const statusClassMap = {
-    'Atendida': 'status-atendida', 'En consulta': 'status-consulta',
-    'Agendada': 'status-agendada', 'Confirmada': 'status-agendada',
-    'Cancelada': 'status-no-asistio', 'No asistió': 'status-no-asistio'
-  };
-
-  const before = appointmentStorage.findById(id);
-  const patches = {
-    patient: safeGetElement('editPatient').value.trim(),
-    date: dateFormatted, dateISO: dateVal,
-    time: fmtHora12(`${dateVal}T${timeVal}:00`), timeISO: timeVal,
-    doctor: safeGetElement('editDoctor').value,
-    service: safeGetElement('editService').value,
-    office: safeGetElement('editOffice').value,
-    status: newStatus, statusClass: statusClassMap[newStatus] || 'status-agendada',
-    notes
-  };
-
-  // Optimistic update
-  appointmentStorage.update(id, patches);
-  updateMetrics();
-  filterAppointments();
-  modalManager.close('modalEditAppointment');
-
-  const body = buildServerBody({ ...before, ...patches }, patches);
-  let success = false, msg = null;
-  try {
-    const res = await fetch(`${API_BASE}/citas/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(body)
-    });
-    let payload;
-    try { payload = await res.json(); } catch { payload = { success: res.ok }; }
-    success = res.ok && payload.success;
-    msg = payload.message;
-  } catch (err) {
-    console.warn('[SmileTrack] PUT cita offline:', err);
-    success = true;
-    msg = 'Cita actualizada localmente (sin conexión)';
+  if (!validateForm(form)) {
+    e.preventDefault();
+    showToast('Por favor completa los campos requeridos.', 'error');
+    return;
   }
-  if (success) showToast(msg || 'Cita actualizada exitosamente',
-    msg && msg.includes('local') ? 'warning' : 'success');
-  else {
-    if (before) appointmentStorage.update(id, {
-      patient: before.patient, date: before.date, dateISO: before.dateISO,
-      time: before.time, timeISO: before.timeISO, doctor: before.doctor,
-      service: before.service, office: before.office, status: before.status,
-      statusClass: before.statusClass, notes: before.notes || ''
-    });
-    updateMetrics(); filterAppointments();
-    showToast(msg || 'No fue posible actualizar la cita en el servidor', 'error');
+  const submitBtn = form.querySelector('[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando...';
   }
 };
 
@@ -628,7 +579,9 @@ const initModalHandlers = () => {
     safeGetElement(btnId)?.addEventListener('click', () => modalManager.close(mid));
   });
   document.querySelectorAll('.modal-overlay').forEach(o =>
-    o.addEventListener('click', (e) => { if (e.target === o) modalManager.close(o.id); })
+    o.addEventListener('click', (e) => {
+      if (e.target === o) modalManager.close(o.id);
+    })
   );
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -691,9 +644,12 @@ const initPagination = () => {
 const initNewAppointmentButtons = () => {
   const open = () => {
     const form = safeGetElement('formNewAppointment');
-    if (form) form.reset();
-    document.querySelectorAll('#modalNewAppointment .error').forEach(x => x.classList.remove('error'));
-    document.querySelectorAll('#modalNewAppointment .error-message.visible').forEach(x => x.classList.remove('visible'));
+    if (form) {
+      form.reset();
+      form.querySelectorAll('input, select, textarea').forEach(input => input.classList.remove('error'));
+      form.querySelectorAll('.error-message.visible').forEach(x => x.classList.remove('visible'));
+      form.querySelectorAll('input, select, textarea').forEach(input => input.removeAttribute('aria-invalid'));
+    }
     const dtInp = safeGetElement('newDate');
     if (dtInp) dtInp.min = new Date().toISOString().split('T')[0];
     modalManager.open('modalNewAppointment');
@@ -702,60 +658,17 @@ const initNewAppointmentButtons = () => {
   safeGetElement('fabNuevaCita')?.addEventListener('click', open);
 };
 
-const submitNewAppointment = async (e) => {
-  e.preventDefault();
+const submitNewAppointment = (e) => {
   const form = e.currentTarget;
-  if (!validateForm(form)) { showToast('Por favor completa los campos requeridos', 'error'); return; }
-
-  const dateVal = safeGetElement('newDate').value;
-  const timeVal = safeGetElement('newTime').value;
-  const status = 'Agendada';
-  const statusClassMap = {
-    'Atendida':'status-atendida','En consulta':'status-consulta',
-    'Agendada':'status-agendada','Confirmada':'status-agendada',
-    'Cancelada':'status-no-asistio','No asistió':'status-no-asistio'
-  };
-
-  const patient = safeGetElement('newPatient').value.trim();
-  const doctor = safeGetElement('newDoctor').value;
-  const service = safeGetElement('newService').value;
-  const office = safeGetElement('newOffice').value;
-  const notes = safeGetElement('newNotes').value.trim();
-  const dateFormatted = new Date(dateVal + 'T12:00:00').toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
-
-  const added = appointmentStorage.add({
-    patient, date: dateFormatted, dateISO: dateVal,
-    time: fmtHora12(`${dateVal}T${timeVal}:00`), timeISO: timeVal,
-    doctor, service, office, status, statusClass: statusClassMap[status],
-    highlight: false, noShow: false, notes
-  });
-  updateMetrics();
-  filterAppointments();
-  modalManager.close('modalNewAppointment');
-  form.reset();
-
-  // Intento POST al endpoint de creación (si existe el JSON endpoint; sino, falla silencioso y queda en LocalStorage)
-  try {
-    // Se prefiere usar el endpoint de formulario estándar (CrearCitaDesdeAgenda) como primer intento
-    const body = new URLSearchParams({
-      IdPaciente: '0', IdProfesional: '', IdServicio: '0',
-      FechaHora: `${dateVal}T${timeVal}:00`, Estado: 'programada', Notas: notes,
-      NombrePaciente: patient, NombreProfesional: doctor, NombreServicio: service
-    });
-    const res = await fetch('/gestion-de-citas/st-adm-09-citas/crear-cita', {
-      method: 'POST',
-      headers: { ...getAuthHeaders(), 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-      body: body.toString()
-    });
-    if (!res.ok) throw new Error('status ' + res.status);
-    try {
-      const j = await res.json();
-      if (j && j.idCita) added.id = j.idCita;
-    } catch {}
-    showToast('Cita creada exitosamente en servidor');
-  } catch (err) {
-    console.warn('[SmileTrack] Crear cita offline:', err);
-    showToast('⚠️ Cita guardada localmente (sin conexión)', 'warning');
+  if (!validateForm(form)) {
+    e.preventDefault();
+    showToast('Por favor completa los campos requeridos.', 'error');
+    return;
+  }
+  const submitBtn = form.querySelector('[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Guardando...';
   }
 };
 
@@ -764,21 +677,8 @@ const submitNewAppointment = async (e) => {
 // ═══════════════════════════════════════════════════════════════════
 
 async function fetchAppointments() {
-  try {
-    const res = await fetch(`${API_BASE}/citas?page=1&pageSize=${API_PAGE_SIZE}`, {
-      method: 'GET',
-      headers: getAuthHeaders()
-    });
-    if (!res.ok) throw new Error(`status ${res.status}`);
-    const payload = await res.json();
-    if (payload && payload.success && Array.isArray(payload.data)) {
-      appointmentStorage.replaceAll(payload.data.map(mapServerToClient));
-      return;
-    }
-    throw new Error('payload inválido');
-  } catch (err) {
-    console.warn('[SmileTrack] Fetch citas recepción: fallback LocalStorage', err);
-  }
+  console.warn('[SmileTrack] No existe un endpoint GET /api/citas para esta vista. Usando fallback LocalStorage.');
+  return appointmentStorage.getAll();
 }
 
 // ═══════════════════════════════════════════════════════════════════

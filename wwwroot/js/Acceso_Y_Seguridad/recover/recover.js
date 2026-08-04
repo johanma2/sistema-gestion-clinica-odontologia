@@ -404,7 +404,12 @@ class PasswordRecovery {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': this.getCsrfToken()
             },
-            body: JSON.stringify({ correo: email, codigo: code, nuevaContrasena: newPassword })
+            body: JSON.stringify({
+                correo: email,
+                codigo: code,
+                nuevaContrasena: newPassword,
+                confirmarContrasena: this.confirmPassInput.value
+            })
         });
 
         if (!response.ok) {

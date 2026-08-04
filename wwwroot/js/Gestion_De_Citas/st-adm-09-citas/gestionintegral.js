@@ -8,19 +8,21 @@
  * PROPÓSITO:
  * Gestiona la interactividad de la tabla de citas del administrador:
  * búsqueda debounced, filtrado local dinámico, control de modales,
- * guardado y eliminación consumiendo la API REST /api/citas.
+ * y delega el guardado/cancelación al backend MVC en lugar de consumir
+ * directamente un API REST PUT/DELETE en /api/citas.
  *
  * DECISIONES TÉCNICAS:
- * - Autenticación dual: JWT (sessionStorage) con fallback a Cookie
- * - Fallback offline a LocalStorage cuando la API no responde
- * - Mapeo centralizado server↔client para evitar inconsistencias
- * - Debounce en búsqueda para evitar saturar la API
+ * - Predomina SSR en la vista de citas del administrador
+ * - Guardado / cancelación se realizan mediante formularios MVC existentes
+ * - LocalStorage se usa solo como fallback de datos para el cliente
+ * - Debounce en búsqueda para evitar recargas innecesarias
  * - Notificaciones no bloqueantes (toasts) para mejor UX
  *
  * NOTAS DE MANTENIMIENTO:
- * - API_BASE se mantiene fijo en '/api' según configuración del proyecto
- * - Comentarios explican el "por qué" de las decisiones de diseño
- * - El mapeo server↔cliente se concentra en helpers específicos
+ * - Esta página no expone un endpoint genérico GET /api/citas para listado
+ * - Los formularios deben publicar a /gestion-de-citas/guardar-cita y
+ *   /gestion-de-citas/eliminar-cita según la implementación del backend
+ * - El código cliente debe funcionar tanto con SSR como con datos locales
  * ============================================
  */
 
@@ -739,121 +741,52 @@ const closeAppointmentModal = () => {
 };
 
 /**
- * Guarda los cambios de una cita vía PUT /api/citas/{id}.
- * Actualiza la fila en memoria y muestra notificación.
+ * Guarda los cambios de una cita mediante el formulario MVC existente.
+ * No depende de un endpoint PUT /api/citas/{id} directo.
  *
  * @param {number} id - ID de la cita a actualizar
  */
-const saveAppointmentEdit = async (id) => {
+const saveAppointmentEdit = (id) => {
     const appointment = getAppointmentById(id);
     if (!appointment) return;
 
-    // Obtener valores del formulario
-    const newDate = safeGetElement('editDate')?.value || appointment.date;
-    const newTime = safeGetElement('editTime')?.value || appointment.time;
-    const newService = safeGetElement('editService')?.value || appointment.service;
-    const newStatus = safeGetElement('editStatus')?.value || appointment.status;
-
-    // Crear objeto actualizado localmente
-    const updatedLocal = {
-        ...appointment,
-        date: newDate,
-        time: newTime,
-        service: newService,
-        status: newStatus
-    };
-
-    // Preparar cuerpo para el ViewModel CitaViewModel
     const rawData = appointment._raw || {};
-    const fechaHoraIso = newDate && newTime
-        ? `${newDate}T${newTime}:00`
-        : rawData.FechaHora
-            ? rawData.FechaHora
-            : new Date().toISOString();
+    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (!tokenInput) {
+        showToast('No se pudo guardar la cita: token antiforgery no encontrado.', 'error');
+        return;
+    }
 
-    const requestBody = {
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/gestion-de-citas/guardar-cita';
+    form.style.display = 'none';
+
+    const fields = {
+        __RequestVerificationToken: tokenInput.value,
+        ReturnUrl: window.location.pathname + window.location.search,
         IdCita: id,
         IdPaciente: rawData.IdPaciente || appointment.id || 0,
-        IdProfesional: rawData.IdProfesional || null,
+        IdProfesional: rawData.IdProfesional || 0,
+        IdConsultorio: rawData.IdConsultorio || 0,
         IdServicio: rawData.IdServicio || 0,
-        FechaHora: fechaHoraIso,
-        Estado: mapEstadoClientToServer(newStatus),
+        IdEstado: rawData.IdEstado || 0,
+        Fecha: safeGetElement('editDate')?.value || appointment.date,
+        HoraInicio: safeGetElement('editTime')?.value || appointment.time,
+        Estado: safeGetElement('editStatus')?.value || rawData.Estado || appointment.status,
         Notas: rawData.Notas || ''
     };
 
-    // Deshabilitar botón durante el guardado
-    const editButton = safeGetElement('modalAppointmentEdit');
-    const originalButtonText = editButton?.textContent;
-    if (editButton) {
-        editButton.disabled = true;
-        editButton.textContent = 'Guardando...';
-    }
+    Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = String(value ?? '');
+        form.appendChild(input);
+    });
 
-    let saveSuccessful = false;
-
-    try {
-        const response = await fetch(`${API_BASE}/citas/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(requestBody)
-        });
-
-        let payload;
-        try {
-            payload = await response.json();
-        } catch {
-            payload = { success: response.ok };
-        }
-
-        if (response.ok && payload.success) {
-            // Actualizar en memoria
-            const index = appointments.findIndex(appointment => appointment.id === id);
-            if (index !== -1) {
-                appointments[index] = {
-                    ...updatedLocal,
-                    _raw: {
-                        ...(appointment._raw || {}),
-                        Estado: requestBody.Estado,
-                        FechaHora: requestBody.FechaHora
-                    }
-                };
-            } else {
-                appointments.unshift(updatedLocal);
-            }
-
-            appointmentsStorage.save(appointments);
-            saveSuccessful = true;
-
-            renderAppointments();
-            updateStats();
-            closeAppointmentModal();
-            showToast(`✅ Cita de ${appointment.patient} actualizada`);
-        } else {
-            showToast(`❌ ${payload.message || 'No fue posible actualizar la cita'}`, 'error');
-        }
-    } catch (networkError) {
-        console.error('[SmileTrack] Actualizar cita error red:', networkError);
-
-        // Offline fallback: guardamos localmente para no perder el cambio
-        const index = appointments.findIndex(appointment => appointment.id === id);
-        if (index !== -1) {
-            appointments[index] = updatedLocal;
-        }
-
-        appointmentsStorage.save(appointments);
-        renderAppointments();
-        updateStats();
-        closeAppointmentModal();
-        saveSuccessful = true;
-
-        showToast('⚠️ Cita guardada localmente (sin conexión)', 'warning');
-    } finally {
-        // Restaurar estado del botón
-        if (editButton) {
-            editButton.disabled = false;
-            editButton.textContent = originalButtonText || 'Guardar';
-        }
-    }
+    document.body.appendChild(form);
+    form.submit();
 };
 
 /**
@@ -861,57 +794,36 @@ const saveAppointmentEdit = async (id) => {
  *
  * @param {number} id - ID de la cita a cancelar
  */
-const cancelAppointment = async (id) => {
+const cancelAppointment = (id) => {
     if (!confirm('¿Estás seguro de cancelar esta cita?')) return;
 
-    let operationSuccessful = false;
-    let serverMessage = null;
-
-    try {
-        const response = await fetch(`${API_BASE}/citas/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders()
-        });
-
-        let payload;
-        try {
-            payload = await response.json();
-        } catch {
-            payload = { success: response.ok };
-        }
-
-        if (response.ok && payload.success) {
-            operationSuccessful = true;
-            serverMessage = payload.message;
-        } else {
-            serverMessage = payload.message ||
-                (response.status === 403 ? 'No tienes permiso para cancelar citas' : 'No fue posible cancelar');
-        }
-    } catch (networkError) {
-        console.warn('[SmileTrack] Cancelar offline:', networkError);
+    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (!tokenInput) {
+        showToast('No se pudo cancelar la cita: token antiforgery no encontrado.', 'error');
+        return;
     }
 
-    // Aplicamos el cambio localmente tanto si API respondió como si caímos en offline
-    // (en offline el cambio queda marcado para sincronizar)
-    const index = appointments.findIndex(appointment => appointment.id === id);
-    if (index !== -1) {
-        appointments[index].status = 'cancelada';
-        if (appointments[index]._raw) {
-            appointments[index]._raw.Estado = 'cancelada';
-        }
-    }
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/gestion-de-citas/eliminar-cita';
+    form.style.display = 'none';
 
-    appointmentsStorage.save(appointments);
-    renderAppointments();
-    updateStats();
+    const fields = {
+        __RequestVerificationToken: tokenInput.value,
+        ReturnUrl: window.location.pathname + window.location.search,
+        IdCita: id
+    };
 
-    if (operationSuccessful) {
-        showToast(serverMessage || '🗑️ Cita cancelada en servidor');
-    } else if (index !== -1) {
-        showToast(`⚠️ Cancelada localmente (sin conexión): ${serverMessage || ''}`, 'warning');
-    } else if (serverMessage) {
-        showToast('❌ ' + serverMessage, 'error');
-    }
+    Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = String(value ?? '');
+        form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
 };
 
 // ════════════════════════════════════════════════════════════════════
@@ -1187,57 +1099,22 @@ const initBanner = () => {
  * @returns {Promise<Array>} Array de citas mapeadas
  */
 async function fetchAppointments() {
-    try {
-        const response = await fetch(`${API_BASE}/citas?page=1&pageSize=${API_PAGE_SIZE}`, {
-            method: 'GET',
-            headers: getAuthHeaders()
-        });
-
-        if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                // Sesión expirada o sin rol: no caemos a localStorage para evitar datos viejos
-                throw new Error(response.status === 403 ? 'No tienes permiso para ver citas' : 'Sesión expirada');
-            }
-            throw new Error(`API status ${response.status}`);
-        }
-
-        const payload = await response.json();
-
-        if (payload && payload.success && Array.isArray(payload.data)) {
-            const mappedAppointments = payload.data.map(mapServerToClient);
-            appointmentsStorage.save(mappedAppointments);
-            return mappedAppointments;
-        }
-
-        throw new Error('Respuesta API inválida');
-    } catch (error) {
-        console.warn('[SmileTrack] Fallback a datos locales:', error);
-        return appointmentsStorage.load();
-    }
+    // No hay un endpoint GET /api/citas disponible en el backend actual para esta vista.
+    // Usamos los datos locales / cache como fallback estable.
+    console.warn('[SmileTrack] No existe GET /api/citas para esta vista. Usando datos locales/cache.');
+    return appointmentsStorage.load();
 }
 
 /**
- * Agrega una nueva cita vía POST /api/citas.
- * Si falla, usa el almacenamiento local como fallback.
+ * Genera una nueva cita usando el almacenamiento local cuando la API no está disponible.
+ * En la vista actual no existe un endpoint POST /api/citas en el backend.
  *
  * @param {Object} appointment - Datos de la cita a crear
  * @returns {Promise<Object>} Resultado de la operación
  */
 async function addAppointmentAPI(appointment) {
-    try {
-        const response = await fetch(`${API_BASE}/citas`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(appointment)
-        });
-
-        if (!response.ok) throw new Error('Add failed');
-
-        return await response.json();
-    } catch (error) {
-        console.warn('[SmileTrack] Add offline:', error);
-        return appointmentsStorage.addAppointment(appointment);
-    }
+    console.warn('[SmileTrack] Endpoint POST /api/citas no disponible. Guardando localmente.');
+    return appointmentsStorage.addAppointment(appointment);
 }
 
 // ════════════════════════════════════════════════════════════════════

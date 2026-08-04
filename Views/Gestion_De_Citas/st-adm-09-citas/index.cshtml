@@ -209,8 +209,8 @@
                                 var estados = new[] { "programada", "confirmada", "atendida", "cancelada" };
                                 foreach (var estado in estados)
                                 {
-                                    var selected = estadoFilter == estado ? "selected" : "";
-                                    <option value="@estado" selected="@selected">@char.ToUpper(estado[0])@estado.Substring(1)</option>
+                                    var isSelected = estadoFilter == estado;
+                                    <option value="@estado" @(isSelected ? "selected" : "")>@char.ToUpper(estado[0])@estado.Substring(1)</option>
                                 }
                             }
                         </select>
@@ -221,10 +221,8 @@
                             <option value="">Cualquier profesional</option>
                             @foreach (var profesional in profesionalesFilterOptions)
                             {
-                                var selected = ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString() 
-                                    ? "selected" 
-                                    : "";
-                                <option value="@profesional.IdProfesional" selected="@selected">
+                                var isSelected = ViewData["ProfesionalFilter"]?.ToString() == profesional.IdProfesional.ToString();
+                                <option value="@profesional.IdProfesional" @(isSelected ? "selected" : "")>
                                     @profesional.NombreProfesional
                                 </option>
                             }
@@ -361,7 +359,7 @@
                                     @foreach (var estado in new[] { "Programada", "Confirmada", "Atendida", "Cancelada" })
                                     {
                                         var isSelected = string.Equals(cita.Estado, estado, StringComparison.OrdinalIgnoreCase);
-                                        <option value="@estado.ToLower()" selected="@(isSelected ? "selected" : "")">
+                                        <option value="@estado.ToLower()" @(isSelected ? "selected" : "")>
                                             @estado
                                         </option>
                                     }
@@ -572,7 +570,7 @@
             <h2 class="modal-title" id="modalCitaTitle">
                 @(isEditing ? "Editar Cita" : "Nueva Cita")
             </h2>
-            <form method="post" action="/gestion-de-citas/guardar-cita">
+            <form method="post" action="/gestion-de-citas/guardar-cita" novalidate>
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
                 <input type="hidden" name="IdCita" value="@(editingCita?.IdCita ?? 0)" />
@@ -580,47 +578,50 @@
                 <div class="form-grid">
                     <!-- Paciente -->
                     <div class="form-group">
-                        <label class="form-label">Paciente *</label>
-                        <select name="IdPaciente" class="form-input" required>
+                        <label class="form-label" for="idPacienteCita">Paciente *</label>
+                        <select id="idPacienteCita" name="IdPaciente" class="form-input" required aria-required="true" aria-describedby="error-idPacienteCita">
                             <option value="">Seleccione paciente</option>
                             @foreach (var paciente in pacientes)
                             {
-                                var selected = editingCita?.IdPaciente == paciente.IdPaciente ? "selected" : "";
-                                <option value="@paciente.IdPaciente" selected="@selected">
+                                var isSelectedPaciente = editingCita?.IdPaciente == paciente.IdPaciente;
+                                <option value="@paciente.IdPaciente" @(isSelectedPaciente ? "selected" : "")>
                                     @paciente.NombresCompleto
                                 </option>
                             }
                         </select>
+                        <span class="error-message" id="error-idPacienteCita" role="alert">Por favor selecciona un paciente.</span>
                     </div>
 
                     <!-- Profesional -->
                     <div class="form-group">
-                        <label class="form-label">Profesional</label>
-                        <select name="IdProfesional" class="form-input">
+                        <label class="form-label" for="idProfesionalCita">Profesional</label>
+                        <select id="idProfesionalCita" name="IdProfesional" class="form-input" aria-describedby="error-idProfesionalCita">
                             <option value="">Seleccione profesional</option>
                             @foreach (var profesional in profesionales)
                             {
-                                var selected = editingCita?.IdProfesional == profesional.IdProfesional ? "selected" : "";
-                                <option value="@profesional.IdProfesional" selected="@selected">
+                                var isSelectedProfesional = editingCita?.IdProfesional == profesional.IdProfesional;
+                                <option value="@profesional.IdProfesional" @(isSelectedProfesional ? "selected" : "")>
                                     @profesional.NombreProfesional
                                 </option>
                             }
                         </select>
+                        <span class="error-message" id="error-idProfesionalCita" role="alert">Por favor selecciona un profesional.</span>
                     </div>
 
                     <!-- Consultorio -->
                     <div class="form-group">
-                        <label class="form-label">Consultorio</label>
-                        <select name="IdConsultorio" class="form-input">
+                        <label class="form-label" for="idConsultorioCita">Consultorio</label>
+                        <select id="idConsultorioCita" name="IdConsultorio" class="form-input" aria-describedby="error-idConsultorioCita">
                             <option value="">Seleccione consultorio</option>
                             @foreach (var consultorio in (ViewData["Consultorios"] as List<SmileTrack_MVC.Models.Entities.Consultorio> ?? new()))
                             {
-                                var selected = editingCita?.IdConsultorio == consultorio.IdConsultorio ? "selected" : "";
-                                <option value="@consultorio.IdConsultorio" selected="@selected">
+                                var isSelectedConsultorio = editingCita?.IdConsultorio == consultorio.IdConsultorio;
+                                <option value="@consultorio.IdConsultorio" @(isSelectedConsultorio ? "selected" : "")>
                                     @consultorio.Nombre
                                 </option>
                             }
                         </select>
+                        <span class="error-message" id="error-idConsultorioCita" role="alert">Por favor selecciona un consultorio.</span>
                     </div>
 
                     <!-- Fecha -->
@@ -633,18 +634,21 @@
                             class="form-input" 
                             min="@DateTime.Today.ToString("yyyy-MM-dd")"
                             value="@(editingCita?.Fecha.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" 
-                            required />
+                            required aria-required="true" aria-describedby="error-fechaCita" />
+                        <span class="error-message" id="error-fechaCita" role="alert">Por favor selecciona una fecha válida.</span>
                     </div>
 
                     <!-- Hora Inicio -->
                     <div class="form-group">
-                        <label class="form-label" for="horaInicioCita">Hora Inicio</label>
+                        <label class="form-label" for="horaInicioCita">Hora Inicio *</label>
                         <input 
                             type="time" 
                             id="horaInicioCita"
                             name="HoraInicio" 
                             class="form-input" 
-                            value="@(editingCita?.HoraInicio?.ToString("hh\\:mm") ?? "09:00")" />
+                            value="@(editingCita?.HoraInicio?.ToString("hh\\:mm") ?? "09:00")" 
+                            required aria-required="true" aria-describedby="error-horaInicioCita" />
+                        <span class="error-message" id="error-horaInicioCita" role="alert">Por favor selecciona una hora de inicio.</span>
                     </div>
 
                     <!-- Hora Fin -->
@@ -661,15 +665,16 @@
                     <!-- Estado -->
                     <div class="form-group">
                         <label class="form-label" for="idEstadoCita">Estado *</label>
-                        <select id="idEstadoCita" name="IdEstado" class="form-input">
+                        <select id="idEstadoCita" name="IdEstado" class="form-input" required aria-required="true" aria-describedby="error-idEstadoCita">
                             @foreach (var estado in (ViewData["EstadosCita"] as List<SmileTrack_MVC.Models.Entities.EstadoCita> ?? new()))
                             {
-                                var selected = editingCita?.IdEstado == estado.IdEstado ? "selected" : "";
-                                <option value="@estado.IdEstado" selected="@selected">
+                                var isSelectedEstado = editingCita?.IdEstado == estado.IdEstado;
+                                <option value="@estado.IdEstado" @(isSelectedEstado ? "selected" : "")>
                                     @estado.NombreEstado
                                 </option>
                             }
                         </select>
+                        <span class="error-message" id="error-idEstadoCita" role="alert">Por favor selecciona un estado válido.</span>
                     </div>
 
                     <!-- Motivo consulta -->

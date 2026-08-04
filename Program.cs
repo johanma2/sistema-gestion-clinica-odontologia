@@ -16,6 +16,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Globalization;
 using System.Text.Json;
+using System.IO;
+using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -385,52 +387,73 @@ static async Task EnsureDatabaseSchemaAsync(IServiceProvider services, ILogger l
     {
         await db.Database.EnsureCreatedAsync();
 
-        var statements = new[]
-        {
-            """
-            IF COL_LENGTH(N'dbo.Usuario', N'codigo_recuperacion') IS NULL
-            BEGIN
-                ALTER TABLE [dbo].[Usuario] ADD [codigo_recuperacion] VARCHAR(255) NULL;
-            END
-            """,
-            """
-            IF COL_LENGTH(N'dbo.Usuario', N'fecha_expiracion_codigo') IS NULL
-            BEGIN
-                ALTER TABLE [dbo].[Usuario] ADD [fecha_expiracion_codigo] DATETIME NULL;
-            END
-            """,
-            """
-            IF COL_LENGTH(N'dbo.Usuario', N'intentos_fallidos') IS NULL
-            BEGIN
-                ALTER TABLE [dbo].[Usuario] ADD [intentos_fallidos] INT NOT NULL CONSTRAINT [DF_Usuario_IntentosFallidos] DEFAULT 0;
-            END
-            """,
-            """
-            IF COL_LENGTH(N'dbo.Usuario', N'ultimo_logout') IS NULL
-            BEGIN
-                ALTER TABLE [dbo].[Usuario] ADD [ultimo_logout] DATETIME NULL;
-            END
-            """,
-            """
-            IF COL_LENGTH(N'dbo.Cita', N'estado') IS NULL
-            BEGIN
-                ALTER TABLE [dbo].[Cita] ADD [estado] VARCHAR(30) NOT NULL CONSTRAINT [DF_Cita_Estado] DEFAULT 'programada';
-            END
-            """,
-            """
-            IF COL_LENGTH(N'dbo.Cita', N'notas') IS NULL
-            BEGIN
-                ALTER TABLE [dbo].[Cita] ADD [notas] NVARCHAR(MAX) NULL;
-            END
-            """
-        };
+        var scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "Database", "SCRIPT_SQL_UNICO_SMILETRACK.sql");
 
-        foreach (var statement in statements)
+        if (File.Exists(scriptPath))
         {
-            await db.Database.ExecuteSqlRawAsync(statement);
+            var sql = await File.ReadAllTextAsync(scriptPath);
+            var batches = Regex.Split(sql, @"^\s*GO\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+            foreach (var batch in batches)
+            {
+                var trimmed = batch.Trim();
+                if (string.IsNullOrWhiteSpace(trimmed))
+                    continue;
+
+                await db.Database.ExecuteSqlRawAsync(trimmed);
+            }
+
+            logger.LogInformation("✅ Script unificado ejecutado desde {ScriptPath}", scriptPath);
         }
+        else
+        {
+            // Fallback: apply minimal column fixes required by the runtime model
+            var statements = new[]
+            {
+                """
+                IF COL_LENGTH(N'dbo.Usuario', N'codigo_recuperacion') IS NULL
+                BEGIN
+                    ALTER TABLE [dbo].[Usuario] ADD [codigo_recuperacion] VARCHAR(255) NULL;
+                END
+                """,
+                """
+                IF COL_LENGTH(N'dbo.Usuario', N'fecha_expiracion_codigo') IS NULL
+                BEGIN
+                    ALTER TABLE [dbo].[Usuario] ADD [fecha_expiracion_codigo] DATETIME NULL;
+                END
+                """,
+                """
+                IF COL_LENGTH(N'dbo.Usuario', N'intentos_fallidos') IS NULL
+                BEGIN
+                    ALTER TABLE [dbo].[Usuario] ADD [intentos_fallidos] INT NOT NULL CONSTRAINT [DF_Usuario_IntentosFallidos] DEFAULT 0;
+                END
+                """,
+                """
+                IF COL_LENGTH(N'dbo.Usuario', N'ultimo_logout') IS NULL
+                BEGIN
+                    ALTER TABLE [dbo].[Usuario] ADD [ultimo_logout] DATETIME NULL;
+                END
+                """,
+                """
+                IF COL_LENGTH(N'dbo.Cita', N'estado') IS NULL
+                BEGIN
+                    ALTER TABLE [dbo].[Cita] ADD [estado] VARCHAR(30) NOT NULL CONSTRAINT [DF_Cita_Estado] DEFAULT 'programada';
+                END
+                """,
+                """
+                IF COL_LENGTH(N'dbo.Cita', N'notas') IS NULL
+                BEGIN
+                    ALTER TABLE [dbo].[Cita] ADD [notas] NVARCHAR(MAX) NULL;
+                END
+                """
+            };
 
-        logger.LogInformation("✅ Esquema de base de datos verificado y corregido para login y citas.");
+            foreach (var statement in statements)
+            {
+                await db.Database.ExecuteSqlRawAsync(statement);
+            }
+
+            logger.LogInformation("✅ Esquema de base de datos verificado y corregido para login y citas (fallback).");
+        }
     }
     catch (Exception ex)
     {
@@ -755,8 +778,22 @@ _ = Task.Run(async () =>
     var fakePacientes = await db.Pacientes.Where(p => p.Nombres == "Paciente" && p.Apellidos == "Prueba").ToListAsync();
     if (fakePacientes.Count > 0)
     {
-        db.Pacientes.RemoveRange(fakePacientes);
-        await db.SaveChangesAsync();
+        var fakePacienteIds = fakePacientes.Select(p => p.IdPaciente).ToArray();
+        var pacientesConHistoria = await db.HistoriasClinicas
+            .Where(h => fakePacienteIds.Contains(h.IdPaciente))
+            .Select(h => h.IdPaciente)
+            .Distinct()
+            .ToListAsync();
+
+        var pacientesRemovibles = fakePacientes
+            .Where(p => !pacientesConHistoria.Contains(p.IdPaciente))
+            .ToList();
+
+        if (pacientesRemovibles.Count > 0)
+        {
+            db.Pacientes.RemoveRange(pacientesRemovibles);
+            await db.SaveChangesAsync();
+        }
     }
 
     if (!await db.Pacientes.AnyAsync())

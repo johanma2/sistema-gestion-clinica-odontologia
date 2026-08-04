@@ -44,7 +44,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     {
         try
         {
-            await CargarDatosProfesionales(editId, "/gestion-de-profesionales/st-adm-07-gestion-profesionales", new PaginationQuery
+            await CargarDatosProfesionales(editId, BuildReturnUrl(), new PaginationQuery
             {
                 Page = page,
                 PageSize = pageSize,
@@ -69,7 +69,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     {
         try
         {
-            await CargarDatosProfesionales(editId, "/gestion-de-profesionales/st-adm-14-reportes-clinicos", null, ct);
+            await CargarDatosProfesionales(editId, BuildReturnUrl(), null, ct);
             await CargarDatosReportesClinicos(page, pageSize, search, profesional, mes, ct);
             return View("~/Views/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/index.cshtml");
         }
@@ -88,7 +88,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     {
         try
         {
-            await CargarDatosProfesionales(editId, "/gestion-de-profesionales/st-odo-01-dashboard", null, ct);
+            await CargarDatosProfesionales(editId, BuildReturnUrl(), null, ct);
 
             var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (int.TryParse(userIdStr, out var userId))
@@ -151,7 +151,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     {
         try
         {
-            await CargarDatosProfesionales(editId, "/gestion-de-profesionales/st-odo-08-mis-reportes", null, ct);
+            await CargarDatosProfesionales(editId, BuildReturnUrl(), null, ct);
             return View("~/Views/Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.cshtml");
         }
         catch (Exception ex)
@@ -169,7 +169,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     {
         try
         {
-            await CargarDatosProfesionales(editId, "/gestion-de-profesionales/st-odo-09-perfil-profesional", null, ct);
+            await CargarDatosProfesionales(editId, BuildReturnUrl(), null, ct);
 
             var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (int.TryParse(userIdStr, out var userId))
@@ -437,7 +437,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                 return Redirect(returnUrlSafe);
             }
 
-            var profesional = await _context.Profesionales.FindAsync([IdProfesional], ct);
+            var profesional = await _context.Profesionales.FindAsync(IdProfesional, ct);
             if (profesional == null)
             {
                 TempData["ErrorValidacion"] = "El profesional que intenta desactivar no existe.";
@@ -803,6 +803,16 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
             return true;
         }
         return false;
+    }
+
+    private string BuildReturnUrl()
+    {
+        var queryParams = HttpContext.Request.Query
+            .Where(kvp => !string.Equals(kvp.Key, "editId", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Count == 0 ? null : kvp.Value.ToString());
+
+        var queryString = QueryString.Create(queryParams);
+        return HttpContext.Request.Path + queryString;
     }
 
     private static bool EsViolacionIntegridadReferencial(DbUpdateException dbex)

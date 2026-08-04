@@ -597,6 +597,12 @@ namespace SmileTrack_MVC.Services
                         "Código de recuperación GENERADO en BD pero el CORREO NO FUE ENVIADO. " +
                         "IdUsuario={IdUsuario}, Correo={Correo}, IdCodigoRecuperacion={IdCodigo}, MotivoFallo={Motivo}",
                         user.IdUsuario, correoNormalizado, recoveryCode.IdCodigo, motivoFalloEnvio ?? "desconocido");
+
+                    return new AuthResponse
+                    {
+                        Success = false,
+                        Message = "No fue posible enviar el correo de recuperación. Verifica la configuración SMTP e intenta nuevamente."
+                    };
                 }
 
                 await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "solicitud", ipCliente, ct);

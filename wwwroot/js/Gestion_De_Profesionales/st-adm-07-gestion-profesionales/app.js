@@ -451,34 +451,54 @@ const closeDetailModal = () => {
 };
 
 // Crea o actualiza profesional — submit nativo para que el antiforgery token viaje correctamente
+const setFieldValidity = (field, valid, message) => {
+  if (!field) return;
+  const errorId = field.getAttribute('aria-describedby');
+  const errorMessage = errorId ? document.getElementById(errorId) : null;
+  field.classList.toggle('error', !valid);
+  field.toggleAttribute('aria-invalid', !valid);
+  if (errorMessage) {
+    errorMessage.classList.toggle('visible', !valid);
+    if (!valid) errorMessage.textContent = message;
+  }
+};
+
+const validateProfessionalForm = (form) => {
+  let valid = true;
+  const requiredFields = [
+    { id: 'formNombres', message: 'Ingresa los nombres.' },
+    { id: 'formApellidos', message: 'Ingresa los apellidos.' },
+    { id: 'formRegistroMedico', message: 'Ingresa el registro médico.' },
+    { id: 'formStatus', message: 'Selecciona un estado.' }
+  ];
+
+  requiredFields.forEach(({ id, message }) => {
+    const field = safeGetElement(id);
+    const value = field?.value.trim() || '';
+    const fieldValid = Boolean(value);
+    setFieldValidity(field, fieldValid, message);
+    if (!fieldValid) valid = false;
+  });
+
+  return valid;
+};
+
 const saveProfessional = (e) => {
   const form = e.currentTarget;
-  const nombres = safeGetElement('formNombres')?.value.trim() || '';
-  const apellidos = safeGetElement('formApellidos')?.value.trim() || '';
-  const registroMedico = safeGetElement('formRegistroMedico')?.value.trim() || '';
-
-  // ── VALIDACIÓN CLIENTE ──────────────────────────────────────────────────────
-  // Si los campos obligatorios están vacíos, mostramos el toast y BLOQUEAMOS el envío.
-  // e.preventDefault() solo se llama aquí — nunca después de pasar la validación.
-  if (!nombres || !apellidos || !registroMedico) {
+  const valid = validateProfessionalForm(form);
+  if (!valid) {
     e.preventDefault();
-    showToast('⚠️ Completa nombres, apellidos y registro médico', 'warning');
+    showToast('⚠️ Completa los campos obligatorios marcados en rojo.', 'warning');
+    const firstInvalid = form.querySelector('[aria-invalid="true"]');
+    if (firstInvalid) firstInvalid.focus();
     return;
   }
 
-  // ── PROTECCIÓN DOBLE CLIC ───────────────────────────────────────────────────
-  // Una vez que la validación pasó, deshabilitamos el botón submit INMEDIATAMENTE.
-  // Esto evita que el usuario haga clic dos veces y cree dos registros duplicados en BD.
-  // No necesitamos volver a habilitarlo porque tras el POST el servidor redirige
-  // a la misma página (recarga completa) y el botón renace en su estado original.
   const submitBtn = form.querySelector('[type="submit"]');
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Guardando...';
   }
-
-  // Dejar que el formulario se envíe de forma nativa (POST real al servidor).
-  // El antiforgery token ya está en el <input hidden> del form, no hace falta fetch.
 };
 
 
@@ -491,6 +511,8 @@ const saveProfessional = (e) => {
  * WHY: Solo se usa en modo fallback; en producción las opciones vienen del servidor.
  */
 const populateSpecialties = () => {
+  if (shouldUseServerRenderedTable()) return;
+
   const select = safeGetElement('filterSpecialty');
   if (!select) return;
   

@@ -4,10 +4,8 @@
   <TargetFramework>net9.0</TargetFramework>
   <Nullable>enable</Nullable>
   <ImplicitUsings>enable</ImplicitUsings>
-  <NuGetAudit>false</NuGetAudit>
-
-  <!-- Optimizaciones para acelerar la compilación en desarrollo -->
-  <Optimize>false</Optimize>
+  <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   <TieredCompilation>true</TieredCompilation>
   <!-- Saltar validación de paquetes en cada build -->
   <SkipValidatePackageReferences>true</SkipValidatePackageReferences>

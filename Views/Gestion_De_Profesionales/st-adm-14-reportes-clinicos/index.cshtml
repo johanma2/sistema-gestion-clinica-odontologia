@@ -124,7 +124,7 @@ NOTAS DE MANTENIMIENTO:
                         @foreach (var prof in profesionales)
                         {
                             var selected = ViewData["ProfesionalFilter"]?.ToString() == prof ? "selected" : "";
-                            <option value="@prof" @selected>@prof</option>
+                            <option value="@prof" @(selected)>@prof</option>
                         }
                     </select>
                 </div>
@@ -137,7 +137,7 @@ NOTAS DE MANTENIMIENTO:
                             var mes = DateTime.Now.AddMonths(-i).ToString("yyyy-MM");
                             var mesTexto = DateTime.Now.AddMonths(-i).ToString("MMMM yyyy");
                             var selected = ViewData["MesFilter"]?.ToString() == mes ? "selected" : "";
-                            <option value="@mes" @selected>@mesTexto</option>
+                            <option value="@mes" @(selected)>@mesTexto</option>
                         }
                     </select>
                 </div>
