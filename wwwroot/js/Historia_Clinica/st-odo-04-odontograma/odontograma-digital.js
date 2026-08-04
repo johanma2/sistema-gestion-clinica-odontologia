@@ -750,7 +750,7 @@ function initSidebarAccordion() {
             header.setAttribute('aria-expanded', String(isExpanded));
         };
 
-        setExpanded(true); // Abierto por defecto
+        setExpanded(false); // Cerrado por defecto
 
         const toggle = () => {
             const isExpanded = header.getAttribute('aria-expanded') === 'true';
