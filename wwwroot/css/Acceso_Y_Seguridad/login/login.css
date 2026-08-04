@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════
    SMILETRACK — LOGIN STYLES (CSS PURO)
    ✅ CORREGIDO: Sin barra roja de validación
    ═══════════════════════════════════════ */
@@ -46,6 +46,7 @@ body {
 
 /* ── Material Symbols ── */
 .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   user-select: none;
   vertical-align: middle;
@@ -552,3 +553,163 @@ a:focus-visible {
 }
 /* Pequeña indentación visual para diferenciar sub-menú */
 .nav-group-items .nav-item { padding-left: 24px; }
+
+/* ═══════════════════════════════════════
+   MODAL DE ERROR DE AUTENTICACIÓN
+   Mostrado exclusivamente cuando las credenciales son inválidas (HTTP 401/403).
+   No se muestra para errores de validación de campos ni errores de servidor.
+   ═══════════════════════════════════════ */
+
+/* Overlay: fondo semitransparente que cubre toda la pantalla */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+  animation: modal-fade-in 0.2s ease;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Caja del modal */
+.modal-box {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  animation: modal-slide-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modal-slide-in {
+  from { transform: translateY(-24px) scale(0.96); opacity: 0; }
+  to   { transform: translateY(0) scale(1);        opacity: 1; }
+}
+
+/* Encabezado del modal */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 0.5rem;
+}
+
+.modal-header h2 {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #b91c1c;   /* rojo semántico para indicar error */
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Ícono decorativo antes del título de error */
+.modal-header h2::before {
+  content: '⚠️';
+  font-size: 1.1rem;
+}
+
+/* Botón × de cierre en el encabezado */
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.modal-close:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Cuerpo del modal: contiene el mensaje de error */
+.modal-body {
+  padding: 1.25rem 1.5rem;
+}
+
+.modal-body p {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  color: #374151;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Footer del modal: botón de cierre secundario */
+.modal-footer {
+  padding: 0.75rem 1.5rem 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Botón secundario "Cerrar" dentro del modal */
+.modal-footer .btn-secondary {
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.modal-footer .btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.modal-footer .btn-secondary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* ── Responsive: modal compacto en móviles ── */
+@media (max-width: 480px) {
+  .modal-box {
+    max-width: 100%;
+    border-radius: 0.75rem;
+  }
+
+  .modal-header {
+    padding: 1rem 1.25rem 0.625rem;
+  }
+
+  .modal-body {
+    padding: 1rem 1.25rem;
+  }
+
+  .modal-footer {
+    padding: 0.625rem 1.25rem 1rem;
+  }
+}

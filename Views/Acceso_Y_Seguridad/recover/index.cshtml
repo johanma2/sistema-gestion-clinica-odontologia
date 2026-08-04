@@ -13,7 +13,7 @@
     <title>Recuperar Contraseña - Smile Track</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;500;700,FILL@0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link href="@Url.Content("~/css/Acceso_Y_Seguridad/recover/recover.css")" rel="stylesheet" />
     <script>
         tailwind.config = {
@@ -115,8 +115,8 @@
                     <div>
                         <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide mb-2" for="newPassword">Nueva Contraseña</label>
                         <div class="relative">
-                            <input class="w-full pl-14 pr-12 py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-body text-white placeholder:text-white/40 outline-none" id="newPassword" name="newPassword" type="password" placeholder="Mínimo 8 caracteres" required minlength="8" />
-                            <button type="button" class="toggle-password absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors" aria-label="Mostrar contraseña">
+                            <input class="w-full pl-4 pr-12 py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-body text-white placeholder:text-white/40 outline-none" id="newPassword" name="newPassword" type="password" placeholder="Mínimo 8 caracteres" required minlength="8" />
+                            <button type="button" class="toggle-password absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors" aria-label="Mostrar contraseña" aria-pressed="false">
                                 <span class="visibility-icon material-symbols-outlined">visibility_off</span>
                             </button>
                         </div>
@@ -130,8 +130,8 @@
                     <div>
                         <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide mb-2" for="confirmPassword">Confirmar Contraseña</label>
                         <div class="relative">
-                            <input class="w-full pl-14 pr-12 py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-body text-white placeholder:text-white/40 outline-none" id="confirmPassword" name="confirmPassword" type="password" placeholder="Repite tu contraseña" required />
-                            <button type="button" class="toggle-password absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors" aria-label="Mostrar contraseña">
+                            <input class="w-full pl-4 pr-12 py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-body text-white placeholder:text-white/40 outline-none" id="confirmPassword" name="confirmPassword" type="password" placeholder="Repite tu contraseña" required />
+                            <button type="button" class="toggle-password absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors" aria-label="Mostrar contraseña" aria-pressed="false">
                                 <span class="visibility-icon material-symbols-outlined">visibility_off</span>
                             </button>
                         </div>

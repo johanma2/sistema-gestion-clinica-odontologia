@@ -1,4 +1,4 @@
-﻿@* ============================================
+@* ============================================
 SmileTrack — Gestión de Profesionales (st-adm-07-gestion-profesionales)
 ============================================
 Autor: Johan Santamaria
@@ -51,10 +51,12 @@ NOTAS DE MANTENIMIENTO:
   <title>SmileTrack — Gestión de Profesionales</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css?v=2")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/footer.css")" />
 </head>
 
 <body>
@@ -158,29 +160,14 @@ NOTAS DE MANTENIMIENTO:
           <label for="filterStatus" class="visually-hidden">Filtrar por estado</label>
           <select id="filterStatus" name="estado" class="status-select" aria-label="Filtrar profesionales por estado">
             <option value="">Todos los estados</option>
-            @if (ViewData["EstadoFilter"]?.ToString() == "activo")
-            {
-              <option value="activo" selected>Activo</option>
-            }
-            else
-            {
-              <option value="activo">Activo</option>
-            }
-            @if (ViewData["EstadoFilter"]?.ToString() == "vacaciones")
-            {
-              <option value="vacaciones" selected>Vacaciones</option>
-            }
-            else
-            {
-              <option value="vacaciones">Vacaciones</option>
-            }
-            @if (ViewData["EstadoFilter"]?.ToString() == "inactivo")
-            {
-              <option value="inactivo" selected>Inactivo</option>
-            }
-            else
-            {
-              <option value="inactivo">Inactivo</option>
+            @{
+              var estadoActual = ViewData["EstadoFilter"]?.ToString();
+              var estadosProf = new[] { ("activo", "Activo"), ("vacaciones", "Vacaciones"), ("inactivo", "Inactivo") };
+              foreach (var (clave, texto) in estadosProf)
+              {
+                var sel = estadoActual == clave ? "selected" : null;
+                <option value="@clave" selected="@sel">@texto</option>
+              }
             }
           </select>
         </div>
@@ -254,7 +241,23 @@ NOTAS DE MANTENIMIENTO:
                 <td>@profesional.Telefono</td>
                 <td><span class="badge-status badge-@((profesional.Estado ?? string.Empty).ToLowerInvariant())">@profesional.Estado</span></td>
                 <td>
+          @{
+            var profNombreCompleto = $"{profesional.Nombres} {profesional.Apellidos}".Trim();
+            var profIniciales = string.Concat(profNombreCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
+          }
           <div class="actions-cell">
+            <!-- Ver detalles: abrir modal con data desde atributos -->
+            <button class="btn-icon action-btn btn-view" type="button"
+                    data-id="@profesional.IdProfesional"
+                    data-name="@profNombreCompleto"
+                    data-initials="@profIniciales"
+                    data-specialty="@especialidadPrincipal"
+                    data-registry="@profesional.RegistroMedico"
+                    data-phone="@profesional.Telefono"
+                    data-status="@profesional.Estado"
+                    aria-label="Ver detalles de profesional @profesional.Nombres @profesional.Apellidos">
+              👁️ <span class="btn-text">Ver</span>
+            </button>
             <!-- Editar: GET con editId para que el Controller cargue el profesional en ViewData -->
             <a class="btn-icon edit action-btn" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { editId = profesional.IdProfesional })" aria-label="Editar profesional @profesional.Nombres @profesional.Apellidos" role="button">
               ✏️ <span class="btn-text">Editar</span>
@@ -506,12 +509,12 @@ NOTAS DE MANTENIMIENTO:
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
       <span style="font-size:1rem;">🦷</span>
-      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+      <p>© @DateTime.Now.Year Smile Track. Todos los derechos reservados.</p>
     </div>
     <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
-    <script src="@Url.Content("~/js/footer.js")"></script>
-    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
+  <!-- Scripts finales (fuera del footer para HTML válido) -->
+  <script src="@Url.Content("~/js/footer.js")"></script>
   <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/app.js")"></script>
 
 <script>
@@ -541,6 +544,71 @@ NOTAS DE MANTENIMIENTO:
         document.body.style.overflow = 'hidden';
       }
     };
+
+    // ═══ MODAL VER DETALLE: poblar desde data-attributes del botón 👁️ Ver ═══
+    (function () {
+      const SPEC_COLORS = {
+        'Odontología General': 'general', 'Ortodoncia': 'ortodoncia', 'Endodoncia': 'endodoncia',
+        'Odontopediatría': 'pediatria', 'Cirugía Oral': 'cirugia', 'Periodoncia': 'periodoncia',
+        'Implantología': 'implante', 'Rehabilitación Oral': 'rehab'
+      };
+      const getAvatarColor = (specName) => {
+        const key = SPEC_COLORS[specName] || 'general';
+        const map = { general: '#60a5fa', ortodoncia: '#a78bfa', endodoncia: '#fb7185',
+                      pediatria: '#4ade80', cirugia: '#f97316', periodoncia: '#facc15',
+                      implante: '#34d399', rehab: '#c084fc' };
+        return map[key] || map.general;
+      };
+      const getStatusBadgeClass = (status) => {
+        const map = { 'Activo': 'activo', 'Vacaciones': 'vacaciones', 'Inactivo': 'inactivo' };
+        return map[status] || 'inactivo';
+      };
+
+      const modalDetail = document.getElementById('modalDetail');
+      document.querySelectorAll('button.btn-view[data-id][data-name]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const avatar = document.getElementById('detailAvatar');
+          const name = document.getElementById('detailName');
+          const specialty = document.getElementById('detailSpecialty');
+          const registry = document.getElementById('detailRegistry');
+          const phone = document.getElementById('detailPhone');
+          const statusEl = document.getElementById('detailStatus');
+
+          if (avatar) {
+            avatar.textContent = btn.dataset.initials || '--';
+            avatar.style.background = getAvatarColor(btn.dataset.specialty || '');
+          }
+          if (name) name.textContent = btn.dataset.name || '--';
+          if (specialty) specialty.textContent = btn.dataset.specialty || '--';
+          if (registry) registry.textContent = btn.dataset.registry || '--';
+          if (phone) phone.textContent = btn.dataset.phone || '--';
+          if (statusEl) {
+            statusEl.textContent = btn.dataset.status || '--';
+            statusEl.className = `badge-status badge-${getStatusBadgeClass(btn.dataset.status || '')}`;
+          }
+
+          if (modalDetail) {
+            modalDetail.classList.add('open');
+            modalDetail.setAttribute('aria-hidden', 'false');
+            modalDetail.removeAttribute('inert');
+            document.body.style.overflow = 'hidden';
+            const closeBtn = document.getElementById('modalDetailClose');
+            if (closeBtn) closeBtn.focus();
+          }
+        });
+      });
+
+      if (modalDetail) {
+        modalDetail.addEventListener('click', (e) => {
+          if (e.target === modalDetail) {
+            modalDetail.classList.remove('open');
+            modalDetail.setAttribute('aria-hidden', 'true');
+            modalDetail.setAttribute('inert', '');
+            if (!document.querySelector('.modal-overlay.open')) document.body.style.overflow = '';
+          }
+        });
+      }
+    })();
 </script>
 </body>
 

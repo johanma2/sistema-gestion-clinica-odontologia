@@ -181,6 +181,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(c => c.IdPaciente).HasColumnName("id_paciente");
             entity.Property(c => c.IdProfesional).HasColumnName("id_profesional");
             entity.Property(c => c.IdServicio).HasColumnName("id_servicio");
+            entity.Property(c => c.IdConsultorio).HasColumnName("id_consultorio");
+            entity.Property(c => c.IdEstado).HasColumnName("id_estado");
             entity.Property(c => c.FechaHora).HasColumnName("fecha_hora");
             entity.Property(c => c.Estado).HasColumnName("estado");
             entity.Property(c => c.Notas).HasColumnName("notas");
@@ -198,6 +200,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasOne(c => c.Servicio)
                   .WithMany()
                   .HasForeignKey(c => c.IdServicio)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(c => c.Consultorio)
+                  .WithMany()
+                  .HasForeignKey(c => c.IdConsultorio)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(c => c.EstadoCita)
+                  .WithMany()
+                  .HasForeignKey(c => c.IdEstado)
                   .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -289,12 +301,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasOne(p => p.Usuario)
                   .WithMany()
                   .HasForeignKey(p => p.IdUsuario)
-                  .OnDelete(DeleteBehavior.SetNull);
+                  .OnDelete(DeleteBehavior.NoAction);
 
             entity.HasOne(p => p.AtendidaPorUsuario)
                   .WithMany()
                   .HasForeignKey(p => p.AtendidaPor)
-                  .OnDelete(DeleteBehavior.SetNull);
+                  .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Inventario>(entity =>

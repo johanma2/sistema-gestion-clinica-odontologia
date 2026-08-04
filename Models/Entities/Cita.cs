@@ -70,10 +70,8 @@ namespace SmileTrack_MVC.Models.Entities
         [NotMapped]
         public string? TipoCita { get; set; }
 
-        [NotMapped]
         public int? IdConsultorio { get; set; }
 
-        [NotMapped]
         public int? IdEstado { get; set; }
 
         [NotMapped]
@@ -94,10 +92,10 @@ namespace SmileTrack_MVC.Models.Entities
         [ForeignKey(nameof(IdServicio))]
         public Servicio? Servicio { get; set; }
 
-        [NotMapped]
+        [ForeignKey(nameof(IdConsultorio))]
         public Consultorio? Consultorio { get; set; }
 
-        [NotMapped]
+        [ForeignKey(nameof(IdEstado))]
         public EstadoCita? EstadoCita { get; set; }
     }
 }

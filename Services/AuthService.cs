@@ -26,7 +26,8 @@ namespace SmileTrack_MVC.Services
     {
         private const string MensajeErrorSeguridad = "No fue posible completar la operación. Por favor intente nuevamente en unos momentos.";
         private const string MensajeCredencialesInvalidas = "Correo o contraseña incorrectos";
-        private const string MensajeCuentaBloqueada = "Cuenta bloqueada por 5 intentos fallidos. Contacta al administrador para reactivarla.";
+        private const int MaxLoginFailedAttempts = 3;
+        private const string MensajeCuentaBloqueada = "Cuenta bloqueada por 3 intentos fallidos. Contacta al administrador para reactivarla.";
         private const string MensajeUsuarioNoDisponible = "El acceso no está disponible en este momento. Intente nuevamente más tarde.";
         private const string MensajeRecuperacionGenerico = "Si el correo está registrado, recibirás un código.";
         private const string MensajeCodigoInvalidoOExpirado = "Código inválido o expirado.";
@@ -129,7 +130,7 @@ namespace SmileTrack_MVC.Services
                     _logger.LogWarning("Login fallido: usuario inactivo. IdUsuario={IdUsuario}, Correo={Correo}, Estado={Estado}, IpCliente={IpCliente}",
                         user.IdUsuario, correoNormalizado, user.Estado, ipCliente);
 
-                    if (user.IntentosFallidos >= 5)
+                    if (user.IntentosFallidos >= MaxLoginFailedAttempts)
                     {
                         return new AuthResponse
                         {
@@ -170,7 +171,7 @@ namespace SmileTrack_MVC.Services
                     if (usuarioActualizar != null)
                     {
                         usuarioActualizar.IntentosFallidos += 1;
-                        if (usuarioActualizar.IntentosFallidos >= 5)
+                        if (usuarioActualizar.IntentosFallidos >= MaxLoginFailedAttempts)
                         {
                             usuarioActualizar.Estado = "inactivo";
                             estaBloqueada = true;
@@ -558,23 +559,47 @@ namespace SmileTrack_MVC.Services
                     return new AuthResponse { Success = false, Message = MensajeErrorSeguridad };
                 }
 
+                bool envioExitoso = true;
+                string? motivoFalloEnvio = null;
                 try
                 {
                     await _emailService.SendRecoveryCodeAsync(user.Correo, code, ct);
                 }
                 catch (Exception mailEx)
                 {
-                    recoveryCode.Usado = true;
-                    _context.CodigosRecuperacion.Update(recoveryCode);
-                    await _context.SaveChangesAsync(ct);
-                    _logger.LogWarning(mailEx, "Recuperar contraseña: no se pudo enviar el correo. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
+                    envioExitoso = false;
+                    motivoFalloEnvio = mailEx.InnerException?.Message ?? mailEx.Message;
+
+                    _logger.LogCritical(mailEx,
+                        "Recuperar contraseña: FALLO ENVÍO DE CORREO. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente} " +
+                        "Motivo={Motivo}. ATENCIÓN: Revisa inmediatamente la configuración SMTP en appsettings.Local.json " +
+                        "(Password: debes poner la App Password de Gmail de 16 caracteres).",
+                        user.IdUsuario, correoNormalizado, ipCliente, motivoFalloEnvio);
+
+                    try
+                    {
+                        await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "envio_fallido", ipCliente, ct);
+                    }
+                    catch (Exception audEx)
+                    {
+                        _logger.LogWarning(audEx, "No se pudo registrar auditoria 'envio_fallido' (no crítico). IdUsuario={IdUsuario}", user.IdUsuario);
+                    }
+                }
+
+                if (envioExitoso)
+                {
+                    _logger.LogInformation("Código de recuperación GENERADO y ENVIADO exitosamente. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
                         user.IdUsuario, correoNormalizado, ipCliente);
+                }
+                else
+                {
+                    _logger.LogError(
+                        "Código de recuperación GENERADO en BD pero el CORREO NO FUE ENVIADO. " +
+                        "IdUsuario={IdUsuario}, Correo={Correo}, IdCodigoRecuperacion={IdCodigo}, MotivoFallo={Motivo}",
+                        user.IdUsuario, correoNormalizado, recoveryCode.IdCodigo, motivoFalloEnvio ?? "desconocido");
                 }
 
                 await RegistrarAuditoriaRecuperacionAsync(user.IdUsuario, correoNormalizado, "solicitud", ipCliente, ct);
-
-                _logger.LogInformation("Código de recuperación generado correctamente. IdUsuario={IdUsuario}, Correo={Correo}, IpCliente={IpCliente}",
-                    user.IdUsuario, correoNormalizado, ipCliente);
 
                 return new AuthResponse { Success = true, Message = MensajeRecuperacionGenerico };
             }
@@ -868,7 +893,6 @@ namespace SmileTrack_MVC.Services
         public async Task<AuthResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default)
         {
             string ipCliente = ObtenerIpCliente();
-            string correoNormalizado = request?.ContrasenaActual?.Trim() ?? string.Empty;
 
             try
             {

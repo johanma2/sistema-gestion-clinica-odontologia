@@ -17,27 +17,42 @@ document.addEventListener('DOMContentLoaded', function () {
   const toast = document.getElementById('toast');
   const toastMsg = document.getElementById('toastMsg');
   const authModal = document.getElementById('authErrorModal');
-  const authErrorMessage = document.getElementById('authErrorMessage');
   const authErrorClose = document.getElementById('authErrorClose');
   const authErrorCloseBtn = document.getElementById('authErrorCloseBtn');
 
-  if (authModal && authErrorMessage && authErrorMessage.textContent.trim() && document.body.dataset.errorStatus !== "0") {
+  // ── Apertura del modal: el servidor controla si debe mostrarse (via clase 'hidden' en Razor).
+  // Cuando el modal está visible al cargar la página, movemos el foco al botón de cierre.
+  // Esto cumple los requisitos de accesibilidad: el usuario sabe inmediatamente que hay un modal abierto.
+  const openAuthModal = () => {
+    if (!authModal) return;
     authModal.classList.remove('hidden');
-  }
-
-  const closeAuthModal = () => {
-    if (authModal) authModal.classList.add('hidden');
+    authModal.setAttribute('aria-hidden', 'false');
+    authModal.removeAttribute('inert');
+    // Foco automático en el botón de cierre (WCAG 2.1 Focus Management)
+    setTimeout(() => authErrorClose?.focus(), 60);
   };
 
-  if (authErrorClose) {
-    authErrorClose.addEventListener('click', closeAuthModal);
+  const closeAuthModal = () => {
+    if (!authModal) return;
+    authModal.classList.add('hidden');
+    authModal.setAttribute('aria-hidden', 'true');
+    authModal.setAttribute('inert', '');
+    // Restaurar foco al campo de correo para que el usuario pueda reintentar
+    emailInput?.focus();
+  };
+
+  // Si el servidor ya renderizó el modal abierto (errorStatus 401/403), aplicar foco automático
+  if (authModal && !authModal.classList.contains('hidden')) {
+    openAuthModal();
   }
-  if (authErrorCloseBtn) {
-    authErrorCloseBtn.addEventListener('click', closeAuthModal);
-  }
+
+  if (authErrorClose) authErrorClose.addEventListener('click', closeAuthModal);
+  if (authErrorCloseBtn) authErrorCloseBtn.addEventListener('click', closeAuthModal);
+
+  // Cerrar al hacer clic en el overlay (fuera de la caja del modal)
   if (authModal) {
-    authModal.addEventListener('click', (event) => {
-      if (event.target === authModal) closeAuthModal();
+    authModal.addEventListener('click', (e) => {
+      if (e.target === authModal) closeAuthModal();
     });
   }
 
@@ -135,9 +150,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && loginForm?.contains(e.target)) {
       if (!loginBtn?.disabled) loginForm?.requestSubmit();
     }
-    if (e.key === 'Escape' && errorMsg && !errorMsg.classList.contains('hidden')) {
-      errorMsg.classList.add('hidden');
-      emailInput?.focus();
+    // Escape: cierra el modal de autenticación si está abierto (prioridad sobre el error-box);
+    // si no hay modal abierto, cierra el error-box inline.
+    if (e.key === 'Escape') {
+      if (authModal && !authModal.classList.contains('hidden')) {
+        closeAuthModal();
+      } else if (errorMsg && !errorMsg.classList.contains('hidden')) {
+        errorMsg.classList.add('hidden');
+        emailInput?.focus();
+      }
     }
   });
 });

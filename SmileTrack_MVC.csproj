@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 <PropertyGroup>
   <TargetFramework>net9.0</TargetFramework>
@@ -11,7 +11,8 @@
   <TieredCompilation>true</TieredCompilation>
   <!-- Saltar validación de paquetes en cada build -->
   <SkipValidatePackageReferences>true</SkipValidatePackageReferences>
-</PropertyGroup>
+  <UserSecretsId>ff5d4b9c-690c-44b5-a2e6-8cd9fe7ea759</UserSecretsId>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />

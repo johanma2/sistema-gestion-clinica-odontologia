@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
@@ -11,12 +13,42 @@ using SmileTrack_MVC.Models.Entities;
 using SmileTrack_MVC.Services.Email;
 using System.Security.Claims;
 using System.Net;
+using System.Net.Sockets;
 using System.Globalization;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+// NOTA sobre orden de configuración: CADA NUEVA FUENTE AGREGADA SOBRESCRIBE A LAS ANTERIORES.
+// WebApplication.CreateBuilder(args) YA registra automáticamente:
+//   1) appsettings.json
+//   2) appsettings.{Environment}.json
+//   3) User Secrets (SI environment = Development)
+//   4) Variables de entorno
+//   5) Argumentos de línea de comandos
+//
+// Orden que queremos para evitar perder el Password de user-secrets:
+//   (automáticos por el builder)
+//   + appsettings.Local.json   ← valores locales específicos de la máquina
+//   + user-secrets (explicito, por si el builder no lo cargó)
+//   + variables de entorno y CLI (van implícitas después, pero las re-confirmamos)
+// Así: Smtp:Password de user-secrets NUNCA será sobreescrito por un "" del json.
+
+builder.Configuration.Sources.Clear();
+
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>(optional: true, reloadOnChange: true);
+}
+
+builder.Configuration
+    .AddEnvironmentVariables()
+    .AddCommandLine(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddAntiforgery(options =>
@@ -185,8 +217,22 @@ builder.Services.AddScoped<SmileTrack_MVC.Services.IAuthService, SmileTrack_MVC.
 builder.Services.Configure<SmileTrack_MVC.Services.Email.EmailServiceOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddScoped<SmileTrack_MVC.Services.Email.IEmailService, SmileTrack_MVC.Services.Email.EmailService>();
 
+var urlsConfig = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5000";
+var configuredUrls = urlsConfig.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var candidateUrls = new[]
+{
+    "http://localhost:5000",
+    "http://localhost:5001",
+    "http://127.0.0.1:5000",
+    "http://127.0.0.1:5001"
+};
+var selectedUrl = SelectFirstAvailableUrl(configuredUrls.Concat(candidateUrls).Distinct().ToArray());
+builder.WebHost.UseUrls(selectedUrl);
+
 var app = builder.Build();
 
+app.Logger.LogInformation("Usando URL de escucha: {Url}", selectedUrl);
+await WaitForSqlServerAsync(connectionString, app.Logger);
 await EnsureDatabaseSchemaAsync(app.Services, app.Logger);
 
 app.Use(async (context, next) =>
@@ -392,6 +438,71 @@ static async Task EnsureDatabaseSchemaAsync(IServiceProvider services, ILogger l
     }
 }
 
+static string SelectFirstAvailableUrl(string[] urls)
+{
+    foreach (var url in urls)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            if (IsPortAvailable(uri.Host, uri.Port))
+            {
+                return url;
+            }
+        }
+    }
+
+    return urls[0];
+}
+
+static bool IsPortAvailable(string host, int port)
+{
+    try
+    {
+        var ipAddress = IPAddress.Loopback;
+        if (!string.IsNullOrWhiteSpace(host) && host != "localhost" && host != "127.0.0.1" && host != "::1")
+        {
+            ipAddress = Dns.GetHostAddresses(host).FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork) ?? IPAddress.Loopback;
+        }
+
+        var listener = new TcpListener(ipAddress, port);
+        listener.Start();
+        listener.Stop();
+        return true;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
+static async Task WaitForSqlServerAsync(string connectionString, ILogger logger)
+{
+    const int maxAttempts = 12;
+    var delay = TimeSpan.FromSeconds(2);
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        try
+        {
+            logger.LogInformation("🔌 Probando conexión a SQL Server (intento {Intento}/{MaxIntentos})...", attempt, maxAttempts);
+            await using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+            logger.LogInformation("✅ Conexión a SQL Server establecida.");
+            return;
+        }
+        catch (Exception ex) when (attempt < maxAttempts)
+        {
+            logger.LogWarning(ex, "No se pudo conectar a SQL Server en el intento {Intento}. Reintentando en {Retraso}s...", attempt, delay.TotalSeconds);
+            await Task.Delay(delay);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "No se pudo conectar a SQL Server después de {Intentos} intentos.", maxAttempts);
+            throw;
+        }
+    }
+}
+
 // ⚡ Seed en background: el servidor arranca INMEDIATAMENTE
 // La inicialización de BD ocurre en paralelo sin bloquear el startup
 _ = Task.Run(async () =>
@@ -472,8 +583,8 @@ _ = Task.Run(async () =>
                         respuesta VARCHAR(MAX) NULL,
                         atendida_por INT NULL,
                         evidencia_adjunto VARCHAR(255) NULL,
-                        CONSTRAINT FK_PQR_Paciente FOREIGN KEY (id_paciente) REFERENCES Paciente(id_paciente),
-                        CONSTRAINT FK_PQR_Usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario)
+                        CONSTRAINT FK_PQR_Paciente FOREIGN KEY (id_paciente) REFERENCES Paciente(id_paciente) ON DELETE NO ACTION,
+                        CONSTRAINT FK_PQR_Usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario) ON DELETE NO ACTION
                     );
                 END
 
@@ -524,49 +635,26 @@ _ = Task.Run(async () =>
             logger.LogWarning(exMigration, "⚠️ No se pudieron aplicar algunas alteraciones de columnas/tablas automáticas: {Mensaje}", exMigration.Message);
         }
 
-        // ⚡ 1 sola query para verificar si hay datos
-        if (await db.Roles.AnyAsync() &&
-            await db.Usuarios.AnyAsync() &&
-            await db.Especialidades.AnyAsync() &&
-            await db.Servicios.AnyAsync() &&
-            await db.Pacientes.AnyAsync() &&
-            await db.Profesionales.AnyAsync() &&
-            await db.Consultorios.AnyAsync())
-        {
-            logger.LogInformation("✅ BD ya inicializada, seed omitido");
-            // Corregir asociación incorrecta de profesionales si la semilla ya se ejecutó con el ID equivocado
-            var profUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "prof@smiletrack.co");
-            var adminUser = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == "admin@smiletrack.co");
-            if (profUser != null && adminUser != null)
-            {
-                var incorrectlyMappedProfs = await db.Profesionales.Where(p => p.IdUsuario == adminUser.IdUsuario).ToListAsync();
-                if (incorrectlyMappedProfs.Any())
-                {
-                    logger.LogInformation("🛠️ Detectada mala asociación de profesionales en la base de datos existente. Corrigiendo...");
-                    foreach (var prof in incorrectlyMappedProfs)
-                    {
-                        prof.IdUsuario = profUser.IdUsuario;
-                    }
-                    await db.SaveChangesAsync();
-                    logger.LogInformation("✅ Profesionales reasociados correctamente a prof@smiletrack.co");
-                }
-            }
-            return;
-        }
-
         logger.LogInformation("🌱 Ejecutando seed inicial de la BD...");
 
-    if (!await db.Roles.AnyAsync())
-    {
-        db.Roles.AddRange(
-            new Rol { NombreRol = "Administrador", Descripcion = "Acceso total" },
-            new Rol { NombreRol = "Profesional", Descripcion = "Gestión clínica" },
-            new Rol { NombreRol = "Paciente", Descripcion = "Paciente de la clínica" },
-            new Rol { NombreRol = "Recepcionista", Descripcion = "Gestión de citas" },
-            new Rol { NombreRol = "Auxiliar", Descripcion = "Apoyo clínico" });
-    }
+        var requiredRoles = new[]
+        {
+            new { Name = "Administrador", Description = "Acceso total" },
+            new { Name = "Profesional", Description = "Gestión clínica" },
+            new { Name = "Paciente", Description = "Paciente de la clínica" },
+            new { Name = "Recepcionista", Description = "Gestión de citas" },
+            new { Name = "Auxiliar", Description = "Apoyo clínico" }
+        };
 
-    await db.SaveChangesAsync();
+        foreach (var roleDefinition in requiredRoles)
+        {
+            if (!await db.Roles.AnyAsync(r => r.NombreRol == roleDefinition.Name))
+            {
+                db.Roles.Add(new Rol { NombreRol = roleDefinition.Name, Descripcion = roleDefinition.Description });
+            }
+        }
+
+        await db.SaveChangesAsync();
 
     var adminRole = await db.Roles.FirstOrDefaultAsync(r => r.NombreRol == "Administrador");
     var pacienteRole = await db.Roles.FirstOrDefaultAsync(r => r.NombreRol == "Paciente");

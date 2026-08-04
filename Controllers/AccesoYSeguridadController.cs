@@ -9,14 +9,16 @@ using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.ViewModels;
 using SmileTrack_MVC.Services;
+using SmileTrack_MVC.Services.Email;
 
 namespace SmileTrack_MVC.Controllers;
 
-public class AccesoYSeguridadController(AppDbContext context, IAuthService authService, IAntiforgery antiforgery) : Controller
+public class AccesoYSeguridadController(AppDbContext context, IAuthService authService, IAntiforgery antiforgery, IEmailService emailService) : Controller
 {
     private readonly AppDbContext _context = context;
     private readonly IAuthService _authService = authService;
     private readonly IAntiforgery _antiforgery = antiforgery;
+    private readonly IEmailService _emailService = emailService;
 
     [HttpGet]
     [Route("acceso-y-seguridad/login")]
@@ -91,6 +93,33 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
                 return Unauthorized(new { success = false, message = "Correo o contraseña incorrectos." });
             }
             ModelState.AddModelError("", "Correo o contraseña incorrectos.");
+            return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
+        }
+
+        if (usuario.Rol == null && usuario.IdRol > 0)
+        {
+            var rolDb = await _context.Roles.FirstOrDefaultAsync(r => r.IdRol == usuario.IdRol);
+            if (rolDb == null)
+            {
+                if (wantsJson)
+                {
+                    return BadRequest(new { success = false, message = "El usuario no tiene un rol asignado o el rol existe en la base de datos." });
+                }
+
+                ModelState.AddModelError("", "El usuario no tiene un rol válido asignado.");
+                return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
+            }
+
+            usuario.Rol = rolDb;
+        }
+
+        if (usuario.Rol == null)
+        {
+            if (wantsJson)
+            {
+                return BadRequest(new { success = false, message = "El usuario no tiene un rol asignado o el rol existe en la base de datos." });
+            }
+            ModelState.AddModelError("", "El usuario no tiene un rol válido asignado.");
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
         }
 
@@ -232,8 +261,8 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     [Route("acceso-y-seguridad/logout")]
     public async Task<IActionResult> Logout()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (int.TryParse(userId, out var idUsuario))
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdString, out var idUsuario))
         {
             var usuario = await _context.Usuarios.FindAsync(idUsuario);
             if (usuario != null)
@@ -282,8 +311,11 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
 
         if (!ModelState.IsValid)
         {
-            var errors = ModelState.Where(kvp => kvp.Value.Errors.Count > 0)
-                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+            var errors = ModelState
+                .Where(kvp => kvp.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray() ?? Array.Empty<string>());
             return BadRequest(new { Success = false, Message = "Model validation failed.", Errors = errors });
         }
 
@@ -293,7 +325,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
 
     [HttpPost]
     [Route("acceso-y-seguridad/recover/verify-code")]
-    public async Task<IActionResult> RecoverVerifyCode([FromBody] Models.ViewModels.VerifyRecoveryCodeRequest request)
+    public async Task<IActionResult> RecoverVerifyCode([FromBody] VerifyRecoveryCodeRequest request)
     {
         try
         {
@@ -311,8 +343,11 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
 
         if (!ModelState.IsValid)
         {
-            var errors = ModelState.Where(kvp => kvp.Value.Errors.Count > 0)
-                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+            var errors = ModelState
+                .Where(kvp => kvp.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray() ?? Array.Empty<string>());
             return BadRequest(new { Success = false, Message = "Model validation failed.", Errors = errors });
         }
 
@@ -322,7 +357,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
 
     [HttpPost]
     [Route("acceso-y-seguridad/recover/reset-password")]
-    public async Task<IActionResult> RecoverResetPassword([FromBody] Models.ViewModels.ResetPasswordRequest request)
+    public async Task<IActionResult> RecoverResetPassword([FromBody] ResetPasswordRequest request)
     {
         try
         {
@@ -340,15 +375,18 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
 
         if (!ModelState.IsValid)
         {
-            var errors = ModelState.Where(kvp => kvp.Value.Errors.Count > 0)
-                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+            var errors = ModelState
+                .Where(kvp => kvp.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray() ?? Array.Empty<string>());
             return BadRequest(new { Success = false, Message = "Model validation failed.", Errors = errors });
         }
 
         var tokenTemporal = request.TokenTemporal ?? string.Empty;
         if (string.IsNullOrWhiteSpace(tokenTemporal) && !string.IsNullOrWhiteSpace(request.Correo) && !string.IsNullOrWhiteSpace(request.Codigo))
         {
-            var verificationResult = await _authService.VerifyRecoveryCodeAsync(new Models.ViewModels.VerifyRecoveryCodeRequest
+            var verificationResult = await _authService.VerifyRecoveryCodeAsync(new VerifyRecoveryCodeRequest
             {
                 Correo = request.Correo,
                 Codigo = request.Codigo
@@ -367,7 +405,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
             return BadRequest(new { Success = false, Message = "El token temporal es obligatorio." });
         }
 
-        var result = await _authService.ResetPasswordAsync(new Models.ViewModels.ResetPasswordRequest
+        var result = await _authService.ResetPasswordAsync(new ResetPasswordRequest
         {
             TokenTemporal = tokenTemporal,
             NuevaContrasena = request.NuevaContrasena,
@@ -388,12 +426,13 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     [Route("acceso-y-seguridad/cambiar-contrasena")]
     public async Task<IActionResult> ChangePasswordPost(string contrasenaActual, string nuevaContrasena, string confirmarContrasena)
     {
-        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var idUsuario))
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdString, out var idUsuario))
         {
             return RedirectToAction("Login");
         }
 
-        var response = await _authService.ChangePasswordAsync(new Models.ViewModels.ChangePasswordRequest
+        var response = await _authService.ChangePasswordAsync(new ChangePasswordRequest
         {
             IdUsuario = idUsuario,
             ContrasenaActual = contrasenaActual,
@@ -493,6 +532,123 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
 
         ViewData["BitacoraJson"] = System.Text.Json.JsonSerializer.Serialize(bitacoraDb);
         return View("~/Views/Acceso_Y_Seguridad/st-adm-15-bitacora/index.cshtml", bitacoraDb);
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Administrador")]
+    [Route("acceso-y-seguridad/st-adm-16-test-smtp")]
+    public IActionResult Stadm16TestSmtp()
+    {
+        ViewData["SmtpConfigOk"] = true;
+        return Content(@$"
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+<meta charset='utf-8' />
+<title>SmileTrack — Panel de Diagnóstico SMTP</title>
+<style>
+body{{font-family:Arial;margin:0;padding:32px;background:#f3f4f6;color:#111827}}
+.container{{max-width:960px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:28px;box-shadow:0 1px 3px rgba(0,0,0,.05)}}
+h1{{margin:0 0 8px 0;color:#0f766e;font-size:24px}}
+.subtitle{{margin:0 0 24px 0;color:#6b7280}}
+.form-row{{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:end}}
+label{{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;color:#374151}}
+input[type=email]{{padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;min-width:320px}}
+button{{padding:10px 18px;background:#0f766e;color:#fff;border:0;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px}}
+button:hover{{background:#0d6660}}
+button:disabled{{background:#94a3b8;cursor:not-allowed}}
+.result{{margin-top:16px;padding:18px;border-radius:10px;font-size:13px;line-height:1.6;white-space:pre-wrap;font-family:Consolas,'Courier New',monospace;max-height:60vh;overflow-y:auto;word-break:break-word}}
+.result.ok{{background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46}}
+.result.err{{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}}
+.result.loading{{background:#eff6ff;border:1px solid #93c5fd;color:#1e40af}}
+.back-link{{display:inline-block;margin-top:20px;color:#2563eb;text-decoration:none;font-size:14px}}
+.back-link:hover{{text-decoration:underline}}
+.checklist{{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin-bottom:20px}}
+.checklist h3{{margin:0 0 10px 0;color:#1f2937;font-size:15px}}
+.checklist ul{{margin:0;padding-left:20px}}
+.checklist li{{margin:4px 0;font-size:13px;color:#334155}}
+.checklist code{{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:12px;color:#0f172a}}
+</style>
+</head>
+<body>
+<div class='container'>
+  <h1>🧪 Diagnóstico SMTP — SmileTrack</h1>
+  <p class='subtitle'>Herramienta exclusiva para administradores. Ejecuta los 4 pasos del envío (configurar → conectar → autenticar → enviar) y devuelve un diagnóstico detallado por paso.</p>
+
+  <div class='checklist'>
+    <h3>✅ Antes de ejecutar el test, verifica:</h3>
+    <ul>
+      <li>El archivo <code>appsettings.Local.json</code> tiene <code>Smtp.Password</code> NO VACÍO.</li>
+      <li>Si usas Gmail: la contraseña debe ser una <strong>App Password de 16 caracteres</strong> (4 grupos de 4 separados por espacios). La contraseña normal NUNCA funciona.</li>
+      <li>La cuenta Gmail tiene activada la <strong>Verificación en 2 pasos</strong>.</li>
+      <li>Puerto recomendado: <code>587</code> (STARTTLS). Alternativa <code>465</code> (SSL). Prueba AMBOS si uno falla.</li>
+      <li>Windows Firewall / antivirus / VPN NO bloqueen el puerto saliente.</li>
+    </ul>
+  </div>
+
+  <div class='form-row'>
+    <label>
+      Correo de destino para la prueba
+      <input type='email' id='destino' placeholder='tucorreo@ejemplo.com' />
+    </label>
+    <button id='btnTest' onclick='ejecutarPrueba()'>▶ Ejecutar prueba SMTP</button>
+  </div>
+
+  <div id='resultado' class='result loading' style='display:none;'></div>
+  <a href='/acceso-y-seguridad/st-adm-01-dashboard' class='back-link'>← Volver al Dashboard</a>
+</div>
+
+<script>
+async function ejecutarPrueba() {{
+    const btn = document.getElementById('btnTest');
+    const destino = document.getElementById('destino').value.trim();
+    const out = document.getElementById('resultado');
+    btn.disabled = true;
+    out.style.display = 'block';
+    out.className = 'result loading';
+    out.textContent = '⏳ Ejecutando diagnóstico SMTP (4 pasos)...';
+
+    try {{
+        const url = '/acceso-y-seguridad/st-adm-16-test-smtp/run?destino=' + encodeURIComponent(destino || '');
+        const r = await fetch(url, {{ method:'GET', credentials:'same-origin' }});
+        const json = await r.json();
+        out.className = 'result ' + (json.exito ? 'ok' : 'err');
+        out.textContent = json.detalle || '(sin detalle)';
+    }} catch (e) {{
+        out.className = 'result err';
+        out.textContent = '❌ Error del lado del cliente: ' + e.message + '\\n\\n' +
+            'Revisa la consola (F12) para más detalles. Verifica que: 1) estés logueado como Administrador, 2) el servidor esté corriendo.';
+    }} finally {{
+        btn.disabled = false;
+    }}
+}}
+</script>
+</body>
+</html>", "text/html; charset=utf-8");
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Administrador")]
+    [Route("acceso-y-seguridad/st-adm-16-test-smtp/run")]
+    public async Task<IActionResult> Stadm16RunTestSmtp([FromQuery] string? destino, CancellationToken ct = default)
+    {
+        try
+        {
+            var (exito, detalle) = await _emailService.ProbarConfiguracionSmtpAsync(destino ?? string.Empty, ct);
+            return Ok(new { exito, detalle });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new
+            {
+                exito = false,
+                detalle = "EXCEPTION NO MANEJADA EN EL TEST:\n" +
+                          $"Tipo: {ex.GetType().FullName}\n" +
+                          $"Mensaje: {ex.Message}\n" +
+                          (ex.InnerException != null ? $"Inner: {ex.InnerException.Message}\n" : string.Empty) +
+                          $"StackTrace:\n{ex.StackTrace}"
+            });
+        }
     }
 }
 

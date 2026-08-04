@@ -132,6 +132,42 @@ const showToast = (message, type = 'success') => {
     }, 3500);
 };
 
+/**
+ * Abre el modal de Crear/Editar Cita y gestiona el cierre por click fuera.
+ * Se asigna a window directamente para que esté disponible ANTES de que el
+ * inline script de la vista se registre en DOMContentLoaded (evita problema
+ * de orden de carga: JS carga primero, luego inline script lo sobrescribe).
+ */
+window.openModalCita = () => {
+    const modal = document.getElementById('modalCita');
+    if (!modal) return;
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    modal.removeAttribute('inert');
+    document.body.style.overflow = 'hidden';
+
+    modal.addEventListener('click', function outsideHandler(e) {
+        if (e.target === modal) {
+            window.closeModalCita();
+            modal.removeEventListener('click', outsideHandler);
+        }
+    });
+};
+
+/**
+ * Cierra el modal de Crear/Editar Cita y restaura el scroll del body.
+ */
+window.closeModalCita = () => {
+    const modal = document.getElementById('modalCita');
+    if (!modal) return;
+
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('inert', '');
+    document.body.style.overflow = '';
+};
+
 // ════════════════════════════════════════════════════════════════════
 //  MAPEO ENTRE FORMATOS: Server (JSON) ↔ Cliente (fila renderizada)
 // ════════════════════════════════════════════════════════════════════
@@ -389,7 +425,8 @@ const avatarColors = {
  * @returns {boolean} True para usar renderizado servidor
  */
 const shouldUseServerRenderedList = () => {
-    return false;
+    const tbody = document.getElementById('citasBody');
+    return !!(tbody && tbody.children.length > 0 && tbody.querySelector('.table-row'));
 };
 
 /**
@@ -1090,13 +1127,16 @@ const initPagination = () => {
 };
 
 /**
- * Inicializa el botón de nueva cita (placeholder).
+ * Inicializa el botón de nueva cita.
+ * openModalCita y closeModalCita están en window al principio de este archivo,
+ * garantizando disponibilidad antes de cualquier DOMContentLoaded (incluido el inline script).
  */
 const initNewAppointment = () => {
-    const newAppointmentButton = safeGetElement('btnNewAppointment');
-
-    newAppointmentButton?.addEventListener('click', () => {
-        showToast('📝 Funcionalidad de nueva cita en desarrollo', 'warning');
+    const newAppointmentButton = safeGetElement('btnNewCita') || safeGetElement('btnNewAppointment');
+    if (!newAppointmentButton) return;
+    if (newAppointmentButton.hasAttribute('onclick')) return;
+    newAppointmentButton.addEventListener('click', () => {
+        if (typeof window.openModalCita === 'function') window.openModalCita();
     });
 };
 
@@ -1235,22 +1275,32 @@ function mostrarErrorUsuario(message) {
  */
 const init = async () => {
     try {
+        const useSSR = shouldUseServerRenderedList();
+
         // Inicializar componentes de UI
         initSidebar();
-        initTabs();
-        initSearch();
-        initFilters();
+        if (!useSSR) initTabs();
+        if (!useSSR) initSearch();
+        if (!useSSR) initFilters();
         initPagination();
         initNewAppointment();
         initModal();
         initBanner();
 
-        // Cargar datos desde API o fallback local
-        appointments = await fetchAppointments();
+        if (!useSSR) {
+            // Cargar datos desde API o fallback local
+            appointments = await fetchAppointments();
 
-        // Actualizar UI con datos cargados
-        updateStats();
-        renderAppointments();
+            // Actualizar UI con datos cargados
+            updateStats();
+            renderAppointments();
+        } else {
+            // Modo SSR: animar los KPI renderizados por Razor si tienen data-target
+            document.querySelectorAll('[data-target]').forEach(el => {
+                const target = parseInt(el.getAttribute('data-target'), 10);
+                if (!isNaN(target) && target >= 0) animateCounter(el, target);
+            });
+        }
 
         // Cleanup al cerrar la página (para SPA o navegación frecuente)
         window.addEventListener('beforeunload', () => {

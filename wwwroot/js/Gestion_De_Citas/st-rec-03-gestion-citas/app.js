@@ -102,6 +102,22 @@ const showToast = (message, type = 'success') => {
   toast._tid = setTimeout(() => toast.classList.remove('show'), 3000);
 };
 
+const shouldUseServerRenderedList = () => {
+  const tbody = safeGetElement('appointmentsTable');
+  return !!(tbody && tbody.children.length > 0 && tbody.querySelector('tr'));
+};
+
+const animateCounter = (el, target) => {
+  if (!el) return;
+  let cur = 0;
+  const step = Math.max(1, Math.ceil(target / 30));
+  const t = setInterval(() => {
+    cur = Math.min(cur + step, target);
+    el.textContent = cur;
+    if (cur >= target) clearInterval(t);
+  }, 30);
+};
+
 // Formato fecha: "20 mar"
 const fmtFechaCorta = (fhIso) => {
   try {
@@ -312,6 +328,7 @@ const createAppointmentRow = (appt) => {
 };
 
 const renderAppointments = (data) => {
+  if (shouldUseServerRenderedList()) return;
   const tbody = safeGetElement('appointmentsTable');
   if (!tbody) return;
 
@@ -332,6 +349,7 @@ const renderAppointments = (data) => {
 // ═══════════════════════════════════════════════════════════════════
 
 const filterAppointments = () => {
+  if (shouldUseServerRenderedList()) return;
   const q = safeGetElement('searchPatient')?.value.toLowerCase().trim() || '';
   const prof = safeGetElement('filterProfessional')?.value || '';
   const datePreset = safeGetElement('filterDate')?.value || '';
@@ -355,7 +373,21 @@ const filterAppointments = () => {
 //  MÉTRICAS + PAGINACIÓN
 // ═══════════════════════════════════════════════════════════════════
 
+const initServerMetrics = () => {
+  [['metricToday'], ['metricConfirmed'], ['metricPending'], ['metricCancelled']].forEach(([id]) => {
+    const el = safeGetElement(id);
+    if (!el) return;
+    const target = parseInt(el.getAttribute('data-target') ?? '0', 10);
+    if (!isNaN(target) && target > 0) animateCounter(el, target);
+    else el.textContent = String(target ?? 0);
+  });
+};
+
 const updateMetrics = () => {
+  if (shouldUseServerRenderedList()) {
+    initServerMetrics();
+    return;
+  }
   const all = appointmentStorage.getAll();
   const hoy = new Date().toISOString().split('T')[0];
   const todayCount = all.filter(a => a.dateISO === hoy).length;
@@ -366,7 +398,7 @@ const updateMetrics = () => {
   [['metricToday', todayCount], ['metricConfirmed', confirmed],
    ['metricPending', pending], ['metricCancelled', cancelled]].forEach(([id, v]) => {
     const el = safeGetElement(id);
-    if (el) el.textContent = v;
+    if (el) animateCounter(el, v);
   });
 };
 
@@ -755,6 +787,7 @@ async function fetchAppointments() {
 
 const init = async () => {
   try {
+    const useSSR = shouldUseServerRenderedList();
     appointmentStorage.init();
     initMobileMenu();
     initModalHandlers();
@@ -776,30 +809,35 @@ const init = async () => {
       inp.addEventListener('input', () => { if (inp.classList.contains('error')) validateField(inp); });
     });
 
-    // Carga inicial de datos (API → LocalStorage fallback)
-    await fetchAppointments();
-    updateMetrics();
-    renderAppointments(appointmentStorage.getAll());
+    if (!useSSR) {
+      // Carga inicial de datos (API → LocalStorage fallback)
+      await fetchAppointments();
+      updateMetrics();
+      renderAppointments(appointmentStorage.getAll());
 
-    // Filtros y tabs
-    document.querySelectorAll('.view-toggle').forEach(btn => {
-      btn.addEventListener('click', () => handleViewToggle(btn));
-      btn.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleViewToggle(btn); }
+      // Filtros y tabs (solo en modo client-side; en SSR los filtros son GET al servidor)
+      document.querySelectorAll('.view-toggle').forEach(btn => {
+        btn.addEventListener('click', () => handleViewToggle(btn));
+        btn.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleViewToggle(btn); }
+        });
       });
-    });
-    safeGetElement('searchPatient')?.addEventListener('input', debounce(filterAppointments, 180));
-    ['filterProfessional','filterDate','filterStatus'].forEach(id =>
-      safeGetElement(id)?.addEventListener('change', filterAppointments)
-    );
-    const tbody = safeGetElement('appointmentsTable');
-    if (tbody) {
-      tbody.addEventListener('click', handleTableAction);
-      tbody.addEventListener('keydown', (e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-action]')) {
-          e.preventDefault(); e.target.click();
-        }
-      });
+      safeGetElement('searchPatient')?.addEventListener('input', debounce(filterAppointments, 180));
+      ['filterProfessional','filterDate','filterStatus'].forEach(id =>
+        safeGetElement(id)?.addEventListener('change', filterAppointments)
+      );
+      const tbody = safeGetElement('appointmentsTable');
+      if (tbody) {
+        tbody.addEventListener('click', handleTableAction);
+        tbody.addEventListener('keydown', (e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-action]')) {
+            e.preventDefault(); e.target.click();
+          }
+        });
+      }
+    } else {
+      // Modo SSR: animar los KPI renderizados por Razor con data-target
+      initServerMetrics();
     }
   } catch (err) {
     console.error('[SmileTrack] Error init app.js (recepcionista):', err);

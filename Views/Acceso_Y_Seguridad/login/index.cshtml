@@ -21,6 +21,15 @@
             mensajeErrorServidor = error.ErrorMessage;
         }
     }
+
+    // showAuthModal: solo se activa cuando el servidor devuelve 401 o 403
+    // (credenciales inválidas o cuenta bloqueada), NUNCA para errores de campos
+    // vacíos (status 0) ni errores de servidor (500).
+    var showAuthModal = errorStatus is 401 or 403;
+
+    // El error-box inline solo se muestra para errores que NO son de credenciales
+    // (campos vacíos, rol inválido, etc.) para evitar duplicar el mismo mensaje.
+    var mensajeInline = showAuthModal ? string.Empty : mensajeErrorServidor;
 }
 
 <!DOCTYPE html>
@@ -100,7 +109,7 @@
           </label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon" aria-hidden="true">lock</span>
-            <input class="form-input" id="password" name="password" placeholder="••••••••" type="password" autocomplete="current-password" aria-required="true">
+            <input class="form-input" id="password" name="password" placeholder="••••••••" type="password" autocomplete="current-password" aria-required="true" required>
             <button id="togglePassword" class="toggle-pass" type="button" aria-label="Mostrar contraseña" aria-pressed="false">
               <span id="toggleIcon" class="material-symbols-outlined" aria-hidden="true">visibility</span>
             </button>
@@ -116,9 +125,9 @@
           <a class="link-forgot" href="/acceso-y-seguridad/recover">¿Olvidaste tu contraseña?</a>
         </div>
 
-        <div id="errorMsg" class="error-box @(string.IsNullOrEmpty(mensajeErrorServidor) ? "hidden" : "")" role="alert" aria-live="assertive">
+        <div id="errorMsg" class="error-box @(string.IsNullOrEmpty(mensajeInline) ? "hidden" : "")" role="alert" aria-live="assertive">
           <span class="material-symbols-outlined" aria-hidden="true">error</span>
-          <span id="errorText">@mensajeErrorServidor</span>
+          <span id="errorText">@mensajeInline</span>
         </div>
 
         <div id="successMsg" class="success-box @(string.IsNullOrEmpty(successMessage) ? "hidden" : "")" role="status" aria-live="polite">
@@ -148,14 +157,31 @@
     </footer>
   </main>
 
-  <div id="authErrorModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authErrorTitle" aria-describedby="authErrorMessage">
+  <!--
+    Modal de error de credenciales:
+    - Se activa solo cuando el servidor devuelve HTTP 401 (credenciales incorrectas)
+      o HTTP 403 (cuenta bloqueada). No se muestra para otros tipos de error.
+    - inert: bloquea el foco del teclado cuando el modal está cerrado (WCAG 2.1).
+    - aria-hidden="true" lo oculta de lectores de pantalla cuando está cerrado.
+    - El mensaje siempre muestra el texto exacto requerido, en minúsculas.
+  -->
+  <div
+    id="authErrorModal"
+    class="modal-overlay @(showAuthModal ? "" : "hidden")"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="authErrorTitle"
+    aria-describedby="authErrorMessage"
+    aria-hidden="@(showAuthModal ? "false" : "true")"
+    @(showAuthModal ? "" : "inert")>
     <div class="modal-box">
       <div class="modal-header">
         <h2 id="authErrorTitle">Error de autenticación</h2>
-        <button type="button" id="authErrorClose" class="modal-close" aria-label="Cerrar">×</button>
+        <button type="button" id="authErrorClose" class="modal-close" aria-label="Cerrar ventana">×</button>
       </div>
       <div class="modal-body">
-        <p id="authErrorMessage">@mensajeErrorServidor</p>
+        <!-- Mensaje exacto requerido. Se muestra en minúsculas según especificación. -->
+        <p id="authErrorMessage">correo o contraseña incorrectos</p>
       </div>
       <div class="modal-footer">
         <button type="button" id="authErrorCloseBtn" class="btn-secondary">Cerrar</button>

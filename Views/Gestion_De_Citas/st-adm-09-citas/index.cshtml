@@ -53,10 +53,12 @@
 
     <!-- Preconnect para optimizar carga de fuentes -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css")" />
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")" />
 </head>
 
 <body>
@@ -121,25 +123,34 @@
 
         <!-- KPI Cards con contadores animados -->
         <section class="stats-grid" aria-label="Resumen de citas">
+            @{
+                var statKpiTotal = ViewData["StatKpiMesTotal"] ?? 0;
+                var statKpiProgramadas = ViewData["StatKpiMesProgramadas"] ?? 0;
+                var statKpiCanceladas = ViewData["StatKpiMesCanceladas"] ?? 0;
+                var statKpiAtendidas = ViewData["StatKpiMesAtendidas"] ?? 0;
+                var statKpiDifSemana = ViewData["StatKpiDifSemana"] ?? 0;
+                var statKpiTasaCancel = ViewData["StatKpiTasaCancelacion"] ?? 0;
+                var statKpiTasaAsis = ViewData["StatKpiTasaAsistencia"] ?? 0;
+            }
             <div class="stat-card" data-color="blue">
-                <span class="stat-number" id="statTotal" data-target="284" aria-live="polite">0</span>
+                <span class="stat-number" id="statTotal" data-target="@statKpiTotal" aria-live="polite">0</span>
                 <span class="stat-label">Total Citas</span>
                 <span class="stat-sub">Este mes</span>
             </div>
             <div class="stat-card" data-color="green">
-                <span class="stat-number" id="statScheduled" data-target="48" aria-live="polite">0</span>
+                <span class="stat-number" id="statScheduled" data-target="@statKpiProgramadas" aria-live="polite">0</span>
                 <span class="stat-label">Programadas</span>
-                <span class="stat-sub">↑ +12 vs semana pasada</span>
+                <span class="stat-sub">@((int.TryParse(statKpiDifSemana?.ToString(), out var ds) && ds >= 0 ? $"↑ +{ds}" : $"↓ {statKpiDifSemana}")) vs semana pasada</span>
             </div>
             <div class="stat-card" data-color="red">
-                <span class="stat-number" id="statCancelled" data-target="12" aria-live="polite">0</span>
+                <span class="stat-number" id="statCancelled" data-target="@statKpiCanceladas" aria-live="polite">0</span>
                 <span class="stat-label">Canceladas</span>
-                <span class="stat-sub">Tasa: 4.2%</span>
+                <span class="stat-sub">Tasa: @statKpiTasaCancel%</span>
             </div>
             <div class="stat-card" data-color="orange">
-                <span class="stat-number" id="statAttended" data-target="224" aria-live="polite">0</span>
+                <span class="stat-number" id="statAttended" data-target="@statKpiAtendidas" aria-live="polite">0</span>
                 <span class="stat-label">Atendidas</span>
-                <span class="stat-sub">↓ 79% asistencia</span>
+                <span class="stat-sub">↓ @statKpiTasaAsis% asistencia</span>
             </div>
         </section>
 
@@ -360,6 +371,32 @@
 
                         <!-- Acciones -->
                         <div class="table-col col-acciones text-right" role="cell">
+                            @{
+                                var cFecha = cita.Fecha.ToString("dd/MM/yyyy");
+                                var cHora = cita.HoraInicio?.ToString("hh\\:mm") ?? "—";
+                                var cPaciente = cita.Paciente?.NombresCompleto ?? "—";
+                                var cProfesional = cita.Profesional?.NombreProfesional ?? "—";
+                                var cServicio = cita.MotivoConsulta ?? "—";
+                                var cConsultorio = cita.Consultorio?.Nombre ?? "—";
+                                var cEstado = cita.EstadoCita?.NombreEstado ?? cita.Estado ?? "Sin estado";
+                                var cNotas = cita.NotasPrevias ?? "";
+                            }
+                            <button
+                                type="button"
+                                class="action-btn btn-view"
+                                aria-label="Ver detalle de la cita"
+                                title="Ver detalles"
+                                data-id="@cita.IdCita"
+                                data-fecha="@cFecha"
+                                data-hora="@cHora"
+                                data-paciente="@cPaciente"
+                                data-profesional="@cProfesional"
+                                data-servicio="@cServicio"
+                                data-consultorio="@cConsultorio"
+                                data-estado="@cEstado"
+                                data-notas="@cNotas.Replace("\"", "&quot;")">
+                                👁️
+                            </button>
                             <a 
                                 class="action-btn" 
                                 href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" 
@@ -523,7 +560,8 @@
         role="dialog" 
         aria-modal="true" 
         aria-labelledby="modalCitaTitle" 
-        aria-hidden="true">
+        aria-hidden="true"
+        inert>
         <div class="modal">
             <button 
                 class="modal-close" 
@@ -587,33 +625,43 @@
 
                     <!-- Fecha -->
                     <div class="form-group">
-                        <label class="form-label">Fecha *</label>
+                        <label class="form-label" for="fechaCita">Fecha *</label>
                         <input 
                             type="date" 
+                            id="fechaCita"
                             name="Fecha" 
                             class="form-input" 
+                            min="@DateTime.Today.ToString("yyyy-MM-dd")"
                             value="@(editingCita?.Fecha.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" 
                             required />
                     </div>
 
-                    <!-- Hora Inicio y Fin (ancho completo) -->
-                    <div class="form-group full-width">
-                        <label class="form-label">Hora Inicio</label>
+                    <!-- Hora Inicio -->
+                    <div class="form-group">
+                        <label class="form-label" for="horaInicioCita">Hora Inicio</label>
                         <input 
                             type="time" 
+                            id="horaInicioCita"
                             name="HoraInicio" 
                             class="form-input" 
                             value="@(editingCita?.HoraInicio?.ToString("hh\\:mm") ?? "09:00")" />
+                    </div>
 
-                        <label class="form-label">Hora Fin</label>
+                    <!-- Hora Fin -->
+                    <div class="form-group">
+                        <label class="form-label" for="horaFinCita">Hora Fin</label>
                         <input 
                             type="time" 
+                            id="horaFinCita"
                             name="HoraFin" 
                             class="form-input" 
                             value="@(editingCita?.HoraFin?.ToString("hh\\:mm") ?? "09:30")" />
+                    </div>
 
-                        <label class="form-label">Estado *</label>
-                        <select name="IdEstado" class="form-input">
+                    <!-- Estado -->
+                    <div class="form-group">
+                        <label class="form-label" for="idEstadoCita">Estado *</label>
+                        <select id="idEstadoCita" name="IdEstado" class="form-input">
                             @foreach (var estado in (ViewData["EstadosCita"] as List<SmileTrack_MVC.Models.Entities.EstadoCita> ?? new()))
                             {
                                 var selected = editingCita?.IdEstado == estado.IdEstado ? "selected" : "";
@@ -624,29 +672,34 @@
                         </select>
                     </div>
 
-                    <!-- Motivo y Notas (ancho completo) -->
+                    <!-- Motivo consulta -->
                     <div class="form-group full-width">
-                        <label class="form-label">Motivo consulta</label>
+                        <label class="form-label" for="motivoConsultaCita">Motivo consulta</label>
                         <textarea 
+                            id="motivoConsultaCita"
                             name="MotivoConsulta" 
                             class="form-input" 
                             rows="2" 
-                            placeholder="Motivo principal de la cita...">
-                            @editingCita?.MotivoConsulta
-                        </textarea>
+                            placeholder="Motivo principal de la cita...">@editingCita?.MotivoConsulta</textarea>
+                    </div>
 
-                        <label class="form-label">Notas previas</label>
+                    <!-- Notas previas -->
+                    <div class="form-group full-width">
+                        <label class="form-label" for="notasPreviasCita">Notas previas</label>
                         <textarea 
+                            id="notasPreviasCita"
                             name="NotasPrevias" 
                             class="form-input" 
                             rows="2" 
-                            placeholder="Observaciones de la cita...">
-                            @editingCita?.NotasPrevias
-                        </textarea>
+                            placeholder="Observaciones de la cita...">@editingCita?.NotasPrevias</textarea>
+                    </div>
 
-                        <label class="form-label">Tipo de cita</label>
+                    <!-- Tipo de cita -->
+                    <div class="form-group full-width">
+                        <label class="form-label" for="tipoCita">Tipo de cita</label>
                         <input 
                             type="text" 
+                            id="tipoCita"
                             name="TipoCita" 
                             class="form-input" 
                             value="@(editingCita?.TipoCita ?? "Consulta")" />
@@ -669,14 +722,13 @@
     <footer id="dynamic-footer" class="site-footer" role="contentinfo">
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
             <span style="font-size:1rem;">🦷</span>
-            <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+            <p>© @DateTime.Now.Year Smile Track. Todos los derechos reservados.</p>
         </div>
         <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
-        <script src="@Url.Content("~/js/footer.js")"></script>
-        <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
     </footer>
 
-    <!-- Script principal de la gestión de citas -->
+    <!-- Scripts finales (fuera del footer para HTML válido) -->
+    <script src="@Url.Content("~/js/footer.js")"></script>
     <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-09-citas/gestionintegral.js")"></script>
 
     <!-- Script de inicialización específico de la vista -->
@@ -718,7 +770,7 @@
                         } else if (currentTab === 'cancelled') {
                             row.style.display = estado === 'cancelada' ? '' : 'none';
                         } else if (currentTab === 'no-show') {
-                            row.style.display = (estado === 'no asistió' || estado === 'inasistencia') ? '' : 'none';
+                            row.style.display = (estado === 'no_asistio' || estado === 'no asistio' || estado === 'inasistencia') ? '' : 'none';
                         }
                     });
                 });
@@ -762,6 +814,80 @@
             if (isEditingCita) {
                 openModalCita();
             }
+
+            // ═══ MODAL VER DETALLES: poblar desde data-attributes del botón 👁️ ═══
+            const modalAppEl = document.getElementById('modalAppointment');
+            const modalAppContent = document.getElementById('modalAppointmentContent');
+            const modalAppTitle = document.getElementById('modalAppointmentTitle');
+            const modalAppEditBtn = document.getElementById('modalAppointmentEdit');
+            document.querySelectorAll('.btn-view').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const citaId = btn.dataset.id;
+                    const html = `
+                        <div style="display:grid; gap:12px; font-size:0.95rem;">
+                            <div style="display:flex; justify-content:space-between; gap:12px;">
+                                <strong style="color:var(--text-muted); min-width:120px;">Fecha:</strong>
+                                <span>${btn.dataset.fecha ?? '—'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; gap:12px;">
+                                <strong style="color:var(--text-muted); min-width:120px;">Hora:</strong>
+                                <span>${btn.dataset.hora ?? '—'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; gap:12px;">
+                                <strong style="color:var(--text-muted); min-width:120px;">Paciente:</strong>
+                                <span>${btn.dataset.paciente ?? '—'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; gap:12px;">
+                                <strong style="color:var(--text-muted); min-width:120px;">Profesional:</strong>
+                                <span>${btn.dataset.profesional ?? '—'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; gap:12px;">
+                                <strong style="color:var(--text-muted); min-width:120px;">Servicio:</strong>
+                                <span>${btn.dataset.servicio ?? '—'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; gap:12px;">
+                                <strong style="color:var(--text-muted); min-width:120px;">Consultorio:</strong>
+                                <span>${btn.dataset.consultorio ?? '—'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; gap:12px;">
+                                <strong style="color:var(--text-muted); min-width:120px;">Estado:</strong>
+                                <span class="status-badge status-select-inline ${(btn.dataset.estado ?? '').toLowerCase().replace(' ','-')}">${btn.dataset.estado ?? '—'}</span>
+                            </div>
+                            ${(btn.dataset.notas && btn.dataset.notas.length > 0) ? `
+                            <div style="margin-top:8px; padding:12px; background:var(--bg-soft); border-radius:8px;">
+                                <strong style="color:var(--text-muted); display:block; margin-bottom:4px;">Notas previas:</strong>
+                                <span>${btn.dataset.notas}</span>
+                            </div>` : ''}
+                        </div>`;
+                    if (modalAppContent) modalAppContent.innerHTML = html;
+                    if (modalAppTitle) modalAppTitle.textContent = `Detalle: ${btn.dataset.paciente ?? 'Cita'}`;
+                    if (modalAppEditBtn) modalAppEditBtn.style.display = 'inline-flex';
+                    if (modalAppEl) {
+                        modalAppEl.setAttribute('data-selected-id', citaId);
+                        modalAppEl.classList.add('open');
+                        modalAppEl.setAttribute('aria-hidden', 'false');
+                        modalAppEl.removeAttribute('inert');
+                        document.body.style.overflow = 'hidden';
+                    }
+                });
+            });
+
+            // Botón Editar del modalAppointment → cerrar modal y llevar al formulario de edición
+            if (modalAppEditBtn) {
+                const freshBtn = modalAppEditBtn.cloneNode(true);
+                modalAppEditBtn.parentNode.replaceChild(freshBtn, modalAppEditBtn);
+                freshBtn.addEventListener('click', () => {
+                    const targetId = modalAppEl?.getAttribute('data-selected-id');
+                    if (targetId) {
+                        if (modalAppEl) {
+                            modalAppEl.classList.remove('open');
+                            modalAppEl.setAttribute('aria-hidden', 'true');
+                            modalAppEl.setAttribute('inert', '');
+                        }
+                        window.location.href = `/gestion-de-citas/st-adm-09-citas?editId=${targetId}`;
+                    }
+                });
+            }
         });
 
         // ═══ FUNCIONES GLOBALES PARA MODAL DE CITA ═══
@@ -770,7 +896,15 @@
             if (modal) {
                 modal.classList.add('open');
                 modal.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('inert');
                 document.body.style.overflow = 'hidden';
+
+                modal.addEventListener('click', function outsideHandler(e) {
+                    if (e.target === modal) {
+                        closeModalCita();
+                        modal.removeEventListener('click', outsideHandler);
+                    }
+                });
             }
         }
 
@@ -779,6 +913,7 @@
             if (modal) {
                 modal.classList.remove('open');
                 modal.setAttribute('aria-hidden', 'true');
+                modal.setAttribute('inert', '');
                 document.body.style.overflow = '';
             }
         }
