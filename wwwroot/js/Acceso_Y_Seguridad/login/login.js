@@ -8,27 +8,27 @@ document.addEventListener('DOMContentLoaded', function () {
   const passInput = document.getElementById('password');
   const loginForm = document.getElementById('loginForm');
   const loginBtn = document.getElementById('loginBtn');
-  const errorMsg = document.getElementById('errorMsg');
-  const errorText = document.getElementById('errorText');
   const toggleBtn = document.getElementById('togglePassword');
   const toggleIcon = document.getElementById('toggleIcon');
   const roleButtons = document.querySelectorAll('.role-btn');
   const selectedRoleInput = document.getElementById('selectedRole');
-  const toast = document.getElementById('toast');
-  const toastMsg = document.getElementById('toastMsg');
   const authModal = document.getElementById('authErrorModal');
   const authErrorClose = document.getElementById('authErrorClose');
   const authErrorCloseBtn = document.getElementById('authErrorCloseBtn');
 
-  // ── Apertura del modal: el servidor controla si debe mostrarse (via clase 'hidden' en Razor).
-  // Cuando el modal está visible al cargar la página, movemos el foco al botón de cierre.
-  // Esto cumple los requisitos de accesibilidad: el usuario sabe inmediatamente que hay un modal abierto.
+  // Si no existen las utilidades globales, las emulamos de forma básica por seguridad
+  const Toast = window.ToastService || {
+      error: (title, msg) => alert(title + ": " + msg),
+      success: (title, msg) => alert(title + ": " + msg)
+  };
+  const ValUtils = window.ValidationUtils;
+
+  // ── Modales de error por cuenta bloqueada
   const openAuthModal = () => {
     if (!authModal) return;
     authModal.classList.remove('hidden');
     authModal.setAttribute('aria-hidden', 'false');
     authModal.removeAttribute('inert');
-    // Foco automático en el botón de cierre (WCAG 2.1 Focus Management)
     setTimeout(() => authErrorClose?.focus(), 60);
   };
 
@@ -37,11 +37,9 @@ document.addEventListener('DOMContentLoaded', function () {
     authModal.classList.add('hidden');
     authModal.setAttribute('aria-hidden', 'true');
     authModal.setAttribute('inert', '');
-    // Restaurar foco al campo de correo para que el usuario pueda reintentar
     emailInput?.focus();
   };
 
-  // Si el servidor ya renderizó el modal abierto (errorStatus 401/403), aplicar foco automático
   if (authModal && !authModal.classList.contains('hidden')) {
     openAuthModal();
   }
@@ -49,13 +47,13 @@ document.addEventListener('DOMContentLoaded', function () {
   if (authErrorClose) authErrorClose.addEventListener('click', closeAuthModal);
   if (authErrorCloseBtn) authErrorCloseBtn.addEventListener('click', closeAuthModal);
 
-  // Cerrar al hacer clic en el overlay (fuera de la caja del modal)
   if (authModal) {
     authModal.addEventListener('click', (e) => {
       if (e.target === authModal) closeAuthModal();
     });
   }
 
+  // ── Mostrar/Ocultar Contraseña
   if (toggleBtn && passInput && toggleIcon) {
     toggleBtn.addEventListener('click', () => {
       const isHidden = passInput.type === 'password';
@@ -67,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // ── Selector de Roles
   const activateRole = (btn) => {
     roleButtons.forEach((b) => {
       b.classList.remove('active');
@@ -93,71 +92,120 @@ document.addEventListener('DOMContentLoaded', function () {
   const defaultBtn = Array.from(roleButtons).find((b) => b.dataset.role === 'profesional') || roleButtons[0];
   if (defaultBtn) activateRole(defaultBtn);
 
-  const showToast = (msg) => {
-    if (toastMsg) toastMsg.textContent = msg;
-    if (toast) {
-      toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), 3000);
+  // ── Validación Inline en tiempo real
+  const setFieldError = (input, message) => {
+    if (ValUtils) {
+      const errEl = document.getElementById(`${input.id}Error`);
+      if (message) {
+        ValUtils.showError(input, errEl, message);
+      } else {
+        ValUtils.clearError(input, errEl);
+      }
+    } else {
+      input.classList.toggle('input-error', Boolean(message));
     }
   };
 
+  [emailInput, passInput].forEach((input) => {
+    input?.addEventListener('input', () => {
+      if (!input.value.trim()) {
+        setFieldError(input, 'Este campo es obligatorio');
+      } else if (input.id === 'email' && ValUtils && !ValUtils.isValidEmail(input.value.trim())) {
+        setFieldError(input, 'Ingresa un correo válido');
+      } else {
+        setFieldError(input, '');
+      }
+    });
+  });
+
+  // ── Intercepción del Formulario (AJAX/Fetch)
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (errorMsg) errorMsg.classList.add('hidden');
 
       const email = emailInput?.value.trim();
       const pass = passInput?.value.trim();
 
       if (!email || !pass) {
-        if (errorText) errorText.textContent = 'Completa correo y contraseña';
-        if (errorMsg) {
-          errorMsg.classList.remove('hidden');
-          errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        if (!email) setFieldError(emailInput, 'Completa tu correo electrónico');
+        if (!pass) setFieldError(passInput, 'Completa tu contraseña');
+        Toast.error('Datos incompletos', 'Completa tu correo y contraseña para ingresar.');
         return;
       }
 
-      const originalHTML = loginBtn?.innerHTML || '';
+      if (ValUtils && !ValUtils.isValidEmail(email)) {
+        setFieldError(emailInput, 'Ingresa un correo válido');
+        Toast.warning('Formato inválido', 'Por favor ingresa un correo electrónico válido.');
+        return;
+      }
+
+      // ── Spinner en botón de submit del login ─────────────────────────────
+      // WHY: evita dobles clics que crearían sesiones paralelas o registros duplicados.
+      // El spinner se mantiene activo durante la petición fetch; se restaura en caso de error.
       if (loginBtn) {
         loginBtn.disabled = true;
         loginBtn.setAttribute('aria-busy', 'true');
-        loginBtn.innerHTML = '<span class="loading-spinner" aria-hidden="true"></span> <span>Iniciando sesión...</span>';
+        loginBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" style="width:18px;height:18px;animation:st-spin .7s linear infinite;vertical-align:middle;flex-shrink:0;"><path d="M12 2a10 10 0 0 1 10 10"/></svg> <span>Iniciando sesión...</span>';
+        if (!document.getElementById('st-spinner-style')) {
+          const s = document.createElement('style');
+          s.id = 'st-spinner-style';
+          s.textContent = '@keyframes st-spin { to { transform: rotate(360deg); } }';
+          document.head.appendChild(s);
+        }
       }
 
-      // Intentar login AJAX para capturar token cuando la petición lo permita
-      const formData = new FormData(loginForm);
-      const body = new URLSearchParams();
-      for (const pair of formData.entries()) body.append(pair[0], pair[1]);
-      const csrfTokenMatch = document.cookie.match(/(^|; )XSRF-TOKEN=([^;]+)/);
-      const csrfToken = csrfTokenMatch ? decodeURIComponent(csrfTokenMatch[2]) : null;
+      try {
+        const formData = new FormData(loginForm);
+        const urlParams = new URLSearchParams(formData);
 
-      // Usar el submit tradicional porque el backend maneja correctamente el antiforgery y la autenticación.
-      // El login AJAX anterior estaba generando un 400 en el navegador en el flujo actual.
-      loginForm.submit();
+        const response = await fetch(loginForm.action, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+          },
+          body: urlParams
+        });
 
-      setTimeout(() => {
-        if (loginBtn && loginBtn.disabled) {
+        const data = await response.json().catch(() => null);
+
+        if (response.ok && data?.success) {
+          Toast.success('¡Bienvenido!', 'Iniciando sesión de forma segura...');
+          // Redirigir al destino
+          window.location.href = data.redirectUrl || '/';
+        } else {
+          // Restaurar botón
+          if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.setAttribute('aria-busy', 'false');
+            loginBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">login</span> <span id="btnText">Iniciar Sesión</span>';
+          }
+          
+          const errorMsg = data?.message || 'Credenciales incorrectas. Verifica tus datos e intenta de nuevo.';
+          if (response.status === 403 || errorMsg.toLowerCase().includes('bloqueada')) {
+             openAuthModal();
+          } else {
+             Toast.error('Acceso denegado', errorMsg);
+             setFieldError(emailInput, 'Verifica tu correo');
+             setFieldError(passInput, 'Verifica tu contraseña');
+          }
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        Toast.error('Error de conexión', 'No pudimos conectar con el servidor. Intenta nuevamente.');
+        if (loginBtn) {
           loginBtn.disabled = false;
           loginBtn.setAttribute('aria-busy', 'false');
-          loginBtn.innerHTML = originalHTML;
+          loginBtn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">login</span> <span id="btnText">Iniciar Sesión</span>';
         }
-      }, 5000);
+      }
     });
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && loginForm?.contains(e.target)) {
-      if (!loginBtn?.disabled) loginForm?.requestSubmit();
-    }
-    // Escape: cierra el modal de autenticación si está abierto (prioridad sobre el error-box);
-    // si no hay modal abierto, cierra el error-box inline.
     if (e.key === 'Escape') {
       if (authModal && !authModal.classList.contains('hidden')) {
         closeAuthModal();
-      } else if (errorMsg && !errorMsg.classList.contains('hidden')) {
-        errorMsg.classList.add('hidden');
-        emailInput?.focus();
       }
     }
   });

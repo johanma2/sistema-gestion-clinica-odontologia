@@ -237,11 +237,21 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* Acciones en tabla */
 .actions-cell { display: flex; align-items: center; gap: 4px; }
+
+/* action-icon: clase legacy (mantenida por compatibilidad con código existente) */
 .action-icon { background: none; border: none; cursor: pointer; font-size: 16px; padding: 5px 7px; border-radius: 6px; transition: background var(--tr), color var(--tr); color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
 .action-icon:hover { background: var(--primary-light); color: var(--primary); }
 .action-icon.danger:hover { background: #fee2e2; color: #dc2626; }
-/* [MEJORA]: Focus visible para iconos de acción */
 .action-icon:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* btn-icon + action-btn: patrón canónico (igual que st-adm-07) con texto visible */
+.btn-icon { background: none; border: none; cursor: pointer; font-size: 16px; padding: 5px 7px; border-radius: 6px; transition: background var(--tr), color var(--tr); color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; }
+.btn-icon:hover { background: var(--primary-light); color: var(--primary); }
+.btn-icon.danger:hover { background: #fee2e2; color: #dc2626; }
+.btn-icon:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.btn-icon.action-btn { background: var(--white); border: 1.5px solid var(--border); padding: 7px 12px; box-shadow: 0 1px 4px rgba(15,23,42,.06); font-size: .8rem; }
+.btn-icon.action-btn .btn-text { display: inline; font-size: .78rem; font-weight: 500; }
+.btn-icon.action-btn:hover { background: #eff6ff; color: var(--primary); border-color: var(--primary); }
 
 /* Widgets */
 .sidebar-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px; }

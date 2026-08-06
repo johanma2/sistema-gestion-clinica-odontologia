@@ -1,10 +1,11 @@
-﻿/**
+/**
  * ════════════════════════════════════════════════════════
  * SMILETRACK — LÓGICA DE REGISTRO DE USUARIOS
  * Archivo: views/auth/register/register.js
  * Propósito: Validar formulario, mostrar fortaleza de contraseña y manejar envío
  * ════════════════════════════════════════════════════════
- */
+    // El registro de service worker se elimina porque no hay `sw.js` implementado
+    // y registrar uno sin archivo provoca errores en consola en entornos de producción.
 
 /**
  * Clase principal que encapsula toda la funcionalidad del registro
@@ -27,10 +28,19 @@ class DentalRegister {
         this.passwordToggle = document.getElementById('togglePassword');
         // Barra visual que muestra la fortaleza de la contraseña
         this.passwordStrength = document.getElementById('passwordStrength');
+        this.passwordCriterionLength = document.getElementById('passwordCriterionLength');
+        this.passwordCriterionUpper = document.getElementById('passwordCriterionUpper');
+        this.passwordCriterionNumber = document.getElementById('passwordCriterionNumber');
+        this.passwordCriterionSymbol = document.getElementById('passwordCriterionSymbol');
         // Botón de envío del formulario
         this.registerBtn = document.getElementById('registerBtn');
         // Checkbox de aceptación de términos y condiciones
         this.termsCheckbox = document.getElementById('terms');
+        // Select de rol elegido por el usuario
+        this.roleSelect = document.getElementById('role');
+        this.roleError = document.getElementById('roleError');
+        // Contenedor de error global del formulario
+        this.registerGlobalError = document.getElementById('registerGlobalError');
 
         // Iniciar la aplicación vinculando eventos y configurando estado inicial
         this.init();
@@ -42,6 +52,8 @@ class DentalRegister {
     init() {
         // Vincular todos los eventos a sus funciones correspondientes
         this.bindEvents();
+        // Ajustar estado inicial del botón de envío según aceptación de términos
+        this.toggleSubmitButton();
         // Enfocar automáticamente el primer campo para mejor experiencia de usuario
         this.autoFocus();
     }
@@ -67,10 +79,21 @@ class DentalRegister {
         this.form.querySelectorAll('input, select').forEach(field => {
             field.addEventListener('blur', () => this.validateField(field));
             field.addEventListener('input', () => this.validateField(field));
+            if (field.name === 'email') {
+                field.addEventListener('input', () => this.validateField(field));
+            }
         });
+
+        // Validación del selector de rol y limpieza de error asociado
+        this.roleSelect?.addEventListener('change', () => this.validateRole());
 
         // Habilitar/deshabilitar botón de registro según si se aceptan los términos
         this.termsCheckbox.addEventListener('change', () => this.toggleSubmitButton());
+        // Limpiar error global cuando el usuario interactúa nuevamente con el formulario
+        this.form.querySelectorAll('input, select').forEach(field => {
+            field.addEventListener('input', () => this.clearGlobalError());
+            field.addEventListener('change', () => this.clearGlobalError());
+        });
     }
 
     /**
@@ -82,17 +105,14 @@ class DentalRegister {
         const type = this.passwordInput.type === 'password' ? 'text' : 'password';
         this.passwordInput.type = type;
 
-        // Actualizar el icono SVG según el estado de visibilidad
-        const icon = this.passwordToggle.querySelector('svg');
+        // Actualizar el icono de material-symbols según el estado
+        const icon = this.passwordToggle.querySelector('.material-symbols-outlined');
         if (icon) {
-            if (type === 'password') {
-                // Icono de ojo abierto (contraseña oculta)
-                icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>`;
-            } else {
-                // Icono de ojo tachado (contraseña visible)
-                icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>`;
-            }
+            icon.textContent = type === 'password' ? 'visibility' : 'visibility_off';
         }
+
+        const label = type === 'password' ? 'Mostrar contraseña' : 'Ocultar contraseña';
+        this.passwordToggle.setAttribute('aria-label', label);
     }
 
     /**
@@ -101,16 +121,27 @@ class DentalRegister {
      */
     updatePasswordStrength() {
         const password = this.passwordInput.value;
-        // Calcular nivel de fortaleza basado en criterios de seguridad
         const strength = this.calculateStrength(password);
 
-        // Aplicar clase de color y ancho según el nivel calculado
-        this.passwordStrength.className = `h-1 bg-gradient-to-r rounded-full overflow-hidden mt-1 ${strength.class}`;
+        this.passwordStrength.className = `mt-3 h-2 w-full overflow-hidden rounded-full ${strength.class}`;
         this.passwordStrength.style.width = `${strength.width}%`;
-        // Mostrar u ocultar la barra según si hay texto en el campo
-        this.passwordStrength.hidden = !password;
+        this.passwordStrength.classList.remove('hidden');
 
-        // Validar el campo para actualizar estilos de borde según fortaleza
+        this.passwordCriterionLength.classList.toggle('text-green-400', password.length >= 8);
+        this.passwordCriterionUpper.classList.toggle('text-green-400', /[A-Z]/.test(password));
+        this.passwordCriterionNumber.classList.toggle('text-green-400', /[0-9]/.test(password));
+        this.passwordCriterionSymbol.classList.toggle('text-green-400', /[^A-Za-z0-9]/.test(password));
+
+        if (!password) {
+            this.passwordStrength.classList.add('hidden');
+            [
+                this.passwordCriterionLength,
+                this.passwordCriterionUpper,
+                this.passwordCriterionNumber,
+                this.passwordCriterionSymbol
+            ].forEach(el => el.classList.remove('text-green-400'));
+        }
+
         this.validateField(this.passwordInput);
     }
 
@@ -129,9 +160,9 @@ class DentalRegister {
         if (/[^A-Za-z0-9]/.test(password)) score++;
 
         // Retornar configuración visual según el puntaje obtenido
-        if (score <= 2) return { width: 33, class: 'from-red-500 to-orange-500' };   /* Débil */
-        if (score <= 4) return { width: 66, class: 'from-orange-500 to-yellow-500' }; /* Media */
-        return { width: 100, class: 'from-green-500 to-emerald-500' };                /* Fuerte */
+        if (score <= 2) return { width: 33, class: 'strength-weak' };   /* Débil */
+        if (score <= 4) return { width: 66, class: 'strength-medium' }; /* Media */
+        return { width: 100, class: 'strength-strong' };                /* Fuerte */
     }
 
     /**
@@ -142,14 +173,14 @@ class DentalRegister {
         const password = this.passwordInput.value;
         const confirm = this.confirmPassword.value;
 
-        // Si hay texto y no coincide, aplicar estilo de error
         if (confirm && confirm !== password) {
             this.confirmPassword.classList.add('border-red-300', 'ring-2', 'ring-red-200');
             this.confirmPassword.classList.remove('border-green-300', 'ring-green-200');
-        } else {
-            // Si coincide o está vacío, aplicar estilo de éxito o neutro
+        } else if (confirm && confirm === password) {
             this.confirmPassword.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
             this.confirmPassword.classList.add('border-green-300', 'ring-2', 'ring-green-200');
+        } else {
+            this.confirmPassword.classList.remove('border-red-300', 'ring-2', 'ring-red-200', 'border-green-300', 'ring-green-200');
         }
     }
 
@@ -166,28 +197,25 @@ class DentalRegister {
 
         // Reglas de validación específicas según el nombre del campo
         switch (field.name) {
-            case 'email':
-                // Validar formato de correo electrónico con expresión regular
+            case 'Correo':
                 isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
                 break;
-            case 'phone':
-                // Validar formato de teléfono internacional (E.164 simplificado)
+            case 'Telefono':
                 isValid = /^\+?[1-9]\d{1,14}$/.test(value.replace(/[\s()-]/g, ''));
                 break;
-            case 'password':
-                // Validar longitud mínima de 8 caracteres para contraseña
+            case 'Contrasena':
                 isValid = value.length >= 8;
                 break;
-            case 'confirmPassword':
-                // Validar que coincida con el campo de contraseña original
+                case 'ConfirmarContrasena':
                 isValid = value === this.passwordInput.value;
                 break;
+            case 'Rol':
+                isValid = value !== '';
+                break;
             default:
-                // Validación genérica: al menos 2 caracteres para campos de texto
                 isValid = value.length >= 2;
         }
 
-        // Aplicar estilo visual según resultado de validación
         if (isValid && value) {
             field.classList.add('border-green-300', 'ring-2', 'ring-green-200/50');
         } else if (field.hasAttribute('required') && !value) {
@@ -224,13 +252,24 @@ class DentalRegister {
 
         // Si hay campos vacíos, mostrar mensaje de error y detener ejecución
         if (!isValid) {
-            this.showNotification('Completa todos los campos requeridos', 'error');
+            this.setGlobalError('Completa todos los campos requeridos antes de continuar');
             return;
         }
 
         // Verificar que las contraseñas coincidan antes de enviar
         if (this.passwordInput.value !== this.confirmPassword.value) {
-            this.showNotification('Las contraseñas no coinciden', 'error');
+            this.setGlobalError('Las contraseñas no coinciden. Revisa el campo de confirmación.');
+            return;
+        }
+
+        if (!/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(this.passwordInput.value)) {
+            this.setGlobalError('La contraseña debe tener mínimo 8 caracteres, una mayúscula, un número y un símbolo.');
+            return;
+        }
+
+        // Validar rol seleccionado antes de enviar
+        if (!this.validateRole()) {
+            this.setGlobalError('Selecciona un rol válido antes de continuar.');
             return;
         }
 
@@ -238,20 +277,32 @@ class DentalRegister {
         this.setLoading(true);
 
         try {
-            // Simular llamada a API de registro (reemplazar con fetch real en producción)
-            await this.simulateApiCall();
-            // Mostrar mensaje de éxito al usuario
-            this.showNotification('¡Cuenta creada exitosamente!', 'success');
+            const formData = new FormData(this.form);
+            const urlParams = new URLSearchParams(formData);
+            
+            const response = await fetch(this.form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                },
+                body: urlParams
+            });
+            
+            const data = await response.json().catch(() => null);
 
-            // Redirigir al login después de 2 segundos para que el usuario vea el mensaje
-            setTimeout(() => {
-                window.location.href = "../login/index.html";
-            }, 2000);
+            if (response.ok && data?.success) {
+                this.showNotification('¡Cuenta creada exitosamente!', 'success');
+                setTimeout(() => {
+                    window.location.href = data.redirectUrl || "/acceso-y-seguridad/login";
+                }, 2000);
+            } else {
+                this.showNotification(data?.message || 'Error al crear cuenta. Revisa tus datos.', 'error');
+            }
         } catch (error) {
-            // Manejar errores de conexión o servidor
-            this.showNotification('Error al crear cuenta. Inténtalo nuevamente.', 'error');
+            console.error(error);
+            this.setGlobalError('Error de conexión con el servidor. Inténtalo nuevamente.');
         } finally {
-            // Restaurar botón a su estado normal independientemente del resultado
             this.setLoading(false);
         }
     }
@@ -281,48 +332,50 @@ class DentalRegister {
         }
     }
 
-    /**
-     * Simula una llamada a API con tiempo de respuesta aleatorio
-     * @returns {Promise} Resuelve si el email es válido, rechaza si no
-     * NOTA: Reemplazar con fetch real a tu backend en producción
-     */
-    simulateApiCall() {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                const email = document.getElementById('email').value;
-                // Simular éxito si el email tiene formato básico válido
-                if (email.includes('@')) resolve();
-                else reject();
-            }, 2500);
-        });
+    // Removido: simulateApiCall
+
+    showNotification(message, type = 'info') {
+        if (window.ToastService) {
+            if (type === 'success') window.ToastService.success('Éxito', message);
+            else if (type === 'error') window.ToastService.error('Error', message);
+            else if (type === 'warning') window.ToastService.warning('Advertencia', message);
+            else window.ToastService.info('Información', message);
+        } else {
+            alert(message);
+        }
     }
 
-    /**
-     * Muestra una notificación temporal (toast) en la esquina superior derecha
-     * @param {string} message - Texto del mensaje a mostrar
-     * @param {string} type - Tipo de notificación: 'success', 'error' o 'info'
-     */
-    showNotification(message, type = 'info') {
-        // Crear elemento de notificación dinámicamente
-        const notification = document.createElement('div');
-        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-2xl shadow-2xl text-white font-medium transform translate-x-full transition-transform duration-300 ${type === 'success' ? 'bg-success' :
-            type === 'error' ? 'bg-error' : 'bg-info'
-            }`;
-        notification.textContent = message;
+    validateRole() {
+        if (!this.roleSelect) return true;
 
-        // Agregar al body para que flote sobre todo el contenido
-        document.body.appendChild(notification);
+        const selectedValue = this.roleSelect.value?.trim();
+        const isValid = selectedValue !== '';
 
-        // Disparar animación de entrada: deslizarse desde la derecha
-        requestAnimationFrame(() => {
-            notification.classList.remove('translate-x-full');
-        });
+        if (!isValid) {
+            this.roleSelect.classList.add('border-red-300', 'ring-2', 'ring-red-200/50');
+            this.roleError?.classList.remove('hidden');
+        } else {
+            this.roleSelect.classList.remove('border-red-300', 'ring-2', 'ring-red-200/50');
+            this.roleSelect.classList.add('border-green-300', 'ring-2', 'ring-green-200/50');
+            this.roleError?.classList.add('hidden');
+        }
 
-        // Auto-ocultar después de 4 segundos con animación de salida
-        setTimeout(() => {
-            notification.classList.add('translate-x-full');
-            setTimeout(() => notification.remove(), 300);
-        }, 4000);
+        return isValid;
+    }
+
+    setGlobalError(message) {
+        if (this.registerGlobalError) {
+            this.registerGlobalError.textContent = message;
+            this.registerGlobalError.classList.remove('hidden');
+        }
+        this.showNotification(message, 'error');
+    }
+
+    clearGlobalError() {
+        if (this.registerGlobalError) {
+            this.registerGlobalError.textContent = '';
+            this.registerGlobalError.classList.add('hidden');
+        }
     }
 
     /**
@@ -344,9 +397,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ════════════════════════════════════════════════════════
 // SERVICE WORKER PARA PWA (OPCIONAL)
-// Permite que la aplicación funcione offline en el futuro
-// Se registra solo si el navegador lo soporta
-// ════════════════════════════════════════════════════════
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-}
+// Service worker registration removed: no `sw.js` present in repository.

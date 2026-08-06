@@ -1,395 +1,175 @@
-@* ============================================
-   SmileTrack — Dashboard General (st-adm-01)
-   ============================================
-   Autor: Johan Santamaria
-   Fecha: 29/07/2026
-  
-   DESCRIPCIÓN:
-   Vista principal del panel administrativo de SmileTrack.
-   Proporciona una visión consolidada de métricas operativas
-   en tiempo real para la toma de decisiones gerenciales.
-  
-   FUNCIONALIDADES PRINCIPALES:
-   - Renderizado server-side de KPIs: pacientes, citas, profesionales, ingresos
-   - Animaciones de contadores y barras de progreso con fallback accesible
-   - Navegación responsive con sidebar colapsable y soporte móvil
-   - Exportación de reportes PDF (simulada, lista para integración API)
-   - Cumplimiento WCAG 2.1 AA: skip-link, ARIA labels, foco visible
-  
-   DEPENDENCIAS TÉCNICAS:
-   - Controller: GestionCitasController.Stadm01Dashboard()
-   - CSS: ~/css/Gestion_De_Citas/st-adm-01-dashboard/styles.css
-   - JS: ~/js/Gestion_De_Citas/st-adm-01-dashboard/app.js
-   - Partial: _SidebarAdmin.cshtml
-  
-   NOTAS DE MANTENIMIENTO:
-   - Los comentarios explican el "por qué" de las decisiones, no el "qué" del código, segun el estándar de codificación.
-   - Las rutas usan Tag Helpers para resiliencia ante cambios de routing
-   ============================================ *@
-@{
-  Layout = null;
-  
-  // Cache de ViewData en variables locales: evita accesos repetidos al diccionario en el mismo renderizado
-  var pctOcupacion = ViewData["PctOcupacion"] is int po ? po : 0;
-  var totalPacientes = ViewData["TotalPacientes"] is int tp ? tp : 0;
-  var citasHoy = ViewData["CitasHoy"] is int ch ? ch : 0;
-  var profesionalesActivos = ViewData["ProfesionalesActivos"] is int pa ? pa : 0;
-  var ingresosDelMes = ViewData["IngresosDelMes"] is decimal ing ? ing : 0m;
-  
-  // Fallback a lista vacía para evitar NullReferenceException al iterar en la vista
-  var topProfesionales = ViewData["TopProfesionales"] as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
-}
+﻿@* ============================================
+SmileTrack — Dashboard General Administrativo (st-adm-01-dashboard)
+============================================
+Autor: Johan Santamaria
+Fecha: 29/07/2026
+
+DESCRIPCIÓN:
+Vista principal del dashboard administrativo para el módulo de citas.
+Incluye KPIs, gráficos de ocupación, top profesionales y acceso al panel de gestión.
+
+DEPENDENCIAS TÉCNICAS:
+- Controller: GestionCitasController → Stadm01Dashboard
+- CSS: ~/css/Gestion_De_Citas/st-adm-01-dashboard/styles.css
+- JS: ~/js/Gestion_De_Citas/st-adm-01-dashboard/app.js
+- Partial / Otros: _SidebarAdmin.cshtml
+============================================ *@
+@{ Layout = null; }
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Dashboard General administrativo de SmileTrack - Sistema de Gestión de Citas Odontológicas. Indicadores, pacientes y citas." />
-  <title>SmileTrack Dashboard General</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Dashboard administrativo de SmileTrack para gestión de citas, métricas y seguimiento." />
+    <title>SmileTrack — Dashboard General</title>
 
-  <!-- Preconnect para reducir latencia en carga de fuentes externas: mejora perceived performance -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
-  <!-- Cache buster con version query string: fuerza actualización del CSS cuando hay cambios en producción -->
-  <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-adm-01-dashboard/styles.css")" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-adm-01-dashboard/styles.css")" />
+    <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
-
 <body>
-  <!-- Skip link: permite navegación por teclado saltando al contenido principal (WCAG 2.1 AA) -->
-  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-    <div class="sidebar-logo">
-      <!-- Ruta centralizada vía Url.Content: facilita cambios de base de proyecto sin tocar vistas -->
-      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-    </div>
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-    
-    <div class="sidebar-user">
-      <!-- Avatar con fallback seguro: previene ArgumentOutOfRangeException si nombre tiene <2 caracteres -->
-      <div class="user-avatar" aria-hidden="true">
-        @if (!string.IsNullOrEmpty(User.Identity?.Name))
-        {
-          var initials = User.Identity.Name.Length >= 2 
-            ? User.Identity.Name.Substring(0, 2).ToUpperInvariant() 
-            : User.Identity.Name.ToUpperInvariant();
-          @initials
-        }
-        else
-        {
-          @:U
-        }
-      </div>
-      <div class="user-info">
-        <!-- Encoding automático de Razor: previene XSS al mostrar datos de usuario en la UI -->
-        <span class="user-role">@User.Identity?.Name</span>
-        <!-- Fallback a string vacío para claims nulos: evita null en atributos HTML -->
-        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? string.Empty</span>
-      </div>
-    </div>
-  </aside>
 
-  <!-- Hamburger menu: visible solo en móvil mediante media query CSS -->
-  <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
-    <span aria-hidden="true"></span>
-    <span aria-hidden="true"></span>
-    <span aria-hidden="true"></span>
-  </button>
-  <div class="overlay" id="overlay" aria-hidden="true"></div>
+    <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+    </button>
+    <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <main class="main" id="main-content">
-    <header class="page-header">
-      <div class="header-left">
-        <!-- Breadcrumb: mejora UX mostrando ubicación actual en jerarquía de navegación -->
-        <nav class="breadcrumb" aria-label="Ruta de navegación">
-          <span>Administración</span>
-          <span class="bc-sep" aria-hidden="true">→</span>
-          <span class="bc-active">Dashboard</span>
-        </nav>
-        <h1 class="page-title">Dashboard General</h1>
-        <!-- Fecha con cultura es-ES: garantiza consistencia en despliegues multi-región -->
-        <p class="page-subtitle">
-          Resumen en tiempo real ·
-          <time datetime="@DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)" id="headerDate">
-            @DateTime.Now.ToString("dddd d 'de' MMMM yyyy", new System.Globalization.CultureInfo("es-ES"))
-          </time>
-        </p>
-      </div>
-      <div class="header-actions">
-        <!-- Botón exportar: requiere autorización Admin + validación CSRF en backend (implementar en controller) -->
-        <button class="btn-primary" id="btnExport" 
-                aria-label="Exportar reporte PDF" 
-                title="Generar reporte en formato PDF"
-                data-action="export-report">
-          📄 Exportar PDF
-        </button>
-        <!-- Tag Helpers para rutas: se actualizan automáticamente si cambia routing en Program.cs -->
-        <a class="btn-primary" 
-           asp-controller="GestionCitas" 
-           asp-action="Stadm09Citas" 
-           asp-route-action="new"
-           aria-label="Programar nueva cita">
-          + Nueva Cita
-        </a>
-      </div>
-    </header>
-
-    <!-- Barra de progreso: variable cacheada evita 4 accesos repetidos a ViewData en el mismo render -->
-    <div class="progress-row" 
-         role="progressbar" 
-         aria-valuenow="@pctOcupacion" 
-         aria-valuemin="0" 
-         aria-valuemax="100"
-         aria-label="Ocupación de la agenda: @pctOcupacion%">
-      <div class="progress-bar-wrap">
-        <!-- Animación vía CSS transition: más performante que manipular width con JS frame-by-frame -->
-        <div class="progress-bar" id="topProgressBar" style="width:@pctOcupacion%"></div>
-      </div>
-      <span class="progress-label" aria-live="polite">Ocupación de agenda (@pctOcupacion%)</span>
-    </div>
-
-    <!-- Stats Grid: contadores animados con JS, fallback a valor estático si JS está deshabilitado -->
-    <section class="stats-grid" aria-label="Métricas principales">
-      <div class="stat-card" data-color="blue">
-        <span class="stat-number" id="statPacientes" data-target="@totalPacientes" aria-live="polite">0</span>
-        <span class="stat-label">Pacientes activos</span>
-      </div>
-      <div class="stat-card" data-color="green">
-        <span class="stat-number" id="statCitas" data-target="@citasHoy" aria-live="polite">0</span>
-        <span class="stat-label">Citas hoy</span>
-      </div>
-      <div class="stat-card" data-color="orange">
-        <span class="stat-number" id="statProfesionales" data-target="@profesionalesActivos" aria-live="polite">0</span>
-        <span class="stat-label">Profesionales activos</span>
-      </div>
-      <div class="stat-card" data-color="purple">
-        <!-- Formato de moneda con cultura es-CO: consistencia financiera en reportes -->
-        <span class="stat-number" id="statIngresos" aria-live="polite">
-          $@ingresosDelMes.ToString("N0", new System.Globalization.CultureInfo("es-CO"))
-        </span>
-        <span class="stat-label">Ingresos del mes</span>
-        <!-- Badge oculto visualmente pero accesible: informa a screen readers sobre estado de módulo -->
-        <span class="stat-vs" style="visibility:hidden" aria-hidden="true">— módulo en desarrollo</span>
-      </div>
-    </section>
-
-    <div class="content-grid">
-      <div class="content-left">
-        <!-- Panel placeholder: se activa cuando el módulo de Facturación esté implementado -->
-        <section class="card" aria-labelledby="revenueTitle">
-          <h2 class="card-title" id="revenueTitle">Ingresos por mes</h2>
-          <p class="chart-summary">Este panel se activará cuando el módulo de Facturación esté implementado.</p>
-        </section>
-
-        <!-- Tabla con fallback para lista vacía: mejora UX cuando no hay datos que mostrar -->
-        <section class="card" aria-labelledby="topProfTitle">
-          <h2 class="card-title" id="topProfTitle">Top profesionales del mes</h2>
-          <div class="table-wrap">
-            <table class="table-base" aria-label="Tabla de profesionales más productivos">
-              <thead>
-                <tr>
-                  <th scope="col">Profesional</th>
-                  <th scope="col" style="text-align:center">Espec.</th>
-                  <th scope="col" style="text-align:center">Citas</th>
-                </tr>
-              </thead>
-              <tbody>
-                @if (topProfesionales.Any())
-                {
-                  foreach (var prof in topProfesionales)
-                  {
-                    // Encoding automático de Razor: previene XSS en datos dinámicos de BD
-                    <tr>
-                      <td><span class="td-name">@prof.Nombre</span></td>
-                      <td style="text-align:center"><span class="badge-spec">@prof.Especialidad</span></td>
-                      <td style="text-align:center" class="td-strong">@prof.TotalCitas</td>
-                    </tr>
-                  }
-                }
-                else
-                {
-                  // Mensaje de estado vacío: evita tabla en blanco que confunde al usuario
-                  <tr><td colspan="3">Sin citas registradas este mes.</td></tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-
-      <div class="content-right">
-        <!-- Gráfico con data-width: permite animación controlada por JS sin recalcular en servidor -->
-        <section class="card" aria-labelledby="statusTitle">
-          <h2 class="card-title" id="statusTitle">Citas del mes por estado</h2>
-          <div class="status-chart" id="statusChart" role="img" aria-label="Gráfico de estado de citas">
-            <div class="status-row">
-              <span class="status-label">Atendidas</span>
-              <div class="status-bar-bg">
-                <div class="status-bar-fill green" 
-                     data-width="@ViewData["PctAtendidas"]" 
-                     style="width:0" 
-                     role="progressbar" 
-                     aria-valuenow="@ViewData["PctAtendidas"]" 
-                     aria-valuemin="0" 
-                     aria-valuemax="100"></div>
-              </div>
-              <span class="status-val">@ViewData["CitasAtendidas"]</span>
+    <main class="main" id="main-content">
+        <header class="page-header">
+            <div class="header-left">
+                <nav class="breadcrumb" aria-label="Ruta de navegación">
+                    <span>Administración</span>
+                    <span class="bc-sep" aria-hidden="true">›</span>
+                    <span class="bc-active">Dashboard General</span>
+                </nav>
+                <h1 class="page-title">Dashboard General</h1>
+                <p class="page-subtitle">Resumen operativo y métricas clave del centro odontológico</p>
             </div>
-            <!-- Repetir estructura para Confirmadas, Programadas, Canceladas -->
-          </div>
+            <button class="btn-primary" id="btnExport" aria-label="Exportar reporte en PDF">📄 Exportar PDF</button>
+        </header>
+
+        <section class="stats-grid" aria-label="Métricas principales">
+            <div class="stat-card" data-color="blue">
+                <span class="stat-number" id="statTotal" data-target="@(ViewData["TotalPacientes"] ?? 0)" aria-live="polite">0</span>
+                <span class="stat-label">Pacientes activos</span>
+                <span class="stat-sub">Total registrados</span>
+            </div>
+            <div class="stat-card" data-color="green">
+                <span class="stat-number" id="statScheduled" data-target="@(ViewData["CitasHoy"] ?? 0)" aria-live="polite">0</span>
+                <span class="stat-label">Citas hoy</span>
+                <span class="stat-sub">Programadas</span>
+            </div>
+            <div class="stat-card" data-color="orange">
+                <span class="stat-number" id="statAttended" data-target="@(ViewData["ProfesionalesActivos"] ?? 0)" aria-live="polite">0</span>
+                <span class="stat-label">Profesionales activos</span>
+                <span class="stat-sub">En servicio</span>
+            </div>
+            <div class="stat-card" data-color="purple">
+                <span class="stat-number" id="statIncome" data-target="@(ViewData["IngresosDelMes"] ?? 0)" aria-live="polite">0</span>
+                <span class="stat-label">Ingresos del mes</span>
+                <span class="stat-sub">Solo citas atendidas</span>
+            </div>
         </section>
 
-        <!-- Panel placeholder para facturas: se activa con implementación del módulo -->
-        <section class="card" aria-labelledby="invoicesTitle">
-          <h2 class="card-title" id="invoicesTitle">Facturas pendientes de cobro</h2>
-          <div class="invoices-list" role="list">
-            <p class="chart-summary">Disponible cuando el módulo de Facturación esté implementado.</p>
-          </div>
-          <div class="invoices-total" aria-live="polite">
-            <span>Total pendiente:</span>
-            <strong>$0</strong>
-          </div>
+        <section class="progress-row" role="region" aria-label="Ocupación de agenda mensual">
+            <div>
+                <h2 class="section-title">Ocupación de agenda</h2>
+                <p class="page-subtitle">Porcentaje estimado de citas utilizadas este mes</p>
+            </div>
+            <div class="progress-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@(ViewData["PctOcupacion"] ?? 0)" aria-label="Ocupación de agenda mensual">
+                <div class="progress-bar" id="dashboardOccupancyBar" data-width="@(ViewData["PctOcupacion"] ?? 0)"></div>
+            </div>
+            <span class="progress-label">@(ViewData["PctOcupacion"] ?? 0)% de uso estimado</span>
         </section>
-      </div>
-    </div>
-  </main>
 
-  <!-- Mobile nav: solo un elemento con aria-current para cumplir WCAG (evita confusión en lectores de pantalla) -->
-  <nav class="mobile-nav" aria-label="Navegación móvil">
-    <a href="#" class="mobile-nav-item" aria-label="Ir a inicio">
-      <span class="mobile-nav-icon" aria-hidden="true">🏠</span>
-      <span>Inicio</span>
-    </a>
-    <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item active" aria-current="page" aria-label="Dashboard actual">
-      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
-      <span>Dashboard</span>
-    </a>
-    <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item" aria-label="Ver agenda">
-      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
-      <span>Agenda</span>
-    </a>
-    <a href="/gestion-de-citas/st-adm-09-citas" class="mobile-nav-item" aria-label="Gestionar citas">
-      <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
-      <span>Citas</span>
-    </a>
-  </nav>
+        <section class="stats-grid" aria-label="Distribución de estados de cita">
+            <div class="stat-card" data-color="green">
+                <span class="stat-number">@(ViewData["CitasAtendidas"] ?? 0)</span>
+                <span class="stat-label">Atendidas</span>
+                <span class="stat-sub">@((ViewData["PctAtendidas"] ?? 0) + "% de la categoría más frecuente")</span>
+            </div>
+            <div class="stat-card" data-color="blue">
+                <span class="stat-number">@(ViewData["CitasConfirmadas"] ?? 0)</span>
+                <span class="stat-label">Confirmadas</span>
+                <span class="stat-sub">@((ViewData["PctConfirmadas"] ?? 0) + "% de la categoría más frecuente")</span>
+            </div>
+            <div class="stat-card" data-color="orange">
+                <span class="stat-number">@(ViewData["CitasProgramadas"] ?? 0)</span>
+                <span class="stat-label">Programadas</span>
+                <span class="stat-sub">@((ViewData["PctProgramadas"] ?? 0) + "% de la categoría más frecuente")</span>
+            </div>
+            <div class="stat-card" data-color="red">
+                <span class="stat-number">@(ViewData["CitasCanceladas"] ?? 0)</span>
+                <span class="stat-label">Canceladas</span>
+                <span class="stat-sub">@((ViewData["PctCanceladas"] ?? 0) + "% de la categoría más frecuente")</span>
+            </div>
+        </section>
 
-  <!-- Toast: contenedor para notificaciones no bloqueantes con aria-live para screen readers -->
-  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+        <section class="content-grid" aria-label="Contenido principal del dashboard">
+            <div class="content-left">
+                <section class="card" aria-labelledby="topProfessionalsTitle">
+                    <h2 class="card-title" id="topProfessionalsTitle">Top 3 profesionales del mes</h2>
+                    <div class="table-wrap">
+                        <table class="table-base" aria-label="Top 3 profesionales por citas">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Profesional</th>
+                                    <th scope="col">Especialidad</th>
+                                    <th scope="col">Total citas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ var topProfesionales = ViewData["TopProfesionales"] as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>(); }
+                                @if (topProfesionales.Any())
+                                {
+                                    foreach (var prof in topProfesionales)
+                                    {
+                                        <tr>
+                                            <td>@prof.Nombre</td>
+                                            <td>@prof.Especialidad</td>
+                                            <td>@prof.TotalCitas</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="3" style="text-align:center; color:var(--text-muted); padding:18px;">No hay datos suficientes para mostrar los top profesionales.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
 
-  <!-- Estilos críticos inline: garantizan carga inmediata de accesibilidad sin esperar CSS externo -->
-  <style>
-    .skip-link {
-      position: absolute;
-      top: -40px;
-      left: 0;
-      background: var(--primary);
-      color: #fff;
-      padding: 8px 16px;
-      z-index: 1000;
-      transition: top var(--tr);
-    }
-    .skip-link:focus {
-      top: 0;
-      outline: 2px solid #fff;
-      outline-offset: 2px;
-    }
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-  </style>
+            <aside class="content-right" aria-label="Información complementaria">
+                <section class="card" aria-labelledby="quickActionsTitle">
+                    <h2 class="card-title" id="quickActionsTitle">Acciones rápidas</h2>
+                    <div class="quick-actions">
+                        <a href="/gestion-de-citas/st-adm-09-citas" class="btn-primary" aria-label="Ir a la gestión integral de citas">Ver gestión de citas</a>
+                        <a href="/gestion-de-citas/st-adm-08-agenda" class="btn-primary" aria-label="Ir a la agenda general">Abrir agenda</a>
+                    </div>
+                </section>
+                <section class="card" aria-labelledby="notesTitle">
+                    <h2 class="card-title" id="notesTitle">Notas del sistema</h2>
+                    <p style="font-size:.95rem;color:var(--text-muted);line-height:1.5;">Este panel presenta métricas resumidas. Para modificar una cita o verificar disponibilidad, utiliza la agenda general o la gestión de citas.</p>
+                </section>
+            </aside>
+        </section>
+    </main>
 
-  <footer id="dynamic-footer" class="site-footer" role="contentinfo">
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
-      <p>© @DateTime.Now.Year Smile Track. Todos los derechos reservados.</p>
-    </div>
-    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
-    <!-- Cache buster en scripts: fuerza actualización cuando hay cambios en producción -->
-    <script src="@Url.Content("~/js/footer.js")"></script>
-    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
-  </footer>
-
-  <!-- Configuración global para JS: centraliza rutas API para facilitar mantenimiento y testing -->
-  <script>
-    window.APP_CONFIG = {
-      ApiBase: '@Url.Content("~/api")',
-      DashboardUrl: '@Url.Action("Stadm01Dashboard", "GestionCitas")'
-    };
-  </script>
-  
-  <!-- Script principal cargado al final: no bloquea renderizado inicial del DOM -->
-  <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-01-dashboard/app.js")"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Inicializar collapsible solo si existen elementos: previene errores en vistas parciales
-      document.querySelectorAll('.nav-group-header').forEach(header => {
-        const items = header.nextElementSibling;
-        const arrow = header.querySelector('.nav-arrow');
-        if (!items || !arrow) return;
-
-        // Animación con scrollHeight: permite transición suave sin librerías externas
-        const setExpanded = (isExpanded) => {
-          items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-          arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-          header.setAttribute('aria-expanded', String(isExpanded));
-        };
-        setExpanded(false);
-
-        // Soporte teclado + click: cumple WCAG 2.1 para navegación accesible
-        const toggle = () => {
-          const isExpanded = header.getAttribute('aria-expanded') === 'true';
-          setExpanded(!isExpanded);
-        };
-        header.addEventListener('click', toggle);
-        header.addEventListener('keydown', e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            toggle();
-          }
-        });
-      });
-
-      // Animación de contadores con fallback: funciona incluso si JS está parcialmente deshabilitado
-      const animateCounters = () => {
-        document.querySelectorAll('.stat-number[data-target]').forEach(el => {
-          const target = parseInt(el.dataset.target, 10);
-          if (isNaN(target)) return;
-          
-          let current = 0;
-          const step = Math.max(1, Math.ceil(target / 30));
-          const timer = setInterval(() => {
-            current = Math.min(current + step, target);
-            el.textContent = current.toLocaleString('es-CO');
-            if (current >= target) clearInterval(timer);
-          }, 30);
-        });
-      };
-      animateCounters();
-
-      // Animación de barras con reflow forzado: garantiza que la transición CSS se aplique correctamente
-      const animateProgressBars = () => {
-        document.querySelectorAll('.status-bar-fill[data-width]').forEach(bar => {
-          const width = bar.dataset.width;
-          if (width) {
-            // Forzar reflow: lee offsetWidth para que el navegador aplique el estilo inicial antes de animar
-            void bar.offsetWidth;
-            bar.style.width = `${width}%`;
-          }
-        });
-      };
-      animateProgressBars();
-    });
-  </script>
+    <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-01-dashboard/app.js")"></script>
+    <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+    @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
 </body>
 </html>

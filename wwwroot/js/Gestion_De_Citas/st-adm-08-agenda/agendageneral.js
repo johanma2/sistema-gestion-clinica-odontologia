@@ -37,8 +37,6 @@ const API_BASE = (window.APP_CONFIG?.ApiBase) || '/api';
 const activeAnimations = new Set();
 
 // Cola de notificaciones para evitar solapamiento visual
-const toastQueue = [];
-let isToastShowing = false;
 
 // Array de funciones de limpieza para remover event listeners
 const cleanupHandlers = [];
@@ -90,47 +88,6 @@ const debounce = (callback, delay, maxWait = null) => {
 /**
  * Muestra una notificación toast con cola para evitar solapamiento.
  */
-const showToast = (message, type = 'success') => {
-    toastQueue.push({ message, type });
-    processToastQueue();
-};
-
-/**
- * Procesa la cola de notificaciones mostrando una a la vez.
- */
-const processToastQueue = () => {
-    if (isToastShowing || toastQueue.length === 0) return;
-
-    const toastElement = safeGetElement('toast');
-    if (!toastElement) return;
-
-    isToastShowing = true;
-    const currentToast = toastQueue.shift();
-
-    // Actualizar contenido y clases del toast
-    toastElement.textContent = currentToast.message;
-    const toastClasses = ['toast'];
-    if (currentToast.type === 'error') toastClasses.push('error');
-    if (currentToast.type === 'warning') toastClasses.push('warning');
-    toastClasses.push('show');
-    toastElement.className = toastClasses.join(' ');
-
-    // Limpiar timeout anterior si existe
-    if (toastElement._timeoutId) {
-        clearTimeout(toastElement._timeoutId);
-    }
-
-    // Programar ocultamiento después de 3 segundos
-    toastElement._timeoutId = setTimeout(() => {
-        toastElement.classList.remove('show');
-        
-        // Esperar transición CSS antes de procesar siguiente toast
-        setTimeout(() => {
-            isToastShowing = false;
-            processToastQueue();
-        }, 300);
-    }, 3000);
-};
 
 /**
  * Ejecuta una función en el próximo frame de animación y la rastrea.
@@ -319,9 +276,9 @@ const initExport = () => {
 
         try {
             await exportReport();
-            showToast('✅ Reporte PDF generado exitosamente');
+            window.ToastService.error('✅ Reporte PDF generado exitosamente');
         } catch (error) {
-            showToast('❌ Error al generar reporte', 'error');
+            window.ToastService.success('❌ Error al generar reporte');
         } finally {
             // Restaurar estado del botón después de un breve delay
             setTimeout(() => {
@@ -418,7 +375,7 @@ const initWeekNavigation = () => {
             }
         } catch (err) {
             console.error('[SmileTrack][Agenda] Error cargando semana:', err);
-            showToast('❌ No fue posible cargar la semana seleccionada', 'error');
+            window.ToastService.error('❌ No fue posible cargar la semana seleccionada');
         }
     };
 
@@ -465,7 +422,7 @@ const init = async () => {
         initNewAppointmentModal(); // ← AGREGAR ESTA LÍNEA
 
         setTimeout(() => {
-            showToast('✅ Panel administrativo cargado');
+            window.ToastService.success('✅ Panel administrativo cargado');
         }, 500);
 
     } catch (error) {
@@ -546,6 +503,9 @@ const initNewAppointmentModal = () => {
      * Mapea el estado de la cita a la clase CSS correspondiente
      */
     const getStatusClass = (status) => {
+        if (window.AppointmentUtils) {
+            return window.AppointmentUtils.getStatusLabelAndClass(status?.toLowerCase()).class;
+        }
         const statusMap = {
             'Agendada': 'reserved',
             'Confirmada': 'confirmed',
@@ -611,7 +571,7 @@ const initNewAppointmentModal = () => {
         
         if (!dayContainer) {
             console.warn(`[SmileTrack][Agenda] No se encontró el contenedor del día: ${appointmentData.date}`);
-            showToast('⚠️ La fecha seleccionada no está en la vista actual del calendario', 'warning');
+            window.ToastService.warning('⚠️ La fecha seleccionada no está en la vista actual del calendario');
             return false;
         }
 
@@ -701,27 +661,79 @@ const initNewAppointmentModal = () => {
 
         try {
             // Recopilar datos del formulario
-            const formData = {
-                fecha: form.querySelector('#newApptDate').value,
-                estado: form.querySelector('#newApptStatus').value,
-                horaInicio: form.querySelector('#newApptStartTime').value,
-                horaFin: form.querySelector('#newApptEndTime').value,
-                idPaciente: form.querySelector('#newApptPatient').value,
-                idProfesional: form.querySelector('#newApptProfessional').value,
-                idConsultorio: form.querySelector('#newApptOffice').value,
-                idServicio: form.querySelector('#newApptService').value,
-                notas: form.querySelector('#newApptNotes').value
+            const parseIntOrNull = (value) => {
+                const parsed = parseInt(value, 10);
+                return Number.isFinite(parsed) ? parsed : null;
             };
 
-            // Validación básica
-            if (!formData.fecha || !formData.horaInicio || !formData.horaFin) {
-                showToast('⚠️ Por favor complete todos los campos obligatorios', 'warning');
+            const formData = {
+                IdCita: parseIntOrNull(form.querySelector('#appointmentId')?.value || ''),
+                Fecha: form.querySelector('#newApptDate').value,
+                Estado: form.querySelector('#newApptStatus').value,
+                HoraInicio: form.querySelector('#newApptStartTime').value,
+                HoraFin: form.querySelector('#newApptEndTime').value,
+                IdPaciente: parseIntOrNull(form.querySelector('#newApptPatient').value),
+                IdProfesional: parseIntOrNull(form.querySelector('#newApptProfessional').value),
+                IdConsultorio: parseIntOrNull(form.querySelector('#newApptOffice').value),
+                IdServicio: parseIntOrNull(form.querySelector('#newApptService').value),
+                Notas: form.querySelector('#newApptNotes').value
+            };
+
+            // Validación básica de campos obligatorios antes de enviar
+            if (!formData.Fecha || !formData.HoraInicio || !formData.HoraFin || !formData.IdPaciente || !formData.IdProfesional || !formData.IdConsultorio || !formData.IdServicio) {
+                window.ToastService.warning('⚠️ Completa todos los campos obligatorios antes de guardar la cita.');
+                saveButton.disabled = false;
+                saveButton.textContent = originalText;
                 return;
             }
 
-            if (formData.horaInicio >= formData.horaFin) {
-                showToast('⚠️ La hora de inicio debe ser anterior a la hora de fin', 'warning');
-                return;
+            // Validation with AppointmentUtils and ValidationUtils
+            if (window.AppointmentUtils && window.ValidationUtils) {
+                // Clear previous errors
+                form.querySelectorAll('input, select').forEach(input => window.ValidationUtils.clearError(input));
+
+                const errors = window.AppointmentUtils.validateAppointmentTime(formData.fecha, formData.horaInicio, formData.horaFin);
+                if (errors.length > 0) {
+                    errors.forEach(err => {
+                        if (err.field === 'general') {
+                            window.ToastService.warning(`⚠️ ${err.message}`);
+                        } else {
+                            let inputId = '';
+                            if (err.field === 'fecha') inputId = 'newApptDate';
+                            if (err.field === 'horaInicio') inputId = 'newApptStartTime';
+                            if (err.field === 'horaFin') inputId = 'newApptEndTime';
+                            
+                            const inputEl = form.querySelector(`#${inputId}`);
+                            if (inputEl) {
+                                window.ValidationUtils.showError(inputEl, null, err.message);
+                            } else {
+                                window.ToastService.warning(`⚠️ ${err.message}`);
+                            }
+                        }
+                    });
+                    
+                    if (!errors.some(e => e.field === 'general')) {
+                        window.ToastService.warning('⚠️ Verifique los campos resaltados en rojo');
+                    }
+                    saveButton.disabled = false;
+                    saveButton.textContent = originalText;
+                    return;
+                }
+            } else {
+                // Fallback validación básica
+                if (!formData.fecha || !formData.horaInicio || !formData.horaFin) {
+                    window.ToastService.warning('⚠️ Por favor complete todos los campos obligatorios');
+                    saveButton.disabled = false;
+                    saveButton.textContent = originalText;
+                    return;
+                }
+
+                if (formData.horaInicio >= formData.horaFin) {
+                    window.ToastService.warning('⚠️ La hora de inicio debe ser anterior a la hora de fin');
+                    saveButton.disabled = false;
+                    saveButton.textContent = originalText;
+                    return;
+                }
             }
 
             // Preparar datos para el calendario
@@ -746,13 +758,13 @@ const initNewAppointmentModal = () => {
                 const added = addAppointmentToCalendar(appointmentData);
                 
                 if (added) {
-                    showToast('✅ Cita creada exitosamente');
+                    window.ToastService.success('✅ Cita creada exitosamente');
                     closeModal();
                 }
             }
         } catch (error) {
             console.error('[SmileTrack][Agenda] Error al guardar cita:', error);
-            showToast('❌ Error al crear la cita. Intente nuevamente.', 'error');
+            window.ToastService.error('❌ Error al crear la cita. Intente nuevamente.');
         } finally {
             // Restaurar estado del botón
             saveButton.disabled = false;

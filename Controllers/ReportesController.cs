@@ -21,17 +21,17 @@ public class ReportesController : Controller
     [Route("reportes")]
     public async Task<IActionResult> VistaAdmin(string? categoria)
     {
-        var userName = User.Identity?.Name ?? "Administrador";
-        var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Administrador";
+        string userName = User.Identity?.Name ?? "Administrador";
+        string userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Administrador";
 
-        var totalPacientes = await _context.Pacientes.CountAsync();
-        var totalCitas = await _context.Citas.CountAsync();
-        var citasCompletadas = await _context.Citas.CountAsync(c => c.Estado == "Atendida" || c.Estado == "Completada");
-        var totalIngresos = await _context.Facturas.Where(f => f.Estado == "pagada").SumAsync(f => (decimal?)f.Total) ?? 0m;
+        int totalPacientes = await _context.Pacientes.CountAsync();
+        int totalCitas = await _context.Citas.CountAsync();
+        int citasCompletadas = await _context.Citas.CountAsync(c => c.Estado == "Atendida" || c.Estado == "Completada");
+        decimal totalIngresos = await _context.Facturas.Where(f => f.Estado == "pagada").SumAsync(f => (decimal?)f.Total) ?? 0m;
 
         // Distribución de servicios de BD
         var serviciosDb = await _context.Servicios.ToListAsync();
-        var totalServicios = serviciosDb.Count;
+        int totalServicios = serviciosDb.Count;
         var distribucion = serviciosDb.Select((s, idx) => new DistribucionServicioViewModel
         {
             Nombre = s.Nombre,
@@ -137,10 +137,10 @@ public class ReportesController : Controller
     [Route("reportes/vista-prof")]
     public async Task<IActionResult> VistaProf()
     {
-        var userName = User.Identity?.Name ?? "Profesional";
-        var totalPacientes = await _context.Pacientes.CountAsync();
-        var totalCitas = await _context.Citas.CountAsync();
-        var totalIngresos = await _context.Facturas.Where(f => f.Estado == "pagada").SumAsync(f => (decimal?)f.Total) ?? 0m;
+        string userName = User.Identity?.Name ?? "Profesional";
+        int totalPacientes = await _context.Pacientes.CountAsync();
+        int totalCitas = await _context.Citas.CountAsync();
+        decimal totalIngresos = await _context.Facturas.Where(f => f.Estado == "pagada").SumAsync(f => (decimal?)f.Total) ?? 0m;
 
         var citasRecientes = await _context.Citas
             .Include(c => c.Paciente)
@@ -210,8 +210,8 @@ public class ReportesController : Controller
     [Route("reportes/descargar/{id}")]
     public IActionResult DescargarReporte(int id)
     {
-        var contenidoDummy = $"SmileTrack Reporte #{id}\nGenerado el: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\nEstado: Exportado exitosamente.";
-        var bytes = System.Text.Encoding.UTF8.GetBytes(contenidoDummy);
+        string contenidoDummy = $"SmileTrack Reporte #{id}\nGenerado el: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\nEstado: Exportado exitosamente.";
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(contenidoDummy);
         return File(bytes, "text/csv", $"Reporte_{id}_{DateTime.Now:yyyyMMdd}.csv");
     }
 

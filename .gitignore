@@ -73,3 +73,6 @@ TestResults/
 
 # Carpeta temporal de build local (evitar commits accidentales desde herramientas de CI locales)
 build_temp/
+
+# Archivos de salida de compilación local (generados por dotnet build, no deben commitearse)
+build_output.txt

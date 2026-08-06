@@ -41,8 +41,8 @@ input:focus { transform: translateY(-1px); box-shadow: 0 10px 25px rgba(30, 136,
 .step-indicator.completed { background: #43A047; }
 
 /* Requisitos de contraseña */
-#passLength, #passUpper, #passNumber { color: #E53935; }
-#passLength.valid, #passUpper.valid, #passNumber.valid { color: #43A047; }
+#passLength, #passUpper, #passNumber, #passSymbol { color: #E53935; }
+#passLength.valid, #passUpper.valid, #passNumber.valid, #passSymbol.valid { color: #43A047; }
 
 /* Toggle password visibility */
 .toggle-password { background: none; border: none; cursor: pointer; padding: 4px; }

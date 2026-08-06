@@ -1,3 +1,4 @@
+﻿@removeTagHelper "Microsoft.AspNetCore.Mvc.TagHelpers.BodyTagHelper, Microsoft.AspNetCore.Mvc.TagHelpers"
 @{
     Layout = null;
     var mensajeErrorServidor = "";
@@ -30,6 +31,11 @@
     // El error-box inline solo se muestra para errores que NO son de credenciales
     // (campos vacíos, rol inválido, etc.) para evitar duplicar el mismo mensaje.
     var mensajeInline = showAuthModal ? string.Empty : mensajeErrorServidor;
+    var infoMessage = string.Empty;
+    if (TempData["InfoMessage"] is string tempInfo)
+    {
+        infoMessage = tempInfo;
+    }
 }
 
 <!DOCTYPE html>
@@ -135,6 +141,11 @@
           <span id="successText">@successMessage</span>
         </div>
 
+        <div id="infoMsg" class="info-box @(string.IsNullOrEmpty(infoMessage) ? "hidden" : "")" role="status" aria-live="polite">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          <span id="infoText">@infoMessage</span>
+        </div>
+
         <button id="loginBtn" class="btn-login" type="submit" aria-busy="false">
           <span class="material-symbols-outlined" aria-hidden="true">login</span>
           <span id="btnText">Iniciar Sesión</span>
@@ -189,13 +200,10 @@
     </div>
   </div>
 
-  <div id="toast" class="toast hidden" role="status" aria-live="polite">
-    <div class="toast-content">
-      <span class="material-symbols-outlined toast-icon" aria-hidden="true">check_circle</span>
-      <span id="toastMsg"></span>
-    </div>
-  </div>
-
+  <script src="@Url.Content("~/js/shared/validation-utils.js")" defer></script>
   <script src="@Url.Content("~/js/Acceso_Y_Seguridad/login/login.js")" defer></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>
+

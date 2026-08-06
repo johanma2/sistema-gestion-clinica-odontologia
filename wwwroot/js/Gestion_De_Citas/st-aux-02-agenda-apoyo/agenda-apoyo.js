@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Agenda de Apoyo Clínico (st-aux-02-agenda-apoyo)
 ============================================
 Autor: Johan Santamaria
@@ -41,16 +41,6 @@ const debounce = (fn, delay) => {
 };
 
 // WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin entorpecer el flujo de trabajo
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 // ═══════════════════════════════════════════════════════════════════
 //  AGENDA CONTROLLER CON PERSISTENCIA
@@ -217,7 +207,7 @@ const initTipoFiltros = () => {
       aplicarFiltros();
       
       // Feedback visual
-      showToast(`Filtro aplicado: ${btn.textContent.trim()}`, 'info');
+      window.ToastService.success(`Filtro aplicado: ${btn.textContent.trim()}`, 'info');
     });
     
     // WHY: Habilita activación mediante Enter o Barra Espaciadora para usuarios sin ratón
@@ -278,7 +268,7 @@ const initProfesionalDropdown = () => {
       aplicarFiltros();
       
       // Feedback visual
-      showToast(`Profesional: ${item.textContent.trim()}`, 'info');
+      window.ToastService.success(`Profesional: ${item.textContent.trim()}`, 'info');
     });
     
     // Soporte para teclado en items

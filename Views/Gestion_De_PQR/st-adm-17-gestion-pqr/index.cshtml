@@ -9,27 +9,16 @@
     <title>SmileTrack — Gestión de PQR</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_PQR/st-adm-17-gestion-pqr/styles.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-    <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-        <div class="sidebar-logo">
-            <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-        </div>
-        @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-
-        <div class="sidebar-user">
-            <div class="user-avatar" aria-hidden="true">AD</div>
-            <div class="user-info">
-                <span class="user-role">Administrador</span>
-                <span class="user-email">admin@smiletrack.co</span>
-            </div>
-        </div>
-    </aside>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
 
     <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
         <span aria-hidden="true"></span>
@@ -371,6 +360,11 @@
         window.RAZOR_PQRS = @Html.Raw(ViewData["PqrsJson"] ?? "[]");
     </script>
     <script src="@Url.Content("~/js/Gestion_De_PQR/st-adm-17-gestion-pqr/script.js")"></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 
 </html>
+
+

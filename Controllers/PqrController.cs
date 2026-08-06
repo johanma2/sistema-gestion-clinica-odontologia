@@ -21,8 +21,8 @@ public class PqrController : Controller
     [Route("gestion-de-pqr/st-pac-04-nueva-pqr")]
     public async Task<IActionResult> Stpac04NuevaPqr()
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        int.TryParse(userIdStr, out var userId);
+        string? userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out int userId);
         
         var paciente = await _context.Pacientes.FirstOrDefaultAsync(p => p.IdUsuario == userId);
         var misPqrs = paciente != null
@@ -38,8 +38,8 @@ public class PqrController : Controller
     [Route("gestion-de-pqr/crear")]
     public async Task<IActionResult> CrearPqr([FromForm] string tipo, [FromForm] string asunto, [FromForm] string descripcion)
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        int.TryParse(userIdStr, out var userId);
+        string? userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out int userId);
         var paciente = await _context.Pacientes.FirstOrDefaultAsync(p => p.IdUsuario == userId)
             ?? await _context.Pacientes.FirstOrDefaultAsync();
 

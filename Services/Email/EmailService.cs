@@ -28,7 +28,7 @@ public class EmailService(IOptions<EmailServiceOptions> options, ILogger<EmailSe
 
         ValidarConfiguracionSmtp();
 
-        var finalRecipient = string.IsNullOrWhiteSpace(_options.RecipientOverride)
+        string finalRecipient = string.IsNullOrWhiteSpace(_options.RecipientOverride)
             ? recipientEmail
             : _options.RecipientOverride.Trim();
 
@@ -51,7 +51,7 @@ public class EmailService(IOptions<EmailServiceOptions> options, ILogger<EmailSe
         message.From.Add(new MailboxAddress("SmileTrack", _options.Username));
         message.To.Add(new MailboxAddress(finalRecipient, finalRecipient));
         message.Subject = "SmileTrack — Código para restablecer tu contraseña";
-        var codigoSeguro = WebUtility.HtmlEncode(code.Trim());
+        string codigoSeguro = WebUtility.HtmlEncode(code.Trim());
 
         var bodyBuilder = new BodyBuilder
         {
@@ -127,7 +127,7 @@ Este es un mensaje automatico, por favor no respondas a este correo.
             _logger.LogDebug("Paso 2/3 OK — Autenticación SMTP exitosa.");
 
             _logger.LogDebug("Paso 3/3 — Enviando mensaje a {Recipient}", finalRecipient);
-            var response = await client.SendAsync(message, cancellationToken);
+            string response = await client.SendAsync(message, cancellationToken);
             _logger.LogInformation("Paso 3/3 OK — Correo enviado exitosamente. Destinatario={Recipient} RespuestaSmtp={SmtpResponse}",
                 finalRecipient, response ?? string.Empty);
         }
@@ -255,8 +255,173 @@ Este es un mensaje automatico, por favor no respondas a este correo.
         }
     }
 
-    private void ValidarConfiguracionSmtp()
+    // ─── SendCitaNotificacionAsync ─────────────────────────────────────────
+    // Notifica al paciente cuando su cita cambia a estado Confirmada o Cancelada.
+    // Se llama desde GestionCitasController de forma fire-and-forget con Task.Run
+    // para no bloquear la respuesta al usuario si el SMTP tarda.
+    public async Task SendCitaNotificacionAsync(
+        string recipientEmail,
+        string nombrePaciente,
+        DateTime fechaCita,
+        string profesional,
+        string servicio,
+        string nuevoEstado,
+        CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(recipientEmail)) return; // silencioso: paciente sin correo
+
+        ValidarConfiguracionSmtp();
+
+        string finalRecipient = string.IsNullOrWhiteSpace(_options.RecipientOverride)
+            ? recipientEmail
+            : _options.RecipientOverride.Trim();
+
+        bool esConfirmada = nuevoEstado.Equals("confirmada", StringComparison.OrdinalIgnoreCase);
+        string estadoLabel  = esConfirmada ? "Confirmada ✅" : "Cancelada ❌";
+        string colorBanner  = esConfirmada ? "#0f766e" : "#dc2626";
+        string colorEstado  = esConfirmada ? "#166534" : "#991b1b";
+        string bgEstado     = esConfirmada ? "#dcfce7" : "#fee2e2";
+        string asunto       = esConfirmada
+            ? $"SmileTrack — Tu cita del {fechaCita:dd/MM/yyyy} fue confirmada"
+            : $"SmileTrack — Tu cita del {fechaCita:dd/MM/yyyy} fue cancelada";
+
+        string nombreSafe   = WebUtility.HtmlEncode(nombrePaciente);
+        string profSafe     = WebUtility.HtmlEncode(profesional);
+        string servicioSafe = WebUtility.HtmlEncode(servicio);
+        string fechaStr     = fechaCita.ToString("dddd d 'de' MMMM 'de' yyyy 'a las' HH:mm",
+                               new System.Globalization.CultureInfo("es-CO"));
+
+        string htmlBody = $"""
+<html>
+<body style="margin:0;padding:24px;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+
+    <!-- Banner superior -->
+    <div style="padding:20px 24px;background:{colorBanner};color:#fff;">
+      <h1 style="margin:0;font-size:20px;font-weight:700;">SmileTrack</h1>
+      <p style="margin:6px 0 0;font-size:14px;">Sistema de Gestión Odontológica</p>
+    </div>
+
+    <!-- Cuerpo -->
+    <div style="padding:28px 24px;">
+      <p style="margin:0 0 16px;font-size:16px;">Hola, <strong>{nombreSafe}</strong>,</p>
+
+      <p style="margin:0 0 20px;">
+        {(esConfirmada
+            ? "Te informamos que tu cita odontológica ha sido <strong>confirmada</strong>. Te esperamos en la fecha indicada."
+            : "Lamentamos informarte que tu cita odontológica ha sido <strong>cancelada</strong>. Por favor contáctanos para reagendarla.")}
+      </p>
+
+      <!-- Detalles de la cita -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
+        <h2 style="margin:0 0 16px;font-size:15px;color:#374151;font-weight:700;">Detalles de tu cita</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr>
+            <td style="padding:6px 0;color:#6b7280;width:40%;">📅 Fecha y hora</td>
+            <td style="padding:6px 0;font-weight:600;">{fechaStr}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#6b7280;">🩺 Profesional</td>
+            <td style="padding:6px 0;font-weight:600;">{profSafe}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#6b7280;">🦷 Servicio</td>
+            <td style="padding:6px 0;font-weight:600;">{servicioSafe}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#6b7280;">Estado</td>
+            <td style="padding:6px 0;">
+              <span style="display:inline-block;padding:3px 10px;background:{bgEstado};color:{colorEstado};border-radius:20px;font-weight:700;font-size:13px;">
+                {estadoLabel}
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      {(esConfirmada ? """
+      <p style="margin:0 0 8px;font-size:14px;">Recuerda:</p>
+      <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;line-height:1.7;">
+        <li>Llega 10 minutos antes de tu cita.</li>
+        <li>Trae tu documento de identidad.</li>
+        <li>Si necesitas cancelar, avísanos con al menos 24 horas de anticipación.</li>
+      </ul>
+      """ : """
+      <p style="margin:0 0 20px;font-size:14px;">
+        Para reagendar tu cita, comunícate con nuestro equipo de recepción o ingresa al portal de SmileTrack.
+      </p>
+      """)}
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;">
+      SmileTrack | Sistema de Gestión Odontológica<br />
+      Este es un mensaje automático, por favor no respondas a este correo.
+    </div>
+
+  </div>
+</body>
+</html>
+""";
+
+        string textBody = $"""
+Hola {nombrePaciente},
+
+{(esConfirmada ? "Tu cita odontológica ha sido CONFIRMADA." : "Tu cita odontológica ha sido CANCELADA.")}
+
+Detalles:
+  Fecha y hora : {fechaStr}
+  Profesional  : {profesional}
+  Servicio     : {servicio}
+  Estado       : {estadoLabel}
+
+{(esConfirmada
+    ? "Recuerda llegar 10 minutos antes y traer tu documento de identidad."
+    : "Para reagendar contáctanos o ingresa al portal SmileTrack.")}
+
+SmileTrack | Sistema de Gestión Odontológica
+Este es un mensaje automático, no respondas a este correo.
+""";
+
+        var socketOptions = _options.Port switch
+        {
+            465 => SecureSocketOptions.SslOnConnect,
+            587 => SecureSocketOptions.StartTls,
+            _ => _options.EnableSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.None
+        };
+
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress("SmileTrack", _options.Username));
+        message.To.Add(new MailboxAddress(finalRecipient, finalRecipient));
+        message.Subject = asunto;
+        message.Body = new BodyBuilder { TextBody = textBody, HtmlBody = htmlBody }.ToMessageBody();
+
+        using var client = new SmtpClient();
+        client.Timeout = 15_000;
+        try
+        {
+            await client.ConnectAsync(_options.Host, _options.Port, socketOptions, cancellationToken);
+            await client.AuthenticateAsync(_options.Username, _options.Password, cancellationToken);
+            await client.SendAsync(message, cancellationToken);
+            _logger.LogInformation(
+                "Notificación de cita enviada. Estado={Estado} Destinatario={Dest} Fecha={Fecha}",
+                nuevoEstado, finalRecipient, fechaCita);
+        }
+        catch (Exception ex)
+        {
+            // No propagamos: el email es best-effort; la operación principal ya se guardó.
+            _logger.LogWarning(ex,
+                "No se pudo enviar notificación de cita. Estado={Estado} Destinatario={Dest}",
+                nuevoEstado, finalRecipient);
+        }
+        finally
+        {
+            try { if (client.IsConnected) await client.DisconnectAsync(true, cancellationToken); }
+            catch { }
+        }
+    }
+
+    private void ValidarConfiguracionSmtp()    {
         var faltantes = new List<string>();
 
         if (string.IsNullOrWhiteSpace(_options.Host)) faltantes.Add(nameof(EmailServiceOptions.Host));
@@ -283,7 +448,7 @@ Este es un mensaje automatico, por favor no respondas a este correo.
         if (_options.Username.Contains('@') &&
             _options.Username.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
         {
-            var cleanPwd = (_options.Password ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal);
+            string cleanPwd = (_options.Password ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal);
             if (cleanPwd.Length != 16)
             {
                 _logger.LogWarning(

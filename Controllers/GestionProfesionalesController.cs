@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
+using SmileTrack_MVC.Helpers;
 using SmileTrack_MVC.Models.Entities;
 using SmileTrack_MVC.Models.Shared;
 using SmileTrack_MVC.Models.ViewModels;
@@ -22,7 +23,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     private static bool EsTelefonoValido(string? telefono)
     {
         if (string.IsNullOrWhiteSpace(telefono)) return false;
-        var digitsOnly = new string(telefono.Where(char.IsDigit).ToArray());
+        string digitsOnly = new string(telefono.Where(char.IsDigit).ToArray());
         return digitsOnly.Length is >= 7 and <= 15;
     }
 
@@ -90,8 +91,8 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
         {
             await CargarDatosProfesionales(editId, BuildReturnUrl(), null, ct);
 
-            var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(userIdStr, out var userId))
+            string? userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdStr, out int userId))
             {
                 var profesional = await _context.Profesionales.FirstOrDefaultAsync(p => p.IdUsuario == userId, ct);
                 if (profesional != null)
@@ -109,7 +110,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                     ViewData["OdoPacientesActivos"] = citasDelMes.Select(c => c.IdPaciente).Distinct().Count();
                     ViewData["OdoCitasHoy"] = citasDelMes.Count(c => c.FechaHora.Date == hoy);
 
-                    var ingresosMes = citasDelMes
+                    decimal ingresosMes = citasDelMes
                         .Where(c => string.Equals(c.Estado, "Atendida", StringComparison.OrdinalIgnoreCase) && c.Servicio != null)
                         .Sum(c => c.Servicio!.Precio);
                     ViewData["OdoIngresosMes"] = ingresosMes;
@@ -146,24 +147,6 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
 
     [HttpGet]
     [Authorize(Roles = "Profesional")]
-    [Route("gestion-de-profesionales/st-odo-08-mis-reportes")]
-    public async Task<IActionResult> Stodo08MisReportes([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try
-        {
-            await CargarDatosProfesionales(editId, BuildReturnUrl(), null, ct);
-            return View("~/Views/Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.cshtml");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error cargando Stodo08MisReportes");
-            TempData["ErrorValidacion"] = MensajeErrorFallback;
-            return View("~/Views/Gestion_De_Profesionales/st-odo-08-mis-reportes/mis-reportes.cshtml");
-        }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Profesional")]
     [Route("gestion-de-profesionales/st-odo-09-perfil-profesional")]
     public async Task<IActionResult> Stodo09PerfilProfesional([FromQuery] int? editId, CancellationToken ct = default)
     {
@@ -171,8 +154,8 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
         {
             await CargarDatosProfesionales(editId, BuildReturnUrl(), null, ct);
 
-            var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(userIdStr, out var userId))
+            string? userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdStr, out int userId))
             {
                 var profesional = await _context.Profesionales
                     .Include(p => p.Usuario)
@@ -200,16 +183,16 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     [Route("gestion-de-profesionales/guardar-profesional")]
     public async Task<IActionResult> GuardarProfesional([FromForm] ProfesionalViewModel model, CancellationToken ct = default)
     {
-        var returnUrlSafe = !string.IsNullOrWhiteSpace(model?.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
+        string returnUrlSafe = !string.IsNullOrWhiteSpace(model?.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
             ? model.ReturnUrl
             : "/gestion-de-profesionales/st-adm-07-gestion-profesionales";
-        var idOperacion = model?.IdProfesional ?? 0;
-        var operacion = idOperacion > 0 ? "Actualizacion" : "Creacion";
+        int idOperacion = model?.IdProfesional ?? 0;
+        string operacion = idOperacion > 0 ? "Actualizacion" : "Creacion";
 
         if (!ModelState.IsValid)
         {
-            var firstError = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage;
-            var mensaje = firstError ?? "Datos inválidos en el formulario.";
+            string? firstError = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage;
+            string mensaje = firstError ?? "Datos inválidos en el formulario.";
             _logger.LogWarning("GuardarProfesional: ModelState invalido ({Operacion}). Detalle: {Error}", operacion, mensaje);
             TempData["ErrorValidacion"] = mensaje;
             return Redirect(returnUrlSafe);
@@ -249,7 +232,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
 
         if (model.IdUsuario != null && model.IdUsuario > 0)
         {
-            var usuarioValido = await _context.Usuarios.AnyAsync(u => u.IdUsuario == model.IdUsuario.Value, ct);
+            bool usuarioValido = await _context.Usuarios.AnyAsync(u => u.IdUsuario == model.IdUsuario.Value, ct);
             if (!usuarioValido)
             {
                 TempData["ErrorValidacion"] = "El usuario vinculado seleccionado no existe en el sistema.";
@@ -260,7 +243,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
 
         try
         {
-            var registroMedicoDuplicado = await _context.Profesionales
+            bool registroMedicoDuplicado = await _context.Profesionales
                 .AnyAsync(p => p.RegistroMedico == model.RegistroMedico && p.IdProfesional != idOperacion, ct);
 
             if (registroMedicoDuplicado)
@@ -270,13 +253,13 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                 return Redirect(returnUrlSafe);
             }
 
-            var estado = string.IsNullOrWhiteSpace(model.Estado) ? "activo" : model.Estado;
-            var idUsuario = model.IdUsuario is null or 0 ? (int?)null : model.IdUsuario;
-            var idEspecialidad = model.IdEspecialidad is > 0 ? model.IdEspecialidad.Value : 0;
+            string estado = string.IsNullOrWhiteSpace(model.Estado) ? "activo" : model.Estado;
+            int? idUsuario = model.IdUsuario is null or 0 ? (int?)null : model.IdUsuario;
+            int idEspecialidad = model.IdEspecialidad is > 0 ? model.IdEspecialidad.Value : 0;
 
             if (idEspecialidad > 0)
             {
-                var espExiste = await _context.Especialidades.AnyAsync(e => e.IdEspecialidad == idEspecialidad, ct);
+                bool espExiste = await _context.Especialidades.AnyAsync(e => e.IdEspecialidad == idEspecialidad, ct);
                 if (!espExiste)
                 {
                     TempData["ErrorValidacion"] = "La especialidad seleccionada no existe.";
@@ -309,7 +292,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                     profesional.Categoria = model.Categoria?.Trim();
                     profesional.Telefono = model.Telefono?.Trim();
                     profesional.Descripcion = model.Descripcion?.Trim();
-                    profesional.Estado = estado;
+                    profesional.Estado = EstadoCitaHelper.ResolveEstadoNombre(estado, profesional.Estado);
                     profesional.FechaIngreso ??= DateTime.Today;
 
                     _context.Profesionales.Update(profesional);
@@ -325,7 +308,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                         Categoria = model.Categoria?.Trim(),
                         Telefono = model.Telefono?.Trim(),
                         Descripcion = model.Descripcion?.Trim(),
-                        Estado = estado,
+                        Estado = EstadoCitaHelper.ResolveEstadoNombre(estado, "activo"),
                         FechaIngreso = DateTime.Today
                     };
                     _context.Profesionales.Add(profesional);
@@ -381,7 +364,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
             _logger.LogError(cex, "Concurrencia al guardar profesional Id={Id}", idOperacion);
             TempData["ErrorValidacion"] = "Conflicto: los datos del profesional cambiaron durante la operación. Actualice y vuelva a intentar.";
         }
-        catch (DbUpdateException dbex) when (EsViolacionIndiceUnico(dbex, out var indice))
+        catch (DbUpdateException dbex) when (EsViolacionIndiceUnico(dbex, out string? indice))
         {
             _logger.LogError(dbex, "Violacion UNIQUE al guardar profesional Id={Id}. Indice/mensaje: {Indice}", idOperacion, indice ?? "desconocido");
             TempData["ErrorValidacion"] = "No se pudo guardar: se detectó un dato duplicado (posiblemente registro médico o usuario vinculado).";
@@ -416,7 +399,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
     [Route("gestion-de-profesionales/eliminar-profesional")]
     public async Task<IActionResult> EliminarProfesional([FromForm] int IdProfesional, [FromForm] string? ReturnUrl, CancellationToken ct = default)
     {
-        var returnUrlSafe = !string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)
+        string returnUrlSafe = !string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)
             ? ReturnUrl
             : "/gestion-de-profesionales/st-adm-07-gestion-profesionales";
 
@@ -445,7 +428,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                 return Redirect(returnUrlSafe);
             }
 
-            var tieneCitasActivas = await _context.Citas
+            bool tieneCitasActivas = await _context.Citas
                 .AnyAsync(c => c.IdProfesional == IdProfesional
                     && c.Estado != "Cancelada"
                     && c.FechaHora >= DateTime.Today, ct);
@@ -457,7 +440,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                 return Redirect(returnUrlSafe);
             }
 
-            var estadoAnterior = profesional.Estado;
+            string estadoAnterior = profesional.Estado;
             profesional.Estado = "inactivo";
             _context.Profesionales.Update(profesional);
             await _context.SaveChangesAsync(ct);
@@ -524,8 +507,8 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
 
             if (User.IsInRole("Profesional"))
             {
-                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                if (int.TryParse(userIdStr, out var userId))
+                string? userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdStr, out int userId))
                 {
                     var prof = await _context.Profesionales.AsNoTracking()
                         .FirstOrDefaultAsync(p => p.IdUsuario == userId, ct);
@@ -538,7 +521,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var searchTerm = search.Trim();
+                string searchTerm = search.Trim();
                 citasQuery = citasQuery.Where(c =>
                     (c.Paciente!.Nombres != null && c.Paciente.Nombres.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
                     (c.Paciente.Apellidos != null && c.Paciente.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
@@ -548,7 +531,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
 
             if (!string.IsNullOrWhiteSpace(profesional))
             {
-                var profTerm = profesional.Trim();
+                string profTerm = profesional.Trim();
                 citasQuery = citasQuery.Where(c =>
                     c.Profesional != null && (
                         ((c.Profesional.Nombres ?? "") + " " + (c.Profesional.Apellidos ?? "")).Contains(profTerm, StringComparison.OrdinalIgnoreCase) ||
@@ -587,7 +570,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                 var pacienteCitas = todasCitasPacientes.Where(c => c.IdPaciente == cita.IdPaciente).ToList();
 
                 var nacimiento = cita.Paciente?.FechaNacimiento;
-                var edad = nacimiento.HasValue
+                int edad = nacimiento.HasValue
                     ? hoy.Year - nacimiento.Value.Year - (hoy < nacimiento.Value.AddYears(hoy.Year - nacimiento.Value.Year) ? 1 : 0)
                     : 0;
 
@@ -596,7 +579,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
                     .OrderBy(c => c.FechaHora)
                     .FirstOrDefault();
 
-                var alerta = string.IsNullOrWhiteSpace(cita.Notas) ? null : "observacion";
+                string? alerta = string.IsNullOrWhiteSpace(cita.Notas) ? null : "observacion";
 
                 return new ReporteClinicoViewModel
                 {
@@ -632,8 +615,8 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
             var consultasQuery = _context.Citas.AsNoTracking();
             if (User.IsInRole("Profesional"))
             {
-                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                if (int.TryParse(userIdStr, out var userId))
+                string? userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdStr, out int userId))
                 {
                     var prof = await _context.Profesionales.AsNoTracking()
                         .FirstOrDefaultAsync(p => p.IdUsuario == userId, ct);
@@ -645,7 +628,16 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
             }
 
             ViewData["ConsultasMes"] = await consultasQuery.CountAsync(c => c.FechaHora >= inicioMes && c.FechaHora < finMes, ct);
-            ViewData["SatisfaccionPromedio"] = 95;
+
+            // Calcular SatisfaccionPromedio como % de citas atendidas sobre el total del mes
+            // (opción (a) acordada: dato real calculado desde BD, no hardcoded)
+            int totalCitasMes = await consultasQuery.CountAsync(c => c.FechaHora >= inicioMes && c.FechaHora < finMes, ct);
+            int citasAtendidasMes = await consultasQuery.CountAsync(
+                c => c.FechaHora >= inicioMes && c.FechaHora < finMes
+                  && (c.Estado == "Atendida" || c.Estado == "atendida"), ct);
+            ViewData["SatisfaccionPromedio"] = totalCitasMes > 0
+                ? (int)Math.Round(citasAtendidasMes * 100.0 / totalCitasMes, 0)
+                : 0;
 
             ViewData["SearchFilter"] = search;
             ViewData["ProfesionalFilter"] = profesional;
@@ -681,8 +673,8 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
         try
         {
             var pagination = query ?? new PaginationQuery();
-            var page = pagination.Page < 1 ? 1 : pagination.Page;
-            var pageSize = pagination.PageSize < 1 ? 10 : pagination.PageSize;
+            int page = pagination.Page < 1 ? 1 : pagination.Page;
+            int pageSize = pagination.PageSize < 1 ? 10 : pagination.PageSize;
 
             ViewData["StatTotal"] = await _context.Profesionales.CountAsync(ct);
             ViewData["StatActivos"] = await _context.Profesionales.CountAsync(p => p.Estado == "activo", ct);
@@ -698,7 +690,7 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
 
             if (!string.IsNullOrWhiteSpace(pagination.Search))
             {
-                var searchTerm = pagination.Search.Trim();
+                string searchTerm = pagination.Search.Trim();
                 profesionalesQuery = profesionalesQuery.Where(p =>
                     (p.Usuario != null && ((p.Usuario.Nombre != null && p.Usuario.Nombre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) || (p.Usuario.Apellidos != null && p.Usuario.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))) ||
                     (p.Nombres != null && p.Nombres.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
@@ -709,13 +701,13 @@ public partial class GestionProfesionalesController(AppDbContext context, ILogge
 
             if (!string.IsNullOrWhiteSpace(pagination.Profesional))
             {
-                var especialidad = pagination.Profesional.Trim();
+                string especialidad = pagination.Profesional.Trim();
                 profesionalesQuery = profesionalesQuery.Where(p => p.Especialidades.Any(pe => pe.Especialidad != null && pe.Especialidad.Nombre.Equals(especialidad, StringComparison.OrdinalIgnoreCase)));
             }
 
             if (!string.IsNullOrWhiteSpace(pagination.Estado))
             {
-                var estado = pagination.Estado.Trim();
+                string estado = pagination.Estado.Trim();
                 profesionalesQuery = profesionalesQuery.Where(p => p.Estado != null && p.Estado.Equals(estado, StringComparison.OrdinalIgnoreCase));
             }
 

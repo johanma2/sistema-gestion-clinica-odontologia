@@ -1,4 +1,4 @@
-﻿@* ============================================
+﻿﻿﻿﻿﻿﻿﻿@* ============================================
    SmileTrack — Agenda General (st-adm-08-agenda)
    ============================================
    Autor: Johan Santamaria
@@ -48,35 +48,19 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
         rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-adm-08-agenda/agendageneral.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/print.css")" media="print" />
 </head>
 
 <body>
     <!-- Enlace de accesibilidad: saltar al contenido principal -->
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-    <!-- Sidebar de navegación principal -->
-    <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-        <div class="sidebar-logo">
-            <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-        </div>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
 
-        @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-
-        <div class="sidebar-user">
-            <div class="user-avatar" aria-hidden="true">
-                @(User.Identity?.Name?.Length >= 2 
-                    ? User.Identity.Name.Substring(0, 2).ToUpperInvariant() 
-                    : (User.Identity?.Name?.ToUpperInvariant() ?? "U"))
-            </div>
-            <div class="user-info">
-                <span class="user-role">@User.Identity?.Name</span>
-                <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Botón hamburguesa para dispositivos móviles -->
+    <!-- Botón hamburguesa para dispositivos mÓviles -->
     <button 
         class="hamburger" 
         id="hamburger" 
@@ -96,7 +80,7 @@
             <div class="header-left">
                 <nav class="breadcrumb" aria-label="Ruta de navegación">
                     <span>Administración</span>
-                    <span class="bc-sep" aria-hidden="true">→</span>
+                    <span class="bc-sep" aria-hidden="true">›</span>
                     <span class="bc-active">Agenda General</span>
                 </nav>
                 <h1 class="page-title">Agenda General</h1>
@@ -109,15 +93,15 @@
             <div class="controls-left">
                 <div class="week-nav" role="navigation" aria-label="Navegación semanal">
                     <button class="btn-week" id="btnPrev" aria-label="Semana anterior">
-                        <span aria-hidden="true">‹</span>
+                        <span aria-hidden="true">—</span>
                     </button>
                     <span class="week-label" id="weekLabel" aria-live="polite" data-week-start="@ViewData["WeekStart"]">@semanaLabel</span>
                     <button class="btn-week" id="btnNext" aria-label="Próxima semana">
-                        <span aria-hidden="true">›</span>
+                        <span aria-hidden="true">—</span>
                     </button>
                 </div>
                 <button class="btn-primary" id="btnToday" aria-label="Ir a la semana actual">
-                    📅 Hoy
+                    <span class="material-symbols-outlined" aria-hidden="true">today</span> Hoy
                 </button>
             </div>
 
@@ -153,6 +137,16 @@
                 @* Removed 'Aplicar' and 'Descargar' buttons: not relevant for appointment creation workflow *@
             </div>
         </section>
+
+        <!-- Botón de impresión de agenda -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px;gap:8px;" class="no-print">
+          <button type="button" class="btn-secondary"
+            onclick="window.print()"
+            aria-label="Imprimir agenda semanal"
+            style="display:flex;align-items:center;gap:6px;font-size:.85rem;">
+            🖨️ Imprimir Agenda
+          </button>
+        </div>
 
         <!-- Calendario semanal -->
         <section class="calendar-section" aria-labelledby="calendarTitle">
@@ -195,7 +189,7 @@
                         @if (dia.Cerrado)
                         {
                             <div class="day-closed">
-                                <span aria-hidden="true">🚫</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">block</span>
                                 <span>CERRADO</span>
                             </div>
                         }
@@ -213,21 +207,21 @@
                                     aria-label="@ariaLabel"
                                     data-id="@cita.Id"
                                     data-date="@dia.Fecha.ToString("yyyy-MM-dd")"
-                                    data-start-time="@cita.HoraInicio"
-                                    data-end-time="@cita.HoraFin"
+                                    data-start-time="@Html.Encode(cita.HoraInicio)"
+                                    data-end-time="@Html.Encode(cita.HoraFin)"
                                     data-patient-id="@cita.IdPaciente"
                                     data-professional-id="@cita.IdProfesional"
                                     data-office-id="@cita.IdConsultorio"
                                     data-service-id="@cita.IdServicio"
-                                    data-status="@cita.Estado"
-                                    data-notes="@cita.Notas"
-                                    data-patient-name="@cita.Paciente"
-                                    data-service-name="@cita.Servicio"
-                                    data-office-name="@cita.Consultorio"
-                                    data-professional-name="@cita.Paciente">
+                                    data-status="@Html.Encode(cita.Estado)"
+                                    data-notes="@Html.Encode(cita.Notas)"
+                                    data-patient-name="@Html.Encode(cita.Paciente)"
+                                    data-service-name="@Html.Encode(cita.Servicio)"
+                                    data-office-name="@Html.Encode(cita.Consultorio)"
+                                    data-professional-name="@Html.Encode(cita.Paciente)">
                                     <time datetime="@dateTimeValue" class="appt-time">@cita.Hora</time>
                                     <span class="appt-patient">@cita.Paciente</span>
-                                    <span class="appt-detail">@cita.Servicio · @cita.Consultorio</span>
+                                    <span class="appt-detail">@cita.Servicio — @cita.Consultorio</span>
                                 </div>
                             }
 
@@ -285,7 +279,7 @@
         aria-hidden="true" 
         inert>
         <div class="modal">
-            <button class="modal-close" id="modalApptClose" aria-label="Cerrar ventana">×</button>
+            <button class="modal-close" id="modalApptClose" aria-label="Cerrar ventana">—</button>
             <h2 class="modal-title" id="modalApptTitle">Detalle de Cita</h2>
             <div class="modal-content" id="modalApptContent">
                 <!-- Contenido inyectado dinámicamente por JavaScript -->
@@ -307,7 +301,7 @@
         aria-hidden="true" 
         inert>
         <div class="modal modal-lg">
-            <button class="modal-close" id="modalNewApptClose" aria-label="Cerrar ventana">×</button>
+            <button class="modal-close" id="modalNewApptClose" aria-label="Cerrar ventana">—</button>
             <h2 class="modal-title" id="modalNewApptTitle">Agendar Nueva Cita</h2>
             
             <div class="modal-content">
@@ -448,18 +442,18 @@
         <span aria-hidden="true">+</span>
     </button>
 
-    <!-- Navegación inferior para móviles -->
-    <nav class="mobile-nav" aria-label="Navegación móvil">
+    <!-- Navegación inferior para mÓviles -->
+    <nav class="mobile-nav" aria-label="Navegación mÓvil">
         <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
-            <span class="mobile-nav-icon" aria-hidden="true"></span>
+            <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">space_dashboard</span>
             <span>Dashboard</span>
         </a>
         <a href="#" class="mobile-nav-item active" aria-current="page">
-            <span class="mobile-nav-icon" aria-hidden="true"></span>
+            <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">calendar_month</span>
             <span>Agenda</span>
         </a>
         <a href="/gestion-de-citas/st-adm-09-citas" class="mobile-nav-item">
-            <span class="mobile-nav-icon" aria-hidden="true"></span>
+            <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">event</span>
             <span>Citas</span>
         </a>
     </nav>
@@ -470,53 +464,23 @@
     <!-- Footer dinámico -->
     <footer id="dynamic-footer" class="site-footer" role="contentinfo">
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-            <span style="font-size:1rem;">🦷</span>
-            <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+            <span class="material-symbols-outlined" aria-hidden="true" style="font-size:1rem;">favorite</span>
+            <p>— 2025 Smile Track. Todos los derechos reservados.</p>
         </div>
-        <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+        <p class="footer-sub">Proyecto Formativo ADSO — SENA</p>
         <script src="@Url.Content("~/js/footer.js")"></script>
         <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
     </footer>
 
     <!-- Script de inicialización de navegación colapsable del sidebar -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Inicializar grupos de navegación expandibles en el sidebar
-            document.querySelectorAll('.nav-group-header').forEach(header => {
-                const itemsContainer = header.nextElementSibling;
-                const arrowIcon = header.querySelector('.nav-arrow');
-
-                if (!itemsContainer || !arrowIcon) return;
-
-                // Función para actualizar estado visual y aria-expanded
-                const setExpandedState = (isExpanded) => {
-                    itemsContainer.style.maxHeight = isExpanded ? `${itemsContainer.scrollHeight}px` : '0px';
-                    arrowIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-                    header.setAttribute('aria-expanded', String(isExpanded));
-                };
-
-                // Estado inicial: colapsado
-                setExpandedState(false);
-
-                // Alternar estado al hacer clic
-                const toggleMenu = () => {
-                    const currentState = header.getAttribute('aria-expanded') === 'true';
-                    setExpandedState(!currentState);
-                };
-
-                // Eventos de interacción
-                header.addEventListener('click', toggleMenu);
-                header.addEventListener('keydown', event => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        toggleMenu();
-                    }
-                });
-            });
-        });
-    </script>
 
     <!-- Script principal de la agenda -->
     <script src="@Url.Content("~/js/Gestion_De_Citas/st-adm-08-agenda/agendageneral.js")"></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
+    <script src="@Url.Content("~/js/shared/validation-utils.js")"></script>
+    <script src="@Url.Content("~/js/shared/appointment-utils.js")"></script>
 </body>
 </html>
+

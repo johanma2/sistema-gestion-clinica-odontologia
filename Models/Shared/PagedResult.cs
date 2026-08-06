@@ -35,7 +35,7 @@ public static class PagedResultExtensions
             if (pageSize < 1) pageSize = 10;
             if (pageSize > 500) pageSize = 500;
 
-            var totalCount = await query.CountAsync(ct);
+            int totalCount = await query.CountAsync(ct);
             if (ct.IsCancellationRequested)
             {
                 return PagedResult<T>.Empty(page, pageSize);

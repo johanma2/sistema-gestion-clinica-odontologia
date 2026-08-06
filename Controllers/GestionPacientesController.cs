@@ -20,7 +20,7 @@ public class GestionPacientesController : Controller
     [Route("gestion-de-pacientes/st-adm-05-gestion-pacientes")]
     public async Task<IActionResult> Stadm05GestionPacientes()
     {
-        var colores = new[] { "blue", "green", "yellow", "purple", "slate" };
+        string[] colores = new[] { "blue", "green", "yellow", "purple", "slate" };
         var ahora = DateTime.Now;
 
         var pacientesDb = await _context.Pacientes
@@ -61,9 +61,9 @@ public class GestionPacientesController : Controller
                     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .ToList();
 
-            var inicialNombre = p.Nombres.Trim().FirstOrDefault();
-            var inicialApellido = p.Apellidos.Trim().FirstOrDefault();
-            var iniciales = $"{inicialNombre}{inicialApellido}".ToUpperInvariant();
+            char inicialNombre = p.Nombres.Trim().FirstOrDefault();
+            char inicialApellido = p.Apellidos.Trim().FirstOrDefault();
+            string iniciales = $"{inicialNombre}{inicialApellido}".ToUpperInvariant();
 
             pacientes.Add(new PacienteViewModel
             {

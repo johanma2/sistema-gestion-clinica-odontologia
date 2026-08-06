@@ -43,7 +43,9 @@ NOTAS DE MANTENIMIENTO:
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-odo-09-perfil-profesional/styles.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -275,7 +277,7 @@ NOTAS DE MANTENIMIENTO:
 
       <div class="modal-footer">
         <button class="modal-btn modal-btn-secondary" id="modalCancel">Cancelar</button>
-        <button class="modal-btn modal-btn-primary" id="modalSave">💾 Guardar horario</button>
+        <button class="modal-btn modal-btn-primary" id="modalSave"><span class="material-symbols-outlined" aria-hidden="true">save</span> Guardar horario</button>
       </div>
     </div>
   </div>
@@ -318,46 +320,20 @@ NOTAS DE MANTENIMIENTO:
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
+      <span class="material-symbols-outlined" aria-hidden="true" style="font-size:1rem;">favorite</span>
       <p>© 2025 Smile Track. Todos los derechos reservados.</p>
     </div>
     <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
     <script src="@Url.Content("~/js/footer.js")"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
-  });
-</script>
 
   </footer>
 
 
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
+    <script src="@Url.Content("~/js/shared/validation-utils.js")"></script>
 </body>
 
 </html>
+

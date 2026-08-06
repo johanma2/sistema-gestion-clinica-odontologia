@@ -20,8 +20,8 @@ public class PerfilesController : Controller
     [Route("perfiles/st-aux-11-perfil-auxiliar")]
     public async Task<IActionResult> Staux11PerfilAuxiliar()
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        int.TryParse(userIdStr, out var userId);
+        string? userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out int userId);
         var usuario = await _context.Usuarios.Include(u => u.Rol).FirstOrDefaultAsync(u => u.IdUsuario == userId);
         return View("~/Views/Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.cshtml", usuario);
     }
@@ -31,8 +31,8 @@ public class PerfilesController : Controller
     [Route("perfiles/st-pac-perfil-paciente")]
     public async Task<IActionResult> StpacPerfilPaciente()
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        int.TryParse(userIdStr, out var userId);
+        string? userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out int userId);
         var paciente = await _context.Pacientes.Include(p => p.Usuario).FirstOrDefaultAsync(p => p.IdUsuario == userId);
         return View("~/Views/Perfiles/st-pac-perfil-Paciente/perfil-paciente.cshtml", paciente);
     }
@@ -42,8 +42,8 @@ public class PerfilesController : Controller
     [Route("perfiles/st-rec-06-perfil-recepcionista")]
     public async Task<IActionResult> Strec06PerfilRecepcionista()
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        int.TryParse(userIdStr, out var userId);
+        string? userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(userIdStr, out int userId);
         var usuario = await _context.Usuarios.Include(u => u.Rol).FirstOrDefaultAsync(u => u.IdUsuario == userId);
         return View("~/Views/Perfiles/st-rec-06-perfil-recepcionista/perfilrecepcionista.cshtml", usuario);
     }

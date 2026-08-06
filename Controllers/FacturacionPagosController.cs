@@ -57,7 +57,7 @@ public class FacturacionPagosController : Controller
     {
         var facturasDb = await ObtenerFacturasConSeedAsync();
 
-        var colores = new[] { "blue", "green", "purple", "orange", "red" };
+        string[] colores = new[] { "blue", "green", "purple", "orange", "red" };
         var facturas = facturasDb.Select((f, idx) => new
         {
             id = f.IdFactura,
@@ -84,19 +84,19 @@ public class FacturacionPagosController : Controller
     {
         var facturasDb = await ObtenerFacturasConSeedAsync();
 
-        var income = facturasDb.Sum(f => f.Total);
-        var received = facturasDb.Where(f => f.Estado == "pagada").Sum(f => f.Total)
+        decimal income = facturasDb.Sum(f => f.Total);
+        decimal received = facturasDb.Where(f => f.Estado == "pagada").Sum(f => f.Total)
                       + facturasDb.Where(f => f.Estado == "parcial").Sum(f => f.Total / 2);
-        var pending = income - received;
-        var margin = income > 0 ? Math.Round(received / income * 100, 0) : 0;
+        decimal pending = income - received;
+        decimal margin = income > 0 ? Math.Round(received / income * 100, 0) : 0;
 
         var hoy = DateTime.Today;
-        var nombresMeses = new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" };
+        string[] nombresMeses = new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" };
         var barChart = new List<object>();
-        for (var i = 5; i >= 0; i--)
+        for (int i = 5; i >= 0; i--)
         {
             var mesRef = hoy.AddMonths(-i);
-            var totalMes = facturasDb
+            decimal totalMes = facturasDb
                 .Where(f => f.FechaFactura.Year == mesRef.Year && f.FechaFactura.Month == mesRef.Month)
                 .Sum(f => f.Total);
             barChart.Add(new
@@ -108,7 +108,7 @@ public class FacturacionPagosController : Controller
             });
         }
 
-        var coloresDonut = new[] { "#2563eb", "#16a34a", "#d97706", "#7c3aed", "#dc2626", "#0891b2" };
+        string[] coloresDonut = new[] { "#2563eb", "#16a34a", "#d97706", "#7c3aed", "#dc2626", "#0891b2" };
         var donutChart = facturasDb
             .GroupBy(f => string.IsNullOrWhiteSpace(f.Notas) ? "Servicios Generales" : f.Notas)
             .Select((g, idx) => new
@@ -119,7 +119,7 @@ public class FacturacionPagosController : Controller
             })
             .ToList();
 
-        var coloresAvatar = new[] { "blue", "green", "purple", "orange", "red" };
+        string[] coloresAvatar = new[] { "blue", "green", "purple", "orange", "red" };
         var transactions = facturasDb.Select((f, idx) => new
         {
             id = f.IdFactura,

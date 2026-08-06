@@ -1,69 +1,21 @@
 /* =============================================
    SMILETRACK — REPORTES PROFESIONAL (styles.css)
-   Idéntico en dimensiones y tokens a st-odo-01-dashboard / vista_admin
+   Estilos específicos de la vista vista_prof.
+   El layout base (sidebar, main, hamburger, variables)
+   viene de shared/sidebar.css + vista_admin/styles.css.
    ============================================= */
 
+/* Importar la base de Reportes Admin (KPIs, tablas, gráficos, modales) */
 @import url("../vista_admin/styles.css");
 
-/* Ancho del sidebar unificado a 220px (estándar de todos los módulos) */
-:root {
-  --sidebar-w: 220px !important;
-}
-
-.sidebar {
-  width: 220px !important;
-  box-sizing: border-box;
-  background: linear-gradient(180deg, #0f2057 0%, #1a3580 100%) !important;
-}
-
-.main {
-  margin-left: 220px !important;
-  padding: 24px 28px 40px !important;
-  box-sizing: border-box;
-  min-width: 0;
-}
-
-/* Logo en el sidebar (estilo estándar integrado) */
-.sidebar .sidebar-logo,
-.sidebar-logo {
-  padding: 0 18px 20px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  margin: 0 0 10px 0 !important;
-  text-align: center !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-}
-
-.sidebar .sidebar-logo img.logo-img,
-.sidebar-logo .logo-img {
-  width: 100% !important;
-  max-width: 140px !important;
-  height: auto !important;
-  max-height: 55px !important;
-  object-fit: contain !important;
-  display: block !important;
-  margin: 0 auto !important;
-  border-radius: 8px !important;
-}
-
-/* Información de usuario en el pie del sidebar */
-.sidebar-user .user-role {
-  color: #e2e8f0 !important;
-  font-weight: 600 !important;
-}
-
-.sidebar-user .user-email {
-  color: #6a80a8 !important;
-}
-
-/* Grid de métricas */
+/* ─── Grid de métricas del profesional ──────────────────────────────────── */
+/* Sobreescritura legítima: la vista profesional tiene más tarjetas */
 .stats-grid {
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)) !important;
-  gap: 14px !important;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
 }
 
-/* Barras de progreso de tratamientos */
+/* ─── Barras de progreso de tratamientos ─────────────────────────────────── */
 .prof-revenue-list {
   display: flex;
   flex-direction: column;
@@ -96,23 +48,23 @@
 }
 
 .progress-track {
-  height: 10px !important;
-  background: #e2e8f0 !important;
-  border-radius: 9999px !important;
-  overflow: hidden !important;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
 }
 
 .progress-fill {
-  height: 100% !important;
-  background: linear-gradient(90deg, #1a56cc, #3b82f6) !important;
-  border-radius: 9999px !important;
+  height: 100%;
+  background: linear-gradient(90deg, #1a56cc, #3b82f6);
+  border-radius: 9999px;
   transition: width 0.6s ease;
 }
 
-/* Responsive para dispositivos móviles */
+/* ─── Responsive móvil ───────────────────────────────────────────────────── */
+/* shared/sidebar.css gestiona el drawer; aquí solo el padding del main */
 @media (max-width: 680px) {
   .main {
-    margin-left: 0 !important;
-    padding: 58px 14px 32px !important;
+    padding: 58px 14px 32px;
   }
 }

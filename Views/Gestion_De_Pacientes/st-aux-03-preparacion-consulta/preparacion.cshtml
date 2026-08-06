@@ -10,7 +10,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Pacientes/st-aux-03-preparacion-consulta/preparacion.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -26,20 +28,7 @@
   <!-- Overlay para menú móvil -->
   <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <!-- ═════ SIDEBAR UNIFICADO (Activo: Preparación de Consulta) ═════ -->
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  @{ await Html.RenderPartialAsync("_SidebarAuxiliar"); }
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AU</div>
-    <div class="user-info">
-      <span class="user-role">Auxiliar</span>
-      <span class="user-email">auxiliar@smiletrack.co</span>
-    </div>
-  </div>
-</aside>
+    @{ await Html.RenderPartialAsync("_SidebarAuxiliar"); }
   <!-- ═════ MAIN ═════ -->
   <main class="main-content" id="main-content">
 
@@ -230,7 +219,7 @@
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
+      <span class="material-symbols-outlined" aria-hidden="true" style="font-size:1rem;">favorite</span>
       <p>© 2025 Smile Track. Todos los derechos reservados.</p>
     </div>
     <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
@@ -240,6 +229,10 @@
 
   <script src="@Url.Content("~/js/Gestion_De_Pacientes/st-aux-03-preparacion-consulta/preparacion.js")"></script>
 
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 
 </html>
+

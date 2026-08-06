@@ -1,4 +1,4 @@
-@model SmileTrack_MVC.Models.ViewModels.ReportesViewModel
+﻿@model SmileTrack_MVC.Models.ViewModels.ReportesViewModel
 
 @{
     Layout = null;
@@ -25,6 +25,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Reportes/vista_admin/styles.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -32,25 +33,7 @@
   <!-- Skip link accesibilidad -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <!-- ═════ SIDEBAR ═════ -->
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-    <div class="sidebar-logo">
-      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-    </div>
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-    <div class="sidebar-user">
-      @{
-        var sidebarName     = User.Identity?.Name ?? "Administrador";
-        var sidebarEmail    = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin@smiletrack.co";
-        var sidebarInitials = string.Concat(sidebarName.Split(' ', System.StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
-      }
-      <div class="user-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(sidebarInitials) ? "AD" : sidebarInitials)</div>
-      <div class="user-info">
-        <span class="user-role">@sidebarName</span>
-        <span class="user-email">@sidebarEmail</span>
-      </div>
-    </div>
-  </aside>
 
   <!-- ═════ HAMBURGER (móvil) ═════ -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
@@ -526,5 +509,9 @@
   </main>
 
   <script src="@Url.Content("~/js/Reportes/vista_admin/app.js")"></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>
+

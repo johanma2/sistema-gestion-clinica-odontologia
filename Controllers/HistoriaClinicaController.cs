@@ -57,7 +57,7 @@ public class HistoriaClinicaController(AppDbContext context) : Controller
             return Json(new { success = false, message = "No se recibieron datos del odontograma." });
         }
 
-        var pacienteId = request.PacienteId ?? await ObtenerPacientePredeterminadoAsync();
+        int? pacienteId = request.PacienteId ?? await ObtenerPacientePredeterminadoAsync();
         if (pacienteId is null)
             return Json(new { success = false, message = "No hay pacientes registrados en el sistema." });
         var historia = await _context.HistoriasClinicas.FirstOrDefaultAsync(h => h.IdPaciente == pacienteId && h.Activa)
@@ -95,8 +95,8 @@ public class HistoriaClinicaController(AppDbContext context) : Controller
 [Route("historia-clinica/st-pac-02-historial")]
 public async Task<IActionResult> Stpac02Historial()
 {
-    var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    int? idUsuario = int.TryParse(userIdStr, out var uid) ? uid : null;
+        string? userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    int? idUsuario = int.TryParse(userIdStr, out int uid) ? uid : null;
 
     var paciente = idUsuario.HasValue
         ? await _context.Pacientes.FirstOrDefaultAsync(p => p.IdUsuario == idUsuario)
@@ -156,7 +156,7 @@ public async Task<IActionResult> Stpac02Historial()
 private static string InferirTipoServicio(string? nombreServicio)
 {
     if (string.IsNullOrWhiteSpace(nombreServicio)) return "consulta";
-    var n = nombreServicio.ToLowerInvariant();
+        string n = nombreServicio.ToLowerInvariant();
     if (n.Contains("limpieza") || n.Contains("profilaxis")) return "limpieza";
     if (n.Contains("radiograf")) return "radiografia";
     if (n.Contains("ortodon") || n.Contains("endodon") || n.Contains("implante") || n.Contains("cirugia") || n.Contains("resina") || n.Contains("extrac")) return "tratamiento";
@@ -187,8 +187,8 @@ private static string InferirTipoServicio(string? nombreServicio)
             ?? await _context.HistoriasClinicas.FirstOrDefaultAsync(h => h.IdPaciente == paciente.IdPaciente && h.Activa)
             ?? await CrearHistoriaClinicaAsync(paciente.IdPaciente);
 
-        var profesionalNombre = User.FindFirst(ClaimTypes.Name)?.Value ?? "Profesional";
-        var profesionalCorreo = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+        string profesionalNombre = User.FindFirst(ClaimTypes.Name)?.Value ?? "Profesional";
+        string profesionalCorreo = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
 
         return new OdontogramaViewModel
         {

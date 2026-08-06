@@ -16,25 +16,14 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/styles.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 <body>
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-    <div class="sidebar-logo">
-      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-    </div>
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-
-    <div class="sidebar-user">
-      <div class="user-avatar" aria-hidden="true">AD</div>
-      <div class="user-info">
-        <span class="user-role">Administrador</span>
-        <span class="user-email">admin@smiletrack.co</span>
-      </div>
-    </div>
-  </aside>
 
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
@@ -56,7 +45,7 @@
       </div>
       <div class="header-actions">
         <div class="search-wrap">
-          <span class="search-icon" aria-hidden="true">🔍</span>
+          <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
           <input type="search" id="searchPatients" class="search-input" placeholder="Buscar paciente, cédula o diagnóstico..." aria-label="Buscar paciente" />
         </div>
       </div>
@@ -183,41 +172,13 @@
   </nav>
 
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-
- <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
-  });
-</script>
 <script>
   window.RAZOR_PATIENTS = @Html.Raw(pacientesJson);
 </script>
 <script src="@Url.Content("~/js/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/script.js")"></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>
+

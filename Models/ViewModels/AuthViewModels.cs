@@ -34,7 +34,16 @@ namespace SmileTrack_MVC.Models.ViewModels
         [StringLength(100, MinimumLength = 2, ErrorMessage = "El nombre debe tener entre 2 y 100 caracteres")]
         public string Nombre { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Los apellidos son obligatorios")]
+        [StringLength(100, MinimumLength = 2, ErrorMessage = "Los apellidos deben tener entre 2 y 100 caracteres")]
+        public string Apellidos { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El rol es obligatorio")]
         public string Rol { get; set; } = string.Empty;
+
+        [Compare("Contrasena", ErrorMessage = "Las contraseñas deben coincidir")]
+        [DataType(DataType.Password)]
+        public string? ConfirmarContrasena { get; set; }
         public string? TipoDocumento { get; set; }
         public string? NumeroDocumento { get; set; }
         public string? Telefono { get; set; }

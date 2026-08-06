@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Mi Agenda Odontólogo (st-odo-02-agenda)
 ============================================
 Autor: Johan Santamaria
@@ -83,14 +83,6 @@ const debounce = (fn, delay) => {
   };
 };
 
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 function mostrarErrorUsuario(mensaje) {
   let div = document.getElementById('smiletrack-error-bar');
@@ -317,7 +309,7 @@ window.editAppointment = async (id) => {
 
   const normalizado = validos.find(v => v.toLowerCase() === nuevo.trim().toLowerCase());
   if (!normalizado) {
-    showToast('Estado no válido. Usa uno de los valores permitidos.', 'error');
+    window.ToastService.error('Estado no válido. Usa uno de los valores permitidos.');
     return;
   }
 
@@ -356,19 +348,19 @@ window.editAppointment = async (id) => {
 
     if (res.ok && payload.success) {
       saveLocal(appointments);
-      showToast(`Estado actualizado a "${normalizado}"`, 'success');
+      window.ToastService.success(`Estado actualizado a "${normalizado}"`);
     } else {
       // Rollback UI si falla el server
       item.estado = originalEstado;
       item.active = originalEstado === 'En consulta';
       renderTable(appointments);
       updateCounts();
-      showToast(payload.message || 'No fue posible actualizar el estado en el servidor', 'error');
+      window.ToastService.error(payload.message || 'No fue posible actualizar el estado en el servidor');
     }
   } catch (netErr) {
     console.warn('[SmileTrack] PUT offline, guardado local:', netErr);
     saveLocal(appointments);
-    showToast(`⚠️ Estado guardado localmente (sin conexión): ${normalizado}`, 'warning');
+    window.ToastService.warning(`⚠️ Estado guardado localmente (sin conexión): ${normalizado}`);
   }
 };
 
@@ -529,7 +521,7 @@ const initGlobalStatus = () => {
 
     renderTable(appointments);
     updateCounts();
-    showToast('Estados actualizados en servidor y local', 'success');
+    window.ToastService.success('Estados actualizados en servidor y local');
     this.value = '';
   });
 };

@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Mis Citas Paciente (st-pac-01-mis-citas)
 ============================================
 Autor: Johan Santamaria
@@ -91,13 +91,12 @@ const debounce = (fn, delay) => {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), delay); };
 };
 
-const showToast = (msg, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-  if (toast._tid) clearTimeout(toast._tid);
-  toast._tid = setTimeout(() => toast.classList.remove('show'), 3200);
+const notify = (type, title, message) => {
+  if (window.ToastService && typeof window.ToastService[type] === 'function') {
+    window.ToastService[type](title, message);
+  } else {
+    console[type === 'error' ? 'error' : 'log'](`[SmileTrack] ${title}${message ? ` - ${message}` : ''}`);
+  }
 };
 
 const fmtFecha = (fh) => {
@@ -130,26 +129,53 @@ const mapServerToClient = (srv) => {
   const proximaFutura = info.label === 'Agendada' || info.label === 'Confirmada';
   const todayISO = new Date().toISOString().split('T')[0];
   const citaFechaISO = fhISO ? fhISO.split('T')[0] : todayISO;
+
+  // BUG FIX 'undefined' en alertas:
+  // El API puede devolver el nombre del profesional bajo distintos campos según la versión
+  // del serializador (PascalCase vs camelCase). Probamos todas las variantes conocidas y
+  // si ninguna tiene valor, usamos el fallback legible. Esto evita que `${item.doctor}`
+  // en template literals resulte en el string literal 'undefined'.
+  const prof = srv.Profesional ?? srv.profesional ?? null;
+  const doctorNombre = (
+    prof?.NombreCompleto ||
+    prof?.nombreCompleto ||
+    (prof?.Nombres && prof?.Apellidos ? `${prof.Nombres} ${prof.Apellidos}`.trim() : null) ||
+    (prof?.nombres && prof?.apellidos ? `${prof.nombres} ${prof.apellidos}`.trim() : null) ||
+    prof?.Nombre ||
+    prof?.nombre ||
+    null
+  ) || 'Profesional sin asignar';
+
+  const svc = srv.Servicio ?? srv.servicio ?? null;
+  const servicioNombre = (
+    svc?.Nombre || svc?.nombre || null
+  ) || 'Sin servicio';
+
   return {
-    id: srv.IdCita,
+    id: srv.IdCita ?? srv.idCita,
     fecha: fmtFecha(fhISO),
     fechaISO: citaFechaISO,
     fechaHoraISO: fhISO || new Date().toISOString(),
     hora: fmtHora(fhISO),
-    doctor: srv.Profesional?.NombreCompleto || 'Profesional sin asignar',
-    servicio: srv.Servicio?.Nombre || 'Sin servicio',
+    doctor: doctorNombre,
+    servicio: servicioNombre,
     estado: info.label,
     active: proximaFutura && citaFechaISO === todayISO,
     _raw: srv
   };
 };
 
+// BUG FIX: El FALLBACK original no incluía `fechaHoraISO`, lo que causaba que
+// diffHoras() recibiera undefined → new Date(undefined) → NaN → comparaciones
+// incorrectas en abrirModalCancelar() (hrs < 24 y hrs < 2 ambas falsas cuando son NaN).
+// Añadimos fechaHoraISO con timestamps futuros realistas para que las validaciones
+// de cancelación funcionen correctamente con los datos de demostración.
 const FALLBACK = [
-  { id:1, fecha:'Vie 20 Mar', fechaISO:'2026-03-20', hora:'10:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Control general',   estado:'Agendada',   active:true  },
-  { id:2, fecha:'Vie 27 Mar', fechaISO:'2026-03-27', hora:'03:30 PM', doctor:'Dra. Laura Gómez',   servicio:'Ortodoncia',        estado:'Agendada',   active:true  },
-  { id:3, fecha:'Mar 10 Mar', fechaISO:'2026-03-10', hora:'09:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Limpieza dental',   estado:'Completada', active:false },
-  { id:4, fecha:'Lun 03 Feb', fechaISO:'2026-02-03', hora:'11:30 AM', doctor:'Dra. Laura Gómez',   servicio:'Resina dental',     estado:'Completada', active:false },
-  { id:5, fecha:'Mié 10 Ene', fechaISO:'2026-01-10', hora:'10:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Ortodoncia',        estado:'Cancelada',  active:false }
+  { id:1, fecha:'Vie 20 Mar', fechaISO:'2026-03-20', fechaHoraISO:'2026-03-20T10:00:00.000Z', hora:'10:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Control general',   estado:'Agendada',   active:true  },
+  { id:2, fecha:'Vie 27 Mar', fechaISO:'2026-03-27', fechaHoraISO:'2026-03-27T15:30:00.000Z', hora:'03:30 PM', doctor:'Dra. Laura Gómez',   servicio:'Ortodoncia',        estado:'Agendada',   active:true  },
+  { id:3, fecha:'Mar 10 Mar', fechaISO:'2026-03-10', fechaHoraISO:'2026-03-10T09:00:00.000Z', hora:'09:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Limpieza dental',   estado:'Completada', active:false },
+  { id:4, fecha:'Lun 03 Feb', fechaISO:'2026-02-03', fechaHoraISO:'2026-02-03T11:30:00.000Z', hora:'11:30 AM', doctor:'Dra. Laura Gómez',   servicio:'Resina dental',     estado:'Completada', active:false },
+  { id:5, fecha:'Mié 10 Ene', fechaISO:'2026-01-10', fechaHoraISO:'2026-01-10T10:00:00.000Z', hora:'10:00 AM', doctor:'Dr. Carlos Méndez',  servicio:'Ortodoncia',        estado:'Cancelada',  active:false }
 ];
 
 let citas = [...FALLBACK];
@@ -269,8 +295,14 @@ const renderTable = () => {
       <td><span class="badge ${badgeClass(item.estado)}">${item.estado}</span></td>
       <td>
         <div class="actions-cell">
-          <button class="btn-icon" title="Ver detalle" data-action="ver" data-id="${item.id}" aria-label="Ver detalle de cita">👁️</button>
-          ${canCancel ? `<button class="btn-icon danger" title="Cancelar cita" data-action="cancelar" data-id="${item.id}" aria-label="Cancelar cita">✕</button>` : ''}
+          <button class="btn-icon action-btn btn-view" type="button" id="btn-ver-${item.id}"
+                  title="Ver detalle" data-action="ver" data-id="${item.id}" aria-label="Ver detalle de cita">
+            👁️ <span class="btn-text">Ver</span>
+          </button>
+          ${canCancel ? `<button class="btn-icon action-btn btn-delete danger" type="button" id="btn-cancelar-${item.id}"
+                  title="Cancelar cita" data-action="cancelar" data-id="${item.id}" aria-label="Cancelar cita">
+            ✕ <span class="btn-text">Cancelar</span>
+          </button>` : ''}
         </div>
       </td>`;
     tbody.appendChild(tr);
@@ -297,7 +329,7 @@ const openModal = (id) => {
   }
   const mo = safeGetElement('modalOverlay');
   if (mo) {
-    mo.dataset.opener = 'btnNuevaCita';
+    mo.dataset.opener = `btn-ver-${id}`;
     mo.classList.add('open');
     mo.setAttribute('aria-hidden', 'false');
     mo.removeAttribute('inert');
@@ -314,9 +346,18 @@ const closeModal = () => {
   if (opener) safeGetElement(opener)?.focus();
 };
 
-// Helper: verifica que la cita sea en >24h (regla negocio cancelación paciente)
+// BUG FIX: diffHoras recibía undefined cuando item.fechaHoraISO no estaba presente
+// (ocurría con datos del FALLBACK antes del fix, y puede ocurrir si el API
+// devuelve FechaHora=null). new Date(undefined/null/invalid) retorna Invalid Date,
+// cuyo getTime() es NaN. NaN arithmetic produce NaN, y NaN < 24 / NaN < 2 son
+// ambas false, haciendo que la rama de advertencia nunca ejecutara y que la rama
+// de bloqueo (<2h) tampoco, resultando en que citas ya pasadas fueran cancelables.
+// Ahora retornamos -Infinity si la fecha es inválida para que la UI las trate
+// correctamente como citas ya pasadas (no cancelables).
 const diffHoras = (fechaHoraISO) => {
+  if (!fechaHoraISO) return -Infinity;
   const cita = new Date(fechaHoraISO);
+  if (isNaN(cita.getTime())) return -Infinity;
   return (cita.getTime() - Date.now()) / 3_600_000;
 };
 
@@ -383,7 +424,7 @@ const confirmarCancelacion = async () => {
   item.active = false;
   updateStats();
   renderTable();
-  showToast('Cita cancelada correctamente');
+  notify('success', 'Éxito', 'Cita cancelada correctamente');
 
   let success = false, msg = null;
   try {
@@ -405,7 +446,7 @@ const confirmarCancelacion = async () => {
     saveLocal();
     cerrarModalCancelar();
     if (msg && msg.toLowerCase().includes('local'))
-      showToast('⚠️ Cancelación guardada localmente', 'warning');
+      notify('warning', 'Atención', 'Cancelación guardada localmente');
   } else {
     item.estado = beforeEstado;
     item.active = beforeEstado === 'Agendada' || beforeEstado === 'Confirmada';
@@ -456,7 +497,7 @@ const initNuevaCitaModal = () => {
       return;
     }
     cerrar();
-    showToast('Solicitud de cita enviada exitosamente');
+    notify('success', 'Éxito', 'Solicitud de cita enviada exitosamente');
     if (fecha) fecha.value = '';
     safeGetElement('citaServicio') && (safeGetElement('citaServicio').selectedIndex = 0);
     const nta = safeGetElement('citaNota');
@@ -472,7 +513,7 @@ const initTableEvents = () => {
   const tbody = safeGetElement('citasTbody');
   if (!tbody) return;
   tbody.addEventListener('click', e => {
-    const b = e.target.closest('.btn-icon');
+    const b = e.target.closest('[data-action]');
     if (!b) return;
     const accion = b.dataset.action;
     const id = parseInt(b.dataset.id, 10);
@@ -512,8 +553,13 @@ async function fetchAppointments() {
 
 const init = async () => {
   try {
-    // 1. Cargar datos
-    citas = loadLocal();
+    // 1. Cargar datos — si localStorage está vacío la primera vez, usar FALLBACK explícito
+    // BUG FIX: loadLocal() retornaba el FALLBACK pero solo si localStorage tenía una
+    // entrada previa; en la primera carga (localStorage vacío) retornaba FALLBACK también,
+    // pero si alguna versión anterior guardó un array vacío [] en el storage, lo devolvía
+    // vacío. Ahora normalizamos: si el resultado de loadLocal() está vacío, usamos FALLBACK.
+    const stored = loadLocal();
+    citas = (Array.isArray(stored) && stored.length > 0) ? stored : [...FALLBACK];
     animateCounters();
     updateStats();
     renderTable();

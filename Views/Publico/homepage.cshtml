@@ -6,14 +6,50 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>Smile Track | Gestión Dental de Alta Precisión</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <meta name="robots" content="index, follow">
+    <meta name="description" content="SmileTrack es la plataforma de gestión odontológica para agendar citas, consultar tratamientos y contactar especialistas con confianza.">
+    <meta name="keywords" content="odontología, citas dentales, clínica dental, historial clínico, reserva cita">
+    <link rel="canonical" href="https://smiletrack.com/">
+    <meta property="og:title" content="SmileTrack | Agenda tu cita dental en línea">
+    <meta property="og:description" content="Reserva tu cita, consulta especialistas y gestiona tu salud bucal con seguridad y soporte profesional.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://smiletrack.com/">
+    <meta property="og:image" content="https://smiletrack.com/images/logo.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SmileTrack | Agenda tu cita dental en línea">
+    <meta name="twitter:description" content="Reserva tu cita, consulta especialistas y gestiona tu salud bucal con seguridad y soporte profesional.">
+    <title>SmileTrack | Agenda cita dental, gestiona tu salud bucal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries" defer></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto+Flex:wght@300;400;500;600&display=swap"
         rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="@Url.Content("~/css/Publico/homepage.css")">
+    <script type="application/ld+json">
+    {
+      "@@context": "https://schema.org",
+      "@@type": "Dentist",
+      "name": "SmileTrack",
+      "image": "https://smiletrack.com/images/logo.jpg",
+      "description": "Clínica dental en Bogotá que ofrece citas en línea, atención especializada y gestión de historias clínicas.",
+      "address": {
+        "@@type": "PostalAddress",
+        "streetAddress": "Cra. 15 #93-47, Oficina 302",
+        "addressLocality": "Bogotá D.C.",
+        "addressRegion": "Bogotá",
+        "addressCountry": "CO"
+      },
+      "telephone": "+573001234567",
+      "priceRange": "$$",
+      "openingHours": [
+        "Mo-Fr 08:00-18:00",
+        "Sa 09:00-14:00"
+      ]
+    }
+    </script>
 </head>
 
 <body class="bg-[#f9f9ff] text-[#021c3a] font-[Roboto_Flex,sans-serif] overflow-x-hidden">
@@ -24,11 +60,11 @@
             id="header-bg"></div>
         <nav class="relative flex justify-between items-center px-10 h-full max-w-[1280px] mx-auto gap-6">
             <!-- Logo -->
-            <a href="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" class="flex items-center gap-3 group">
+            <a href="/" class="flex items-center gap-3 group">
                 <div class="h-10 w-10 rounded-xl overflow-hidden flex items-center justify-center bg-[#005ea4]/10">
-                    <img alt="Smile Track Logo" class="h-10 w-auto object-contain"
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWdsdOlulbH1l8P8NDayRRP-_ktepKm4alKWQKbwiBw33rWAjDrLf5OV0Xzan7Ezxu2br8vV7IyWeTWyLe9f9kOqd37w5u4DQkxUjcN7fVFCK9X5MT1ssiI2NtfoETP1QeebXCm0WIfL6xLGUA54dJUfS-6ab80dfTAvc5R7QrL7jW8QHm_Yd_9E1BJ84ieSGmQa9fQ977nwZDXCEPGX6vfcvUYYwseRBk2EM0D2GNg3Wwz5-X5KZoxKae2Xd4750myYhdaFlV7w"
-                        onerror="this.onerror=null;this.src="@Url.Content("~/images/logo.jpg")"">
+                    <img alt="Smile Track Logo" class="h-10 w-auto object-contain" loading="lazy" decoding="async"
+                        src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")"
+                        onerror="this.onerror=null;this.src='@Url.Content("~/images/logo.jpg")'">
                 </div>
                 <span class="font-[Montserrat,sans-serif] text-xl font-extrabold text-[#005ea4] tracking-tight">Smile
                     Track</span>
@@ -98,14 +134,33 @@
                         Más de 15 años devolviendo sonrisas con diagnóstico digital y tecnología de vanguardia.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 animate-fade-in-up delay-300">
-                        <a href="#contacto"
+                        <a href="/acceso-y-seguridad/login"
                             class="bg-[#0077ce] text-white px-8 py-4 rounded-xl font-bold hover:bg-[#005ea4] hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                            Agenda tu cita ahora
-                            <span class="material-symbols-outlined">calendar_month</span>
+                            Iniciar sesión
+                            <span class="material-symbols-outlined">login</span>
                         </a>
-                        <a href="#servicios"
+                        <a href="/acceso-y-seguridad/register"
                             class="bg-white/10 backdrop-blur-sm border border-white/25 text-white px-8 py-4 rounded-xl font-bold hover:bg-white/20 transition-all active:scale-95 text-center">
-                            Ver servicios
+                            Crear cuenta
+                        </a>
+                    </div>
+                    <div class="mt-6 flex flex-wrap gap-3 text-sm text-[#d5e3ff]/80">
+                        <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1">Reserva fácil</span>
+                        <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1">Atención confiable</span>
+                        <span class="rounded-full border border-white/20 bg-white/10 px-3 py-1">Seguimiento clínico</span>
+                    </div>
+                    <div class="mt-8 grid gap-3 sm:grid-cols-3">
+                        <a href="/acceso-y-seguridad/register" class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 text-left text-sm text-white hover:bg-white/15 transition focus:outline-none focus:ring-2 focus:ring-[#a4f0e9]/60">
+                            <p class="font-semibold">Soy paciente</p>
+                            <p class="text-[#d5e3ff]/80 mt-1 text-xs">Crea tu cuenta y agenda tu primera cita.</p>
+                        </a>
+                        <a href="/acceso-y-seguridad/login" class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 text-left text-sm text-white hover:bg-white/15 transition focus:outline-none focus:ring-2 focus:ring-[#a4f0e9]/60">
+                            <p class="font-semibold">Soy profesional</p>
+                            <p class="text-[#d5e3ff]/80 mt-1 text-xs">Accede a tu agenda y controla tus citas.</p>
+                        </a>
+                        <a href="#contacto" class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 text-left text-sm text-white hover:bg-white/15 transition focus:outline-none focus:ring-2 focus:ring-[#a4f0e9]/60">
+                            <p class="font-semibold">Contacto rápido</p>
+                            <p class="text-[#d5e3ff]/80 mt-1 text-xs">Habla con nuestro equipo para resolver tus dudas.</p>
                         </a>
                     </div>
                 </div>
@@ -334,7 +389,7 @@
                         <div class="px-8 pb-8 -mt-14 text-center">
                             <div
                                 class="w-28 h-28 rounded-full border-4 border-white mx-auto overflow-hidden bg-[#d5e3ff] mb-4 shadow-md">
-                                <img class="w-full h-full object-cover"
+                                <img class="w-full h-full object-cover" loading="lazy"
                                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6ykWxjq_u7VrORECIpU1f8vVfGCSEeOEJ3Bgyk9GHo3FAdsgzqIlvq1We5m1eNGw03xvScvm9Ct78MaKi3p9-8Xyc4ClXs6Q1kCgiwZgrpKVIt8AADlMetVr08as1Pv48MqFkNaxdPkhm9Lb3ocAqXdIWOFxVhAHzX0aLrlwyBDY2ngwHoNgkBAOBaR48p9xtNFXHbYrTaY-4Be-iIx7i4768dVNihPT9ZYKpKJ0VlIhuJT4Q9CjLH0IZwcYiFsZ0gVWMb6tUTA"
                                     alt="Dr. Carlos Méndez">
                             </div>
@@ -359,7 +414,7 @@
                         <div class="px-8 pb-8 -mt-14 text-center">
                             <div
                                 class="w-28 h-28 rounded-full border-4 border-white mx-auto overflow-hidden bg-[#d5e3ff] mb-4 shadow-md">
-                                <img class="w-full h-full object-cover"
+                                <img class="w-full h-full object-cover" loading="lazy"
                                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuBASvdA2GzT6MGK0GZWsfYNSicnTvfMsWRmkf2vnDxLU_4VoOhDVLcp5lUN0q7iPTiIWikamhoagFtwyeDLkBmjWPSmEkEbYDPUQVJEg8DquQ0WWQggVFbKhXfj35MaTrOPAbeNUsHIi9do4xrzN4pQibkHnLaz149iQWaNDbFDvu0dEqtBd-X4W_I7MIRNMo0EJm8yIH-HhJQ4mQf50TmbZq1YJiGiv4mE5LjuOiyiDVkX8j6rb9rq37XC6EypMet1rMyqKX1O6Q"
                                     alt="Dr. Andrés Torres">
                             </div>
@@ -384,7 +439,7 @@
                         <div class="px-8 pb-8 -mt-14 text-center">
                             <div
                                 class="w-28 h-28 rounded-full border-4 border-white mx-auto overflow-hidden bg-[#d5e3ff] mb-4 shadow-md">
-                                <img class="w-full h-full object-cover"
+                                <img class="w-full h-full object-cover" loading="lazy"
                                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHYdmiB5d_M1lKAEmjsQ9Pw-Tnh5te3ZCqt0EiC2WBxjFxABI_cuBv2MtDG3dHISiVzeWIiYXF_HukHpzyvX2eRDy5teLkRD_BVdNmKs1tZ4PfKJNG60inZNAFPG5q0AWF-mHxpzOH4zY-GitC0dcpqnmGOMGVgZ0ch2Wqd4t_IdMpmBM-4MblRRFaBPqHPNNVDtT9v0pQKMT1ZAN1V4EeYR3AJUUJKfY_bG95jTcPmp2g4JIN61avfFoT4utF7J-yIKTbYnq-sw"
                                     alt="Dra. Laura Gómez">
                             </div>
@@ -554,6 +609,67 @@
             </div>
         </section>
 
+        <!-- ══════════════ FAQ ══════════════ -->
+        <section class="py-24 bg-[#F5F7FA]" id="faq">
+            <div class="max-w-[800px] mx-auto px-10">
+                <div class="text-center mb-16">
+                    <p class="text-[#005ea4] text-xs font-bold mb-3 uppercase tracking-widest">Dudas Comunes</p>
+                    <h2 class="font-[Montserrat,sans-serif] text-3xl font-bold text-[#021c3a]">Preguntas Frecuentes</h2>
+                </div>
+                <div class="space-y-4">
+                    <details class="bg-white p-6 rounded-2xl shadow-sm border border-[#c0c7d4]/20 group cursor-pointer transition-all">
+                        <summary class="font-[Montserrat,sans-serif] font-bold text-lg list-none flex justify-between items-center text-[#021c3a]">
+                            ¿Aceptan seguros o medicina prepagada?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                        </summary>
+                        <p class="text-[#404752] mt-4 text-sm leading-relaxed animate-fade-in-up">
+                            Sí, tenemos convenios con las principales entidades de medicina prepagada (Colsanitas, Sura, MedPlus). Por favor contáctanos para verificar la cobertura exacta de tu plan antes de agendar.
+                        </p>
+                    </details>
+                    <details class="bg-white p-6 rounded-2xl shadow-sm border border-[#c0c7d4]/20 group cursor-pointer transition-all">
+                        <summary class="font-[Montserrat,sans-serif] font-bold text-lg list-none flex justify-between items-center text-[#021c3a]">
+                            ¿Cuáles son los medios de pago disponibles?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                        </summary>
+                        <p class="text-[#404752] mt-4 text-sm leading-relaxed animate-fade-in-up">
+                            Aceptamos tarjetas de crédito/débito, transferencias bancarias, Nequi, DaviPlata y efectivo. Además, contamos con opciones de financiamiento para tratamientos complejos como ortodoncia o implantes.
+                        </p>
+                    </details>
+                    <details class="bg-white p-6 rounded-2xl shadow-sm border border-[#c0c7d4]/20 group cursor-pointer transition-all">
+                        <summary class="font-[Montserrat,sans-serif] font-bold text-lg list-none flex justify-between items-center text-[#021c3a]">
+                            ¿Cómo es el proceso para agendar una primera cita?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                        </summary>
+                        <p class="text-[#404752] mt-4 text-sm leading-relaxed animate-fade-in-up">
+                            Puedes usar el formulario de contacto en esta página o registrarte en nuestra plataforma ("Crear cuenta"). Una vez registrado, podrás agendar, reagendar y cancelar tus citas de manera 100% digital, así como revisar tu historia clínica.
+                        </p>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════ FINAL CTA ══════════════ -->
+        <section class="py-20 hero-gradient relative overflow-hidden" id="final-cta">
+            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+')] opacity-50"></div>
+            <div class="max-w-[1280px] mx-auto px-10 relative z-10 text-center">
+                <h2 class="font-[Montserrat,sans-serif] text-4xl lg:text-5xl font-extrabold text-white mb-6">
+                    ¿Listo para transformar tu sonrisa?
+                </h2>
+                <p class="text-[#d5e3ff]/90 text-lg max-w-2xl mx-auto mb-10">
+                    Únete a nuestra plataforma y gestiona tu salud bucal de forma moderna y sin complicaciones.
+                </p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <a href="/acceso-y-seguridad/register" class="bg-white text-[#005ea4] px-8 py-4 rounded-xl font-bold hover:bg-[#f0f3ff] hover:shadow-xl transition-all active:scale-95 text-lg flex justify-center items-center gap-2">
+                        Comenzar ahora
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    </a>
+                    <a href="#contacto" class="bg-white/10 backdrop-blur-sm border border-white/25 text-white px-8 py-4 rounded-xl font-bold hover:bg-white/20 transition-all active:scale-95 text-lg flex justify-center items-center">
+                        Contáctanos
+                    </a>
+                </div>
+            </div>
+        </section>
+
         <!-- ══════════════ CONTACT ══════════════ -->
         <section class="py-24 bg-[#f0f3ff]" id="contacto">
             <div class="max-w-[1280px] mx-auto px-10 grid grid-cols-1 lg:grid-cols-2 gap-16">
@@ -599,7 +715,7 @@
                     <!-- Map -->
                     <div
                         class="h-52 rounded-2xl overflow-hidden border border-[#c0c7d4]/30 shadow-sm grayscale opacity-80">
-                        <img class="w-full h-full object-cover"
+                        <img class="w-full h-full object-cover" loading="lazy"
                             src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAlXGYzdHVH34RGdCNL8pm7JrUqFK_kHKv07jn2MO6IHJgpQYXdKTvcDK2RCfLPNKhOWkyLK2iPVVALg9JukqtPVnwC8PzBZcqcZ-JLi38kNaCkGfG9nANwFFKJwcstUFprApvlCV-QxnWiNFDVQvQwiTJ61L94m2zbR0FQ2XMxJIn1NCh85Ba675ulHkI5q7VCEqkwPa2AuANGUjp56jjzCIa5ZSJfSKYmRqnZOy2p5pvRzVDmeiOi1evgININXVKnnn35cdeng"
                             alt="Mapa clínica Bogotá">
                     </div>
@@ -660,164 +776,6 @@
             </div>
         </section>
     </main>
-<!-- ══════════════ CHATBOT MODAL ══════════════ -->
-<div id="chatbotModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="chatbotTitle" hidden>
-  <div class="modal-content chatbot-modal">
-    
-    <!-- Header -->
-    <header class="modal-header">
-      <div class="modal-brand">
-        <div class="modal-avatar" aria-hidden="true">🤖</div>
-        <div>
-          <h2 id="chatbotTitle" class="modal-title">Asistente SmileTrack</h2>
-          <p class="modal-status"><span class="status-dot"></span> En línea</p>
-        </div>
-      </div>
-      <button class="modal-close" id="chatbotClose" aria-label="Cerrar chat">×</button>
-    </header>
-
-    <!-- Mensajes -->
-    <main id="chatbotMessages" class="modal-messages" role="log" aria-live="polite"></main>
-
-    <!-- Indicador escribiendo -->
-    <div id="typingIndicator" class="typing-indicator" hidden>
-      <span></span><span></span><span></span>
-    </div>
-
-    <!-- Botones rápidos -->
-    <div class="quick-replies" role="group" aria-label="Preguntas frecuentes">
-      <button class="quick-reply" data-question="¿Cómo agendo una cita?">📅 Agendar</button>
-      <button class="quick-reply" data-question="¿Qué métodos de pago aceptan?">💳 Pagos</button>
-      <button class="quick-reply" data-question="¿Qué servicios ofrecen?">🦷 Servicios</button>
-      <button class="quick-reply" data-question="¿Dónde están ubicados?">📍 Ubicación</button>
-    </div>
-
-    <!-- Input -->
-    <form id="chatbotForm" class="modal-input-area">
-      <label for="chatbotInput" class="visually-hidden">Escribe tu pregunta</label>
-      <input type="text" id="chatbotInput" class="modal-input" placeholder="Escribe tu pregunta..." autocomplete="off">
-      <button type="submit" class="modal-send" aria-label="Enviar">➤</button>
-    </form>
-
-  </div>
-</div>
-
-<!-- ══════════════ PQRS MODAL ══════════════ -->
-<div id="pqrsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pqrsTitle" hidden>
-  <div class="modal-content pqrs-modal">
-    
-    <!-- Header -->
-    <header class="modal-header">
-      <div class="modal-brand">
-        <div class="modal-avatar" aria-hidden="true">📋</div>
-        <div>
-          <h2 id="pqrsTitle" class="modal-title">PQRS - SmileTrack</h2>
-          <p class="modal-status">Respuesta en ≤ 48h hábiles</p>
-        </div>
-      </div>
-      <button class="modal-close" id="pqrsClose" aria-label="Cerrar formulario">×</button>
-    </header>
-
-    <!-- Formulario PQRS -->
-    <form id="pqrsForm" class="pqrs-form" novalidate>
-      
-      <!-- Tipo de solicitud -->
-      <div class="form-group">
-        <label class="form-label" for="pqrsType">Tipo de solicitud *</label>
-        <select id="pqrsType" class="form-select" required>
-          <option value="">Selecciona una opción</option>
-          <option value="P">🔍 Petición</option>
-          <option value="Q">❓ Queja</option>
-          <option value="R">🙏 Reclamo</option>
-          <option value="S">💡 Sugerencia</option>
-        </select>
-      </div>
-
-      <!-- Datos del solicitante -->
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label" for="pqrsName">Nombre completo *</label>
-          <input type="text" id="pqrsName" class="form-input" required placeholder="Tu nombre">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="pqrsEmail">Correo electrónico *</label>
-          <input type="email" id="pqrsEmail" class="form-input" required placeholder="tu@email.com">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label" for="pqrsPhone">Teléfono</label>
-          <input type="tel" id="pqrsPhone" class="form-input" placeholder="300 123 4567">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="pqrsDoc">Documento (opcional)</label>
-          <input type="text" id="pqrsDoc" class="form-input" placeholder="CC 123456789">
-        </div>
-      </div>
-
-      <!-- Asunto y descripción -->
-      <div class="form-group">
-        <label class="form-label" for="pqrsSubject">Asunto *</label>
-        <input type="text" id="pqrsSubject" class="form-input" required placeholder="Breve descripción del motivo">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="pqrsMessage">Descripción detallada *</label>
-        <textarea id="pqrsMessage" class="form-textarea" rows="4" required placeholder="Describe tu solicitud con detalles..."></textarea>
-        <p class="form-help">Máximo 500 caracteres. Adjunta documentos en <a href="#contacto" class="link-primary">Contacto</a> si es necesario.</p>
-      </div>
-
-      <!-- Consentimiento -->
-      <label class="form-checkbox">
-        <input type="checkbox" id="pqrsConsent" required>
-        <span>Acepto la <a href="#" class="link-primary">política de tratamiento de datos</a> y autorizo el uso de mi información para dar respuesta a esta solicitud.</span>
-      </label>
-
-      <!-- Botones -->
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" id="pqrsCancel">Cancelar</button>
-        <button type="submit" class="btn-primary">
-          <span class="btn-text">Enviar PQRS</span>
-          <span class="btn-loading" hidden>
-            <span class="spinner"></span> Enviando...
-          </span>
-        </button>
-      </div>
-
-    </form>
-
-    <!-- Mensaje de éxito (oculto por defecto) -->
-    <div id="pqrsSuccess" class="pqrs-success" hidden>
-      <div class="success-icon" aria-hidden="true">✅</div>
-      <h3>¡Solicitud recibida!</h3>
-      <p>Tu PQRS #<strong id="pqrsTicket">ST-2025-XXXX</strong> ha sido registrada.</p>
-      <p>Te responderemos a <strong id="pqrsResponseEmail"></strong> en un plazo máximo de 48 horas hábiles.</p>
-      <button class="btn-primary" id="pqrsNewRequest">Nueva solicitud</button>
-    </div>
-
-  </div>
-</div>
-
-<!-- ══════════════ TOAST NOTIFICATIONS ══════════════ -->
-<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden>
-  <span id="toastIcon" aria-hidden="true">✅</span>
-  <span id="toastMsg"></span>
-  <button class="toast-close" id="toastClose" aria-label="Cerrar">×</button>
-</div>
-
-<!-- ══════════════ ESTILOS INLINE CRÍTICOS ══════════════ -->
-<style>
-  .visually-hidden:not(:focus):not(:active) {
-    position: absolute !important; width: 1px !important; height: 1px !important;
-    padding: 0 !important; margin: -1px !important; overflow: hidden !important;
-    clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important;
-  }
-  :focus-visible { outline: 3px solid #005ea4; outline-offset: 2px; }
-  @@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-  }
-</style>
     <!-- ══════════════ FOOTER ══════════════ -->
     <footer class="bg-[#1a3150] py-14 px-10 border-t border-white/10">
         <div class="max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 text-white/70">
@@ -1057,6 +1015,8 @@ pqrsForm?.addEventListener('submit',async e=>{e.preventDefault();const btn=pqrsF
 $('#pqrsNew')?.addEventListener('click',()=>{if(pqrsSuccess)pqrsSuccess.hidden=true;if(pqrsForm){pqrsForm.hidden=false;pqrsForm.reset()}});$('#pqrsCancel')?.addEventListener('click',()=>{if(confirm('¿Cancelar esta solicitud?'))closeM(pqrsModal)});$('#stToastClose')?.addEventListener('click',()=>{if(toast){toast.classList.remove('show');setTimeout(()=>{toast.hidden=true},200)}});console.log('✅ SmileTrack: Chatbot+PQRS listos');})();
 </script>
 
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 
 </html>

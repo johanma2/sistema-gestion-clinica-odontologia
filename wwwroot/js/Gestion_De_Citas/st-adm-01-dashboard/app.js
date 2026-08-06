@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================
  * SmileTrack — Dashboard Admin (app.js)
  * ============================================
@@ -26,8 +26,6 @@
 // WHY: Leer de window.APP_CONFIG permite cambiar la base de API sin recompilar JS
 const API_BASE = (window.APP_CONFIG && window.APP_CONFIG.ApiBase) ? window.APP_CONFIG.ApiBase : '/api';
 const activeAnimations = new Set();
-const toastQueue = [];
-let isToastShowing = false;
 
 // ════════════════════════════════════════════════════════════════════
 //  UTILIDADES GLOBALES
@@ -60,33 +58,6 @@ const debounce = (fn, delay, maxWait = null) => {
   };
 };
 
-const showToast = (message, type = 'success') => {
-  // WHY: Cola de toasts evita que notificaciones rápidas se solapen visualmente
-  toastQueue.push({ message, type });
-  processToastQueue();
-};
-
-const processToastQueue = () => {
-  if (isToastShowing || toastQueue.length === 0) return;
-
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  isToastShowing = true;
-  const current = toastQueue.shift();
-
-  toast.textContent = current.message;
-  toast.className = `toast ${current.type === 'error' ? 'error' : current.type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => {
-      isToastShowing = false;
-      processToastQueue();
-    }, 300); // Esperar transición CSS antes de procesar siguiente toast
-  }, 3000);
-};
 
 const trackedRAF = (callback) => {
   let id;
@@ -237,10 +208,10 @@ const initExport = () => {
     // - finally restaura el estado del botón incluso si hay error
     try {
       await exportReport();
-      showToast('✅ Reporte PDF generado exitosamente');
+      window.ToastService.error('✅ Reporte PDF generado exitosamente');
     } catch (error) {
       // WHY: Mostrar toast de error da feedback inmediato al usuario sin bloquear la interfaz
-      showToast('❌ Error al generar reporte', 'error');
+      window.ToastService.success('❌ Error al generar reporte');
     } finally {
       setTimeout(() => {
         btn.disabled = false;
@@ -269,13 +240,13 @@ const init = async () => {
     initNativeAnimations();
 
     setTimeout(() => {
-      showToast('✅ Panel administrativo cargado');
+      window.ToastService.success('✅ Panel administrativo cargado');
     }, 500);
   } catch (error) {
     // WHY: console.error con contexto ayuda a identificar la causa raíz en logs de producción
     console.error('[SmileTrack][Init] Falla crítica durante la inicialización:', error);
     // Opcional: mostrar toast de error genérico al usuario
-    // showToast('⚠️ Error cargando el panel. Recargue la página.', 'error');
+    // window.ToastService.error('⚠️ Error cargando el panel. Recargue la página.');
   }
 
   // WHY: beforeunload cleanup previene memory leaks en SPA o navegación frecuente

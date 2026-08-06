@@ -1,4 +1,4 @@
-﻿@{ Layout = null; }
+﻿﻿﻿﻿@{ Layout = null; }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -9,8 +9,10 @@
     <title>SmileTrack — Nueva Solicitud PQR</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_PQR/st-pac-04-nueva-pqr/styles.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -26,51 +28,15 @@
     }
     else if (User.IsInRole("Administrador"))
     {
-        <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-            <div class="sidebar-logo">
-                <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-            </div>
-            @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-            <div class="sidebar-user">
-                <div class="user-avatar" aria-hidden="true">AD</div>
-                <div class="user-info">
-                    <span class="user-role">Administrador</span>
-                    <span class="user-email">admin@smiletrack.co</span>
-                </div>
-            </div>
-        </aside>
+        await Html.RenderPartialAsync("_SidebarAdmin");
     }
     else if (User.IsInRole("Recepcionista"))
     {
-        <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-            <div class="sidebar-logo">
-                <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-            </div>
-            @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
-            <div class="sidebar-user">
-                <div class="user-avatar" aria-hidden="true">RE</div>
-                <div class="user-info">
-                    <span class="user-role">Recepción</span>
-                    <span class="user-email">recepcion@smiletrack.co</span>
-                </div>
-            </div>
-        </aside>
+        await Html.RenderPartialAsync("_SidebarRecepcionista");
     }
     else if (User.IsInRole("Auxiliar"))
     {
-        <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-            <div class="sidebar-logo">
-                <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-            </div>
-            @{ await Html.RenderPartialAsync("_SidebarAuxiliar"); }
-            <div class="sidebar-user">
-                <div class="user-avatar" aria-hidden="true">AU</div>
-                <div class="user-info">
-                    <span class="user-role">Auxiliar</span>
-                    <span class="user-email">auxiliar@smiletrack.co</span>
-                </div>
-            </div>
-        </aside>
+        await Html.RenderPartialAsync("_SidebarAuxiliar");
     }
     else
     {
@@ -90,11 +56,11 @@
         <div class="top-bar">
             <div>
                 <div class="breadcrumb">
-                    <a href="/">Inicio</a> → Peticiones, Quejas y Reclamos
+                    <a href="/">Inicio</a> › Peticiones, Quejas y Reclamos
                 </div>
                 <div class="page-title">
                     <h1>Peticiones, Quejas y Reclamos</h1>
-                    <p>Módulo PQR - SmileTrack</p>
+                    <p>MÓdulo PQR - SmileTrack</p>
                 </div>
             </div>
             <div class="top-actions">
@@ -158,11 +124,11 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Correo electrónico</label>
+                            <label>Correo electrÓnico</label>
                             <input type="email" placeholder="correo@ejemplo.com" required>
                         </div>
                         <div class="form-group">
-                            <label>Teléfono de contacto</label>
+                            <label>TelÉfono de contacto</label>
                             <input type="tel" placeholder="+57 300 000 0000" required>
                         </div>
                     </div>
@@ -196,7 +162,7 @@
                         <label>Adjuntar soporte (opcional)</label>
                         <div class="file-upload" onclick="document.getElementById('fileInput').click()">
                             <i class="fas fa-cloud-upload-alt"></i>
-                            <div>Haz clic para adjuntar un archivo (PDF, JPG, PNG — máx. 5 MB)</div>
+                            <div>Haz clic para adjuntar un archivo (PDF, JPG, PNG — m—x. 5 MB)</div>
                             <input type="file" id="fileInput" hidden accept=".pdf,.jpg,.jpeg,.png">
                         </div>
                     </div>
@@ -257,14 +223,14 @@
 
                 <!-- How it Works -->
                 <div class="info-card how-it-works">
-                    <h3><i class="fas fa-info-circle"></i> ¿Cómo funciona?</h3>
+                    <h3><i class="fas fa-info-circle"></i> —Cómo funciona?</h3>
                     <div class="step">
                         <div class="step-number">01</div>
                         <div>Diligencia el formulario con tu información y descripción del caso.</div>
                     </div>
                     <div class="step">
                         <div class="step-number">02</div>
-                        <div>Recibes un número de radicado en tu correo electrónico.</div>
+                        <div>Recibes un número de radicado en tu correo electrÓnico.</div>
                     </div>
                     <div class="step">
                         <div class="step-number">03</div>
@@ -287,19 +253,19 @@
                     <div class="recent-item">
                         <div class="recent-code">PQR-2024-001847</div>
                         <div class="recent-title">Demora en entrega de historia clínica</div>
-                        <div class="recent-date">Queja · 14 Jun 2024</div>
+                        <div class="recent-date">Queja — 14 Jun 2024</div>
                         <span class="badge process">En proceso</span>
                     </div>
                     <div class="recent-item">
                         <div class="recent-code">PQR-2024-001621</div>
                         <div class="recent-title">Solicitud de certificado de atención</div>
-                        <div class="recent-date">Petición · 02 May 2024</div>
+                        <div class="recent-date">Petición — 02 May 2024</div>
                         <span class="badge resolved">Resuelto</span>
                     </div>
                     <div class="recent-item">
                         <div class="recent-code">PQR-2024-001380</div>
                         <div class="recent-title">Cobro incorrecto en servicio de ortodoncia</div>
-                        <div class="recent-date">Reclamo · 18 Abr 2024</div>
+                        <div class="recent-date">Reclamo — 18 Abr 2024</div>
                         <span class="badge closed">Cerrado</span>
                     </div>
                     </div>
@@ -313,7 +279,12 @@
         window.RAZOR_MIS_PQRS = @Html.Raw(ViewData["MisPqrsJson"] ?? "[]");
     </script>
     <script src="@Url.Content("~/js/Gestion_De_PQR/st-pac-04-nueva-pqr/script.js")"></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 
 </html>
+
+
 

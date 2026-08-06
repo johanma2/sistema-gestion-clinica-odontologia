@@ -1,4 +1,4 @@
-﻿@* ============================================
+﻿﻿﻿﻿@* ============================================
 SmileTrack — Mi Agenda Odontólogo (st-odo-02-agenda)
 ============================================
 Autor: Johan Santamaria
@@ -37,6 +37,7 @@ NOTAS DE MANTENIMIENTO:
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-odo-02-agenda/agenda.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -47,7 +48,7 @@ NOTAS DE MANTENIMIENTO:
   @{ await Html.RenderPartialAsync("_SidebarProfesional"); }
 
 
-  <!-- Botón hamburguesa para menú móvil, con atributos ARIA -->
+  <!-- Botón hamburguesa para menú mÓvil, con atributos ARIA -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
@@ -55,7 +56,7 @@ NOTAS DE MANTENIMIENTO:
   </button>
   <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <!-- ═════ MAIN ═════ -->
+  <!-- ----- MAIN ----- -->
   <main class="main" id="main-content">
 
     <!-- Header con fecha dinámica accesible -->
@@ -63,12 +64,12 @@ NOTAS DE MANTENIMIENTO:
       <div class="header-left">
         <nav class="breadcrumb" aria-label="Ruta de navegación">
           <span>Odontólogo</span>
-          <span class="bc-sep" aria-hidden="true">→</span>
+          <span class="bc-sep material-symbols-outlined" aria-hidden="true">chevron_right</span>
           <span class="bc-active">Mi Agenda</span>
         </nav>
         <h1 class="page-title">Mi Agenda</h1>
         <p class="page-subtitle">
-          <time datetime="" id="headerDate" aria-live="polite">Cargando fecha…</time> · Gestiona y actualiza el estado
+          <time datetime="" id="headerDate" aria-live="polite">Cargando fecha\…</time> — Gestiona y actualiza el estado
           de tus citas asignadas
         </p>
       </div>
@@ -83,7 +84,7 @@ NOTAS DE MANTENIMIENTO:
       <div class="stat-card" data-color="green">
         <span class="stat-number" id="statAtendidas" data-target="2" aria-live="polite">0</span>
         <span class="stat-label">Atendidas</span>
-        <span class="stat-sub">↑ 4</span>
+        <span class="stat-sub">4</span>
       </div>
       <div class="stat-card" data-color="orange">
         <span class="stat-number" id="statPendientes" data-target="3" aria-live="polite">0</span>
@@ -110,17 +111,17 @@ NOTAS DE MANTENIMIENTO:
 
       <!-- Navegación de semana con accesibilidad -->
       <div class="week-nav">
-        <button class="btn-week" id="btnPrev" aria-label="Ir a semana anterior">← Anterior</button>
+        <button class="btn-week" id="btnPrev" aria-label="Ir a semana anterior"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span> Anterior</button>
         <span class="week-title" id="weekTitle" aria-live="polite">Semana 20-25 de marzo 2026</span>
-        <button class="btn-week" id="btnNext" aria-label="Ir a siguiente semana">Siguiente →</button>
+        <button class="btn-week" id="btnNext" aria-label="Ir a siguiente semana">Siguiente <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
         <div class="status-dropdown-wrap">
           <label for="globalStatus" class="visually-hidden">Cambiar estado de todas las citas visibles</label>
           <select id="globalStatus" class="status-select" aria-label="Cambiar estado masivo de citas">
-            <option value="">Cambiar estado ▾</option>
+            <option value="">Cambiar estado</option>
             <option value="Atendida">Atendida</option>
             <option value="En consulta">En consulta</option>
             <option value="Agendada">Agendada</option>
-            <option value="No asistió">No asistió</option>
+            <option value="No asistiÓ">No asistiÓ</option>
             <option value="Cancelada">Cancelada</option>
           </select>
         </div>
@@ -153,24 +154,24 @@ NOTAS DE MANTENIMIENTO:
   <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle"
     aria-hidden="true" inert>
     <div class="modal">
-      <button class="modal-close" id="modalClose" aria-label="Cerrar ventana de detalle">×</button>
+      <button class="modal-close" id="modalClose" aria-label="Cerrar ventana de detalle">—</button>
       <h2 class="modal-title" id="modalTitle">Detalle de Cita</h2>
       <div id="modalContent" role="document"></div>
     </div>
   </div>
 
   <!-- Mobile bottom nav con aria-label -->
-  <nav class="mobile-nav" aria-label="Navegación móvil">
+  <nav class="mobile-nav" aria-label="Navegación mÓvil">
     <a href="/gestion-de-profesionales/st-odo-01-dashboard" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">🏠</span>
+      <span class="mobile-nav-icon material-symbols-outlined" aria-hidden="true">dashboard</span>
       <span>Dashboard</span>
     </a>
     <a href="/gestion-de-citas/st-odo-02-agenda" class="mobile-nav-item active" aria-current="page">
-      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span class="mobile-nav-icon material-symbols-outlined" aria-hidden="true">calendar_month</span>
       <span>Agenda</span>
     </a>
     <a href="/gestion-de-profesionales/st-odo-09-perfil-profesional" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span class="mobile-nav-icon material-symbols-outlined" aria-hidden="true">person</span>
       <span>Perfil</span>
     </a>
   </nav>
@@ -210,48 +211,21 @@ NOTAS DE MANTENIMIENTO:
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
-      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+      <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">copyright</span>
+      <p>— 2025 Smile Track. Todos los derechos reservados.</p>
     </div>
-    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <p class="footer-sub">Proyecto Formativo ADSO — SENA</p>
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
-
-
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
-  });
-</script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-odo-02-agenda/agenda.js")"></script>
 
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
+    <script src="@Url.Content("~/js/shared/validation-utils.js")"></script>
+    <script src="@Url.Content("~/js/shared/appointment-utils.js")"></script>
 </body>
 
 </html>
+

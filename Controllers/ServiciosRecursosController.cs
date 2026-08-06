@@ -75,7 +75,7 @@ public class ServiciosRecursosController : Controller
         {
             appointment = new
             {
-                duration = int.TryParse(ObtenerValor("cita_duracion_default", "30"), out var dur) ? dur : 30,
+                duration = int.TryParse(ObtenerValor("cita_duracion_default", "30"), out int dur) ? dur : 30,
                 open = ObtenerValor("horario_apertura", "07:00"),
                 close = ObtenerValor("horario_cierre", "18:00")
             },

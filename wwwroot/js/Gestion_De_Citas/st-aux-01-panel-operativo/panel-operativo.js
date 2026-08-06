@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Panel Operativo (st-aux-01-panel-operativo)
 ============================================
 Autor: Johan Santamaria
@@ -41,16 +41,6 @@ const debounce = (fn, delay) => {
 };
 
 // WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin entorpecer el flujo de trabajo
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 // WHY: modalManager centraliza la lógica de visualización de diálogos garantizando que se cumplan criterios de accesibilidad WCAG
 const modalManager = {
@@ -322,7 +312,9 @@ const renderCitas = (citas) => {
         <td>${c.consultorio}</td>
         <td class="col-estado">${badgeEstado}</td>
         <td>
-          <button class="btn-icon" title="Ver paciente" data-action="view" data-id="${c.id}" aria-label="Ver detalles de ${c.paciente}">👁️</button>
+          <button class="btn-icon action-btn btn-view" title="Ver paciente" data-action="view" data-id="${c.id}" aria-label="Ver detalles de ${c.paciente}">
+            👁️ <span class="btn-text">Ver</span>
+          </button>
         </td>
       </tr>
     `;
@@ -495,7 +487,7 @@ const initDescargarResumen = () => {
       btn.textContent = '✓ Descargado';
       btn.style.color = 'var(--green)';
       btn.style.borderColor = 'var(--green)';
-      showToast(`Resumen generado: ${res.nombre}`, 'success');
+      window.ToastService.success(`Resumen generado: ${res.nombre}`);
 
       setTimeout(() => {
         btn.textContent = original;
@@ -506,7 +498,7 @@ const initDescargarResumen = () => {
     } catch {
       btn.textContent = original;
       btn.disabled = false;
-      showToast('Error al generar resumen', 'error');
+      window.ToastService.error('Error al generar resumen');
     }
   });
 };

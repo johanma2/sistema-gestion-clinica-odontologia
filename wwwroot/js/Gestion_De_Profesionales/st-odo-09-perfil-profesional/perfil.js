@@ -49,16 +49,6 @@ const debounce = (fn, delay) => {
 };
 
 // Muestra notificación temporal con auto-cierre
-const showToast = (message, ok = true) => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${ok ? '' : 'error'} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 2600);
-};
 
 // ═══════════════════════════════════════════════════════════════════
 //  DATOS DE EJEMPLO (Fallback si API falla)
@@ -277,24 +267,39 @@ const saveSchedule = () => {
   
   const dayData = profileData.horario[currentEditingDay];
   const isActive = safeGetElement('modalDayActive')?.checked;
-  const start = safeGetElement('modalStartTime')?.value;
-  const end = safeGetElement('modalEndTime')?.value;
+  const startEl = safeGetElement('modalStartTime');
+  const endEl = safeGetElement('modalEndTime');
+  const start = startEl?.value;
+  const end = endEl?.value;
+  
+  if (window.ValidationUtils) {
+      if (startEl) window.ValidationUtils.clearError(startEl);
+      if (endEl) window.ValidationUtils.clearError(endEl);
+  }
   
   // Validate if active
   if (isActive) {
     if (!start || !end) {
-      showToast('⚠️ Por favor completa el horario', false);
+      if (window.ValidationUtils && !start && startEl) window.ValidationUtils.showError(startEl, null, 'Por favor completa el horario');
+      if (window.ValidationUtils && !end && endEl) window.ValidationUtils.showError(endEl, null, 'Por favor completa el horario');
+      window.ToastService.warning('⚠️ Verifique los campos resaltados en rojo');
       return;
     }
     
     const hours = calculateHours(start, end);
     if (hours <= 0) {
-      showToast('⚠️ La hora de fin debe ser mayor a la hora de inicio', false);
+      if (window.ValidationUtils && endEl) {
+          window.ValidationUtils.showError(endEl, null, 'La hora de fin debe ser mayor a la hora de inicio');
+      }
+      window.ToastService.warning('⚠️ Verifique los campos resaltados en rojo');
       return;
     }
     
     if (hours > 12) {
-      showToast('⚠️ El horario máximo es de 12 horas por día', false);
+      if (window.ValidationUtils && endEl) {
+          window.ValidationUtils.showError(endEl, null, 'El horario máximo es de 12 horas por día');
+      }
+      window.ToastService.warning('⚠️ Verifique los campos resaltados en rojo');
       return;
     }
     
@@ -311,7 +316,7 @@ const saveSchedule = () => {
   renderSchedule();
   closeScheduleModal();
   
-  showToast(`✅ Horario de ${dayData.dayFull} actualizado`);
+  window.ToastService.success(`✅ Horario de ${dayData.dayFull} actualizado`);
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -354,29 +359,54 @@ const togglePasswordVisibility = (inputId, button) => {
 const changePassword = async (event) => {
   event.preventDefault();
   
-  const currentPassword = safeGetElement('currentPassword')?.value;
-  const newPassword = safeGetElement('newPassword')?.value;
-  const confirmPassword = safeGetElement('confirmPassword')?.value;
+  const currentPasswordEl = safeGetElement('currentPassword');
+  const newPasswordEl = safeGetElement('newPassword');
+  const confirmPasswordEl = safeGetElement('confirmPassword');
   
+  const currentPassword = currentPasswordEl?.value;
+  const newPassword = newPasswordEl?.value;
+  const confirmPassword = confirmPasswordEl?.value;
+
+  if (window.ValidationUtils) {
+      if (currentPasswordEl) window.ValidationUtils.clearError(currentPasswordEl);
+      if (newPasswordEl) window.ValidationUtils.clearError(newPasswordEl);
+      if (confirmPasswordEl) window.ValidationUtils.clearError(confirmPasswordEl);
+  }
+  
+  let valid = true;
+
   // Validaciones básicas
   if (currentPassword?.length < 6) {
-    showToast('⚠️ La contraseña actual debe tener al menos 6 caracteres', false);
-    return;
+    if (window.ValidationUtils && currentPasswordEl) {
+        window.ValidationUtils.showError(currentPasswordEl, null, 'La contraseña actual debe tener al menos 6 caracteres');
+    }
+    valid = false;
   }
   
   if (newPassword?.length < 8) {
-    showToast('⚠️ La nueva contraseña debe tener al menos 8 caracteres', false);
-    return;
+    if (window.ValidationUtils && newPasswordEl) {
+        window.ValidationUtils.showError(newPasswordEl, null, 'La nueva contraseña debe tener al menos 8 caracteres');
+    }
+    valid = false;
   }
   
   if (newPassword !== confirmPassword) {
-    showToast('❌ Las nuevas contraseñas no coinciden', false);
-    return;
+    if (window.ValidationUtils && confirmPasswordEl) {
+        window.ValidationUtils.showError(confirmPasswordEl, null, 'Las nuevas contraseñas no coinciden');
+    }
+    valid = false;
   }
   
   if (currentPassword === newPassword) {
-    showToast('⚠️ La nueva contraseña debe ser diferente a la actual', false);
-    return;
+    if (window.ValidationUtils && newPasswordEl) {
+        window.ValidationUtils.showError(newPasswordEl, null, 'La nueva contraseña debe ser diferente a la actual');
+    }
+    valid = false;
+  }
+
+  if (!valid) {
+      window.ToastService.warning('⚠️ Verifique los campos resaltados en rojo');
+      return;
   }
   
   const btn = event.target.querySelector('.btn-update');
@@ -415,7 +445,7 @@ const changePassword = async (event) => {
       btn.setAttribute('aria-pressed', 'false');
     });
     
-    showToast('✅ Contraseña actualizada exitosamente');
+    window.ToastService.success('✅ Contraseña actualizada exitosamente');
     
     // Restaurar botón
     setTimeout(() => {
@@ -428,7 +458,7 @@ const changePassword = async (event) => {
     
   } catch (error) {
     console.warn('Error actualizando contraseña:', error);
-    showToast('❌ Error al actualizar contraseña', false);
+    window.ToastService.error('❌ Error al actualizar contraseña');
     if (btn) {
       btn.textContent = 'Actualizar contraseña';
       btn.disabled = false;

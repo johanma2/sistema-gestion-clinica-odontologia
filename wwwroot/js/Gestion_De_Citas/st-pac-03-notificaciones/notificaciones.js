@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Notificaciones Paciente (st-pac-03-notificaciones)
 ============================================
 Autor: Johan Santamaria
@@ -40,17 +40,6 @@ const debounce = (fn, delay) => {
 };
 
 // WHY: Muestra retroalimentación temporal autolimpiable para no interrumpir el flujo visual de la lista de alertas
-const showToast = (msg) => {
-  const t = safeGetElement('toast');
-  if (!t) return;
-  
-  t.textContent = msg;
-  t.classList.add('show');
-  
-  // [MEJORA]: Limpiar timeout anterior si existe
-  if (t._timeoutId) clearTimeout(t._timeoutId);
-  t._timeoutId = setTimeout(() => t.classList.remove('show'), 3000);
-};
 
 // —— DATOS DE EJEMPLO ——
 const SAMPLE_NOTIFICACIONES = [
@@ -215,7 +204,7 @@ const handleNotificationClick = (e) => {
     notif.badge = 'read';
     renderNotifications();
     // [MEJORA]: Feedback sutil al marcar como leída
-    showToast('Notificación marcada como leída');
+    window.ToastService.success('Notificación marcada como leída');
   }
 };
 
@@ -226,7 +215,7 @@ const handleNotificationClick = (e) => {
 const markAllAsRead = () => {
   const hayNoLeidas = notificaciones.some(n => !n.leida);
   if (!hayNoLeidas) {
-    showToast('No hay notificaciones sin leer');
+    window.ToastService.success('No hay notificaciones sin leer');
     return;
   }
   
@@ -236,7 +225,7 @@ const markAllAsRead = () => {
   });
   
   renderNotifications();
-  showToast('Todas las notificaciones marcadas como leídas');
+  window.ToastService.success('Todas las notificaciones marcadas como leídas');
 };
 
 // ── Manejo de chips de filtro ──

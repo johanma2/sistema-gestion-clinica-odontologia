@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Antiforgery.Internal;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.ViewModels;
@@ -38,6 +39,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("LoginByIp")]
     [Route("acceso-y-seguridad/login")]
     public async Task<IActionResult> LoginPost(string email, string password, string? rol, string? returnUrl)
     {
@@ -68,8 +70,8 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
         }
 
         ViewData["ReturnUrl"] = returnUrl;
-        var accept = HttpContext.Request.Headers["Accept"].ToString();
-        var wantsJson = accept?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true;
+        string accept = HttpContext.Request.Headers["Accept"].ToString();
+        bool wantsJson = accept?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true;
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
@@ -81,7 +83,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
             return View("~/Views/Acceso_Y_Seguridad/login/index.cshtml");
         }
 
-        var correo = email.Trim();
+        string correo = email.Trim();
         var usuario = await _context.Usuarios
             .Include(u => u.Rol)
             .FirstOrDefaultAsync(u => u.Correo == correo);
@@ -128,10 +130,10 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
         // formulario, se IGNORA la selección de la UI, se usa el rol real asignado en BD y se
         // le deja ingresar sin bloqueos. Así, incluso sin hacer clic en el selector de roles,
         // el login funciona automáticamente.
-        var rolSeleccionado = NormalizarRol(rol);
-        var rolNombre = NormalizarRol(usuario.Rol?.NombreRol);
+        string rolSeleccionado = NormalizarRol(rol);
+        string rolNombre = NormalizarRol(usuario.Rol?.NombreRol);
 
-        if (!redirecciones.TryGetValue(rolNombre, out var redirectUrl))
+        if (!redirecciones.TryGetValue(rolNombre, out string? redirectUrl))
         {
             if (wantsJson)
             {
@@ -159,7 +161,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
 
         if (!authResult.Success)
         {
-            var status = authResult.Message.Contains("bloqueada", StringComparison.OrdinalIgnoreCase)
+            int status = authResult.Message.Contains("bloqueada", StringComparison.OrdinalIgnoreCase)
                 ? StatusCodes.Status403Forbidden
                 : StatusCodes.Status401Unauthorized;
 
@@ -190,7 +192,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
         // navegar entre las distintas vistas de un mismo rol.
         if (string.Equals(rolNombre, "Paciente", StringComparison.OrdinalIgnoreCase))
         {
-            var idPaciente = await _context.Pacientes
+            int? idPaciente = await _context.Pacientes
                 .Where(p => p.IdUsuario == usuario.IdUsuario)
                 .Select(p => (int?)p.IdPaciente)
                 .FirstOrDefaultAsync();
@@ -202,7 +204,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
         }
         else if (string.Equals(rolNombre, "Profesional", StringComparison.OrdinalIgnoreCase))
         {
-            var idProfesional = await _context.Profesionales
+            int? idProfesional = await _context.Profesionales
                 .Where(p => p.IdUsuario == usuario.IdUsuario)
                 .Select(p => (int?)p.IdProfesional)
                 .FirstOrDefaultAsync();
@@ -238,7 +240,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
         }
 
         string destino;
-        var rr = returnUrl ?? string.Empty;
+        string rr = returnUrl ?? string.Empty;
         if (IsLocalUrl(rr) && !rr.StartsWith("/acceso-y-seguridad/login", StringComparison.OrdinalIgnoreCase))
         {
             destino = rr;
@@ -261,8 +263,8 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     [Route("acceso-y-seguridad/logout")]
     public async Task<IActionResult> Logout()
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (int.TryParse(userIdString, out var idUsuario))
+        string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdString, out int idUsuario))
         {
             var usuario = await _context.Usuarios.FindAsync(idUsuario);
             if (usuario != null)
@@ -383,7 +385,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
             return BadRequest(new { Success = false, Message = "Model validation failed.", Errors = errors });
         }
 
-        var tokenTemporal = request.TokenTemporal ?? string.Empty;
+        string tokenTemporal = request.TokenTemporal ?? string.Empty;
         if (string.IsNullOrWhiteSpace(tokenTemporal) && !string.IsNullOrWhiteSpace(request.Correo) && !string.IsNullOrWhiteSpace(request.Codigo))
         {
             var verificationResult = await _authService.VerifyRecoveryCodeAsync(new VerifyRecoveryCodeRequest
@@ -426,8 +428,8 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     [Route("acceso-y-seguridad/cambiar-contrasena")]
     public async Task<IActionResult> ChangePasswordPost(string contrasenaActual, string nuevaContrasena, string confirmarContrasena)
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdString, out var idUsuario))
+        string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdString, out int idUsuario))
         {
             return RedirectToAction("Login");
         }
@@ -458,9 +460,49 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Route("acceso-y-seguridad/register")]
-    public IActionResult RegisterPost()
+    public async Task<IActionResult> RegisterPost([FromForm] RegisterRequest request)
     {
-        return Redirect("/acceso-y-seguridad/login");
+        string accept = HttpContext.Request.Headers["Accept"].ToString();
+        bool wantsJson = accept?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true;
+
+        if (!ModelState.IsValid)
+        {
+            string errorMessage = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .FirstOrDefault() ?? "Completa todos los campos requeridos.";
+
+            if (wantsJson)
+            {
+                return BadRequest(new { success = false, message = errorMessage });
+            }
+
+            ModelState.AddModelError(string.Empty, errorMessage);
+            return View("~/Views/Acceso_Y_Seguridad/register/index.cshtml");
+        }
+
+        // Validación adicional: confirmar que las contraseñas coinciden en servidor
+        if (!string.IsNullOrWhiteSpace(request.ConfirmarContrasena) && request.Contrasena != request.ConfirmarContrasena)
+        {
+            ModelState.AddModelError(string.Empty, "Las contraseñas no coinciden.");
+            if (wantsJson) return BadRequest(new { success = false, message = "Las contraseñas no coinciden." });
+            return View("~/Views/Acceso_Y_Seguridad/register/index.cshtml");
+        }
+
+        var response = await _authService.RegisterAsync(request);
+
+        if (wantsJson)
+        {
+            return Json(response);
+        }
+
+        if (response.Success)
+        {
+            return Redirect("/acceso-y-seguridad/login");
+        }
+
+        ModelState.AddModelError(string.Empty, response.Message);
+        return View("~/Views/Acceso_Y_Seguridad/register/index.cshtml");
     }
 
     [HttpGet]
@@ -487,7 +529,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
             role = u.Rol?.NombreRol ?? "Sin Rol",
             status = string.IsNullOrWhiteSpace(u.Estado) ? "Activo" : char.ToUpper(u.Estado[0]) + u.Estado[1..],
             lastAccess = u.UltimoLogin,
-            color = u.Rol != null && rolesColor.TryGetValue(u.Rol.NombreRol, out var col) ? col : "blue"
+            color = u.Rol != null && rolesColor.TryGetValue(u.Rol.NombreRol, out string? col) ? col : "blue"
         }).ToList();
 
         ViewData["UsuariosJson"] = System.Text.Json.JsonSerializer.Serialize(usuarios);

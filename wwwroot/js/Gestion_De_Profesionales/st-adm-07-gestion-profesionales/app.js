@@ -32,42 +32,36 @@ const API_BASE = '/gestion-de-profesionales';
 // ═══════════════════════════════════════════════════════════════════
 
 /**
- * Obtiene elemento del DOM con logging de errores.
- * WHY: Evita null reference errors silenciosos que rompen la UX sin mensaje claro.
+ * Obtiene un elemento DOM de forma segura.
+ * Previene errores cuando el elemento no existe en la página.
+ *
+ * @param {string} id - ID del elemento
+ * @returns {HTMLElement|null}
  */
 const safeGetElement = (id) => {
-  const el = document.getElementById(id);
-  if (!el) console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
-  return el;
+  const element = document.getElementById(id);
+  if (!element) {
+    console.warn(`[SmileTrack] Elemento no encontrado: #${id}`);
+  }
+  return element;
 };
-
+window.safeGetElement = safeGetElement;
 /**
- * Debounce para búsqueda en tiempo real.
- * WHY: Evita disparar el submit del form a cada tecla mientras el usuario escribe.
+ * Ejecuta una función después de que el usuario deja de escribir.
+ * Evita envíos repetidos de formulario o recargas en cada tecla.
+ *
+ * @param {Function} callback
+ * @param {number} delay
+ * @returns {Function}
  */
-const debounce = (fn, delay) => {
+const debounce = (callback, delay = 250) => {
   let timeoutId;
   return (...args) => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), delay);
+    timeoutId = setTimeout(() => callback.apply(this, args), delay);
   };
 };
-
-/**
- * Muestra notificación toast con auto-cierre.
- * WHY: Feedback visual sin bloquear la interfaz (mejor UX que alert() que paraliza todo).
- */
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
-
+window.debounce = debounce;
 // ═══════════════════════════════════════════════════════════════════
 //  MAPEO DE COLORES (solo UI, no afecta lógica de negocio)
 // ═══════════════════════════════════════════════════════════════════
@@ -374,7 +368,7 @@ window.toggleStatus = (id) => {
   const states = ['Activo', 'Vacaciones', 'Inactivo'];
   const currentIndex = states.indexOf(p.status);
   p.status = states[(currentIndex + 1) % states.length];
-  showToast(`✅ ${p.name}: estado cambiado a "${p.status}"`);
+  window.ToastService.success(`✅ ${p.name}: estado cambiado a "${p.status}"`);
   updateStats();
   renderTable();
 };
@@ -451,17 +445,7 @@ const closeDetailModal = () => {
 };
 
 // Crea o actualiza profesional — submit nativo para que el antiforgery token viaje correctamente
-const setFieldValidity = (field, valid, message) => {
-  if (!field) return;
-  const errorId = field.getAttribute('aria-describedby');
-  const errorMessage = errorId ? document.getElementById(errorId) : null;
-  field.classList.toggle('error', !valid);
-  field.toggleAttribute('aria-invalid', !valid);
-  if (errorMessage) {
-    errorMessage.classList.toggle('visible', !valid);
-    if (!valid) errorMessage.textContent = message;
-  }
-};
+// setFieldValidity removed in favor of ValidationUtils
 
 const validateProfessionalForm = (form) => {
   let valid = true;
@@ -472,12 +456,24 @@ const validateProfessionalForm = (form) => {
     { id: 'formStatus', message: 'Selecciona un estado.' }
   ];
 
+  if (window.ValidationUtils) {
+    requiredFields.forEach(({ id }) => {
+      const field = safeGetElement(id);
+      if (field) window.ValidationUtils.clearError(field);
+    });
+  }
+
   requiredFields.forEach(({ id, message }) => {
     const field = safeGetElement(id);
     const value = field?.value.trim() || '';
     const fieldValid = Boolean(value);
-    setFieldValidity(field, fieldValid, message);
-    if (!fieldValid) valid = false;
+    
+    if (!fieldValid) {
+      valid = false;
+      if (window.ValidationUtils && field) {
+        window.ValidationUtils.showError(field, null, message);
+      }
+    }
   });
 
   return valid;
@@ -488,7 +484,7 @@ const saveProfessional = (e) => {
   const valid = validateProfessionalForm(form);
   if (!valid) {
     e.preventDefault();
-    showToast('⚠️ Completa los campos obligatorios marcados en rojo.', 'warning');
+    window.ToastService.warning('⚠️ Completa los campos obligatorios marcados en rojo.');
     const firstInvalid = form.querySelector('[aria-invalid="true"]');
     if (firstInvalid) firstInvalid.focus();
     return;
@@ -499,6 +495,33 @@ const saveProfessional = (e) => {
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Guardando...';
   }
+};
+
+const bindProfessionalFieldValidation = () => {
+  const form = safeGetElement('formProfessional');
+  if (!form) return;
+
+  form.querySelectorAll('input, select').forEach((field) => {
+    field.addEventListener('input', () => {
+      if (field.id === 'formTelefono' && field.value.trim()) {
+        const validPhone = /^[0-9+\s()-]{7,15}$/.test(field.value.trim());
+        if (window.ValidationUtils) {
+          if (!validPhone) window.ValidationUtils.showError(field, null, 'Ingresa un teléfono válido.');
+          else window.ValidationUtils.clearError(field);
+        }
+      } else if (field.id === 'formRegistroMedico' && field.value.trim()) {
+        const validRegistry = /^[A-Za-z0-9\-\. ]{3,30}$/.test(field.value.trim());
+        if (window.ValidationUtils) {
+          if (!validRegistry) window.ValidationUtils.showError(field, null, 'Use solo letras, números y guiones.');
+          else window.ValidationUtils.clearError(field);
+        }
+      } else {
+         if (window.ValidationUtils && field.value.trim()) {
+            window.ValidationUtils.clearError(field);
+         }
+      }
+    });
+  });
 };
 
 
@@ -662,9 +685,16 @@ const openConfirmDeleteModal = (id, name) => {
   }
   if (modal) {
     modal.classList.add('open');
-    modal.removeAttribute('aria-hidden');
+    // CORRECCIÓN: usar setAttribute con string 'false' en lugar de removeAttribute
+    // para que lectores de pantalla detecten correctamente el cambio de estado ARIA
+    modal.setAttribute('aria-hidden', 'false');
     modal.removeAttribute('inert');
     document.body.style.overflow = 'hidden';
+    // Focus en botón Cancelar: previene confirmación accidental (WCAG 2.4.3)
+    setTimeout(() => {
+      const cancelBtn = safeGetElement('modalConfirmDeleteCancel');
+      if (cancelBtn) cancelBtn.focus();
+    }, 50);
   }
 };
 
@@ -800,6 +830,7 @@ const init = async () => {
   initSidebar();
   initFilters();
   initModals();
+  bindProfessionalFieldValidation();
   initSearchDebounce(); // Debounce del buscador → GET real al servidor en modo SSR
 
   // Animar contadores del Stats Grid con los valores que Razor ya escribió en data-target.

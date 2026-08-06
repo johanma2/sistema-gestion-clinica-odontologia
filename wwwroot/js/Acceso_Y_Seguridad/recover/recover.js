@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ════════════════════════════════════════════════════════
  * SMILETRACK — RECUPERAR CONTRASEÑA (3 PASOS)
  * recover.js
@@ -44,6 +44,7 @@ class PasswordRecovery {
         this.currentStep = 1;
         this.verificationCode = null;
         this.userEmail = null;
+        this.resendCooldown = 0;
         
         this.init();
     }
@@ -59,24 +60,104 @@ class PasswordRecovery {
         this.form1?.addEventListener('submit', (e) => this.handleStep1(e));
         this.emailInput?.addEventListener('input', () => this.clearError(this.emailError));
         
-        // Paso 2: Código
+        // Paso 2: Código — inicializar recuadros OTP
+        this.initOtpInputs();
         this.form2?.addEventListener('submit', (e) => this.handleStep2(e));
-        this.codeInput?.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
-            this.clearError(this.codeError);
-        });
         this.back1?.addEventListener('click', () => this.goToStep(1));
         this.resendBtn?.addEventListener('click', () => this.resendCode());
         
         // Paso 3: Nueva contraseña
         this.form3?.addEventListener('submit', (e) => this.handleStep3(e));
-        this.newPassInput?.addEventListener('input', () => this.validatePassword());
+        this.newPassInput?.addEventListener('input', () => { this.validatePasswordRequirements(); this.validatePasswordMatch(); });
         this.confirmPassInput?.addEventListener('input', () => this.validatePasswordMatch());
         this.back2?.addEventListener('click', () => this.goToStep(2));
         
         // Toggle password visibility
         document.querySelectorAll('.toggle-password').forEach(btn => {
             btn.addEventListener('click', (e) => this.togglePassword(e));
+        });
+    }
+
+    // ── RECUADROS OTP (auto-avance, retroceso, pegado) ──────────────
+    initOtpInputs() {
+        const digits = document.querySelectorAll('.otp-digit');
+        if (!digits.length) return;
+
+        const syncHiddenInput = () => {
+            const val = Array.from(digits).map(d => d.value).join('');
+            if (this.codeInput) this.codeInput.value = val;
+        };
+
+        digits.forEach((digit, idx) => {
+            // Solo permitir dígitos
+            digit.addEventListener('keydown', (e) => {
+                // Borrar: retroceder al recuadro anterior y limpiarlo
+                if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    digit.value = '';
+                    digit.classList.remove('filled');
+                    syncHiddenInput();
+                    if (idx > 0) digits[idx - 1].focus();
+                    return;
+                }
+                // Flechas: navegación manual
+                if (e.key === 'ArrowLeft' && idx > 0) { e.preventDefault(); digits[idx - 1].focus(); return; }
+                if (e.key === 'ArrowRight' && idx < digits.length - 1) { e.preventDefault(); digits[idx + 1].focus(); return; }
+                // Bloquear no-dígitos (excepto Tab, Ctrl+V, etc.)
+                if (!/^\d$/.test(e.key) && !['Tab', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                }
+            });
+
+            digit.addEventListener('input', (e) => {
+                // Tomar solo el último carácter ingresado y asegurarse de que sea dígito
+                const raw = digit.value.replace(/\D/g, '');
+                digit.value = raw ? raw[raw.length - 1] : '';
+                digit.classList.toggle('filled', !!digit.value);
+                syncHiddenInput();
+                this.clearError(this.codeError);
+                // Avanzar automáticamente al siguiente recuadro
+                if (digit.value && idx < digits.length - 1) {
+                    digits[idx + 1].focus();
+                }
+            });
+
+            // Seleccionar el contenido al hacer focus para facilitar reescritura
+            digit.addEventListener('focus', () => digit.select());
+        });
+
+        // Soporte de pegado: pegar "123456" distribuye un dígito por recuadro
+        digits[0].addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasted = (e.clipboardData?.getData('text') ?? '').replace(/\D/g, '').slice(0, 6);
+            pasted.split('').forEach((char, i) => {
+                if (digits[i]) {
+                    digits[i].value = char;
+                    digits[i].classList.add('filled');
+                }
+            });
+            syncHiddenInput();
+            this.clearError(this.codeError);
+            // Mover foco al último recuadro rellenado
+            const lastFilled = Math.min(pasted.length, digits.length - 1);
+            digits[lastFilled].focus();
+        });
+    }
+
+    /** Limpia y resetea los recuadros OTP */
+    clearOtpInputs() {
+        document.querySelectorAll('.otp-digit').forEach(d => {
+            d.value = '';
+            d.classList.remove('filled', 'error');
+        });
+        if (this.codeInput) this.codeInput.value = '';
+    }
+
+    /** Muestra estado de error animado en todos los recuadros */
+    shakeOtpInputs() {
+        document.querySelectorAll('.otp-digit').forEach(d => {
+            d.classList.add('error');
+            setTimeout(() => d.classList.remove('error'), 400);
         });
     }
 
@@ -93,6 +174,14 @@ class PasswordRecovery {
         this.indicators.forEach((ind, i) => {
             ind.classList.toggle('active', i + 1 === step);
             ind.classList.toggle('completed', i + 1 < step);
+            ind.setAttribute('aria-current', i + 1 === step ? 'step' : 'false');
+        });
+
+        // Marcar pasos ocultos para accesibilidad
+        Object.entries(this.steps).forEach(([key, stepEl]) => {
+            if (!stepEl) return;
+            const hidden = key !== String(step);
+            stepEl.setAttribute('aria-hidden', hidden ? 'true' : 'false');
         });
         
         // Actualizar descripción
@@ -142,22 +231,21 @@ class PasswordRecovery {
     // ── PASO 2: CÓDIGO ──────────────────────────────────
     async handleStep2(e) {
         e.preventDefault();
-        const code = this.codeInput.value.trim();
-        
+        // Leer del input oculto sincronizado por initOtpInputs
+        const code = (this.codeInput?.value ?? '').trim();
         if (code.length !== 6 || !/^\d{6}$/.test(code)) {
-            this.showError(this.codeError, 'Ingresa un código válido de 6 dígitos');
+            this.showError(this.codeError, 'Ingresa los 6 dígitos del código');
+            this.shakeOtpInputs?.();
             return;
         }
-        
         this.setLoading(this.form2.querySelector('button[type="submit"]'), true);
-        
         try {
             const response = await this.verifyCode(code);
             if (!response.success) {
                 this.showError(this.codeError, response.message || 'Código incorrecto o expirado.');
+                this.shakeOtpInputs?.();
                 return;
             }
-
             this.showToast(response.message || 'Código verificado', 'success');
             this.goToStep(3);
             this.newPassInput.focus();
@@ -167,9 +255,13 @@ class PasswordRecovery {
             this.setLoading(this.form2.querySelector('button[type="submit"]'), false);
         }
     }
-
     async resendCode() {
         if (!this.userEmail) return;
+        if (this.resendCooldown > 0) {
+            this.showToast(`Espera ${this.resendCooldown} segundos antes de reenviar.`, 'info');
+            return;
+        }
+
         this.resendBtn.disabled = true;
         this.resendBtn.textContent = 'Enviando...';
 
@@ -183,8 +275,18 @@ class PasswordRecovery {
         } catch (error) {
             this.showToast('No se pudo reenviar el código.', 'error');
         } finally {
-            this.resendBtn.disabled = false;
-            this.resendBtn.textContent = '¿No recibiste el código? Reenviar';
+            this.resendCooldown = 30;
+            const countdown = () => {
+                if (this.resendCooldown <= 0) {
+                    this.resendBtn.disabled = false;
+                    this.resendBtn.textContent = '¿No recibiste el código? Reenviar';
+                    return;
+                }
+                this.resendBtn.textContent = `Reenviar en ${this.resendCooldown}s`;
+                this.resendCooldown -= 1;
+                setTimeout(countdown, 1000);
+            };
+            countdown();
         }
     }
 
@@ -225,6 +327,11 @@ class PasswordRecovery {
         return false;
     }
 
+    validatePassword() {
+        this.validatePasswordRequirements();
+        return this.validatePasswordMatch();
+    }
+
     async handleStep3(e) {
         e.preventDefault();
         
@@ -243,7 +350,7 @@ class PasswordRecovery {
             return;
         }
 
-        const codigo = this.codeInput.value.trim();
+        const codigo = (this.codeInput?.value ?? '').trim();
         if (codigo.length !== 6 || !/^[0-9]{6}$/.test(codigo)) {
             this.showError(this.codeError, 'Ingresa un código válido de 6 dígitos');
             this.goToStep(2);
@@ -333,29 +440,14 @@ class PasswordRecovery {
     }
 
     showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.setAttribute('role', 'alert');
-        
-        const icons = { success: 'check_circle', error: 'error', info: 'info' };
-        toast.innerHTML = `
-            <span>${message}</span>
-            <button class="toast-close" aria-label="Cerrar">&times;</button>
-        `;
-        
-        container.appendChild(toast);
-        requestAnimationFrame(() => toast.classList.add('show'));
-        
-        toast.querySelector('.toast-close')?.addEventListener('click', () => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        });
-        
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 5000);
+        if (window.ToastService) {
+            if (type === 'success') window.ToastService.success('Éxito', message);
+            else if (type === 'error') window.ToastService.error('Error', message);
+            else if (type === 'warning') window.ToastService.warning('Advertencia', message);
+            else window.ToastService.info('Información', message);
+        } else {
+            alert(message);
+        }
     }
 
     // ── SIMULACIONES DE API (Reemplazar en producción) ─

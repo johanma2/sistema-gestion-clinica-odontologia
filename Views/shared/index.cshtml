@@ -1,4 +1,4 @@
-@{ Layout = null; }
+﻿@{ Layout = null; }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -31,5 +31,7 @@
       </div>
     </div>
   </div>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>

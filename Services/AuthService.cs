@@ -167,7 +167,7 @@ namespace SmileTrack_MVC.Services
                 if (!isPasswordValid)
                 {
                     var usuarioActualizar = await _context.Usuarios.FindAsync(new object[] { user.IdUsuario }, ct);
-                    var estaBloqueada = false;
+                    bool estaBloqueada = false;
                     if (usuarioActualizar != null)
                     {
                         usuarioActualizar.IntentosFallidos += 1;
@@ -333,7 +333,7 @@ namespace SmileTrack_MVC.Services
                     };
                 }
 
-                var roleName = string.IsNullOrWhiteSpace(request.Rol) ? "Paciente" : request.Rol;
+                string roleName = string.IsNullOrWhiteSpace(request.Rol) ? "Paciente" : request.Rol;
                 var role = await _context.Roles.AsNoTracking()
                     .FirstOrDefaultAsync(r => r.NombreRol == roleName, ct);
 
@@ -347,9 +347,12 @@ namespace SmileTrack_MVC.Services
                     };
                 }
 
-                var names = request.Nombre.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
-                var firstName = names.Length > 0 ? names[0] : request.Nombre;
-                var lastName = names.Length > 1 ? names[1] : "SmileTrack";
+                string firstName = string.IsNullOrWhiteSpace(request.Nombre)
+                    ? "SmileTrack"
+                    : request.Nombre.Trim();
+                string lastName = string.IsNullOrWhiteSpace(request.Apellidos)
+                    ? "SmileTrack"
+                    : request.Apellidos.Trim();
 
                 string hashContrasena;
                 try
@@ -405,7 +408,7 @@ namespace SmileTrack_MVC.Services
 
                     await tx.CommitAsync(ct);
                 }
-                catch (DbUpdateException dbEx) when (EsViolacionIndiceUnico(dbEx, out var nombreIndice))
+                catch (DbUpdateException dbEx) when (EsViolacionIndiceUnico(dbEx, out string? nombreIndice))
                 {
                     await tx.RollbackAsync(ct);
                     _logger.LogWarning(dbEx, "Registro fallido: violación UNIQUE. Correo={Correo}, Indice={Indice}, IpCliente={IpCliente}",
@@ -511,7 +514,7 @@ namespace SmileTrack_MVC.Services
                 }
 
                 var limiteVentana = DateTime.UtcNow.AddMinutes(-VentanaRateLimitMinutos);
-                var solicitudesRecientes = await _context.AuditoriasRecuperacion
+                int solicitudesRecientes = await _context.AuditoriasRecuperacion
                     .AsNoTracking()
                     .CountAsync(a =>
                         a.CorreoSolicitado == correoNormalizado &&
@@ -527,7 +530,7 @@ namespace SmileTrack_MVC.Services
                     return new AuthResponse { Success = true, Message = MensajeRecuperacionGenerico };
                 }
 
-                var code = RandomNumberGenerator.GetInt32(0, 1000000).ToString("D6");
+                string code = RandomNumberGenerator.GetInt32(0, 1000000).ToString("D6");
                 var ahora = DateTime.UtcNow;
                 var recoveryCode = new CodigoRecuperacion
                 {
@@ -670,7 +673,7 @@ namespace SmileTrack_MVC.Services
                     return new AuthResponse { Success = false, Message = MensajeCodigoInvalidoOExpirado };
                 }
 
-                var codigoValido = BCrypt.Net.BCrypt.Verify(request.Codigo.Trim(), codigoRecuperacion.CodigoHash);
+                bool codigoValido = BCrypt.Net.BCrypt.Verify(request.Codigo.Trim(), codigoRecuperacion.CodigoHash);
                 if (!codigoValido)
                 {
                     codigoRecuperacion.IntentosFallidos += 1;
@@ -865,8 +868,8 @@ namespace SmileTrack_MVC.Services
 
         private string GenerarTokenRecuperacion(CodigoRecuperacion codigoRecuperacion)
         {
-            var expiraUnix = new DateTimeOffset(codigoRecuperacion.FechaExpiracion).ToUnixTimeSeconds();
-            var payload = $"{codigoRecuperacion.IdCodigo}|{codigoRecuperacion.IdUsuario}|{expiraUnix}|{Guid.NewGuid():N}";
+            long expiraUnix = new DateTimeOffset(codigoRecuperacion.FechaExpiracion).ToUnixTimeSeconds();
+            string payload = $"{codigoRecuperacion.IdCodigo}|{codigoRecuperacion.IdUsuario}|{expiraUnix}|{Guid.NewGuid():N}";
             return _passwordRecoveryProtector.Protect(payload);
         }
 
@@ -874,16 +877,16 @@ namespace SmileTrack_MVC.Services
         {
             try
             {
-                var payload = _passwordRecoveryProtector.Unprotect(tokenTemporal);
-                var parts = payload.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                string payload = _passwordRecoveryProtector.Unprotect(tokenTemporal);
+                string[] parts = payload.Split('|', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length != 4)
                 {
                     return null;
                 }
 
-                if (!int.TryParse(parts[0], out var idCodigo) ||
-                    !int.TryParse(parts[1], out var idUsuario) ||
-                    !long.TryParse(parts[2], out var expiraUnix))
+                if (!int.TryParse(parts[0], out int idCodigo) ||
+                    !int.TryParse(parts[1], out int idUsuario) ||
+                    !long.TryParse(parts[2], out long expiraUnix))
                 {
                     return null;
                 }
@@ -934,7 +937,7 @@ namespace SmileTrack_MVC.Services
                     return new AuthResponse { Success = false, Message = "La cuenta no está activa." };
                 }
 
-                var isCurrentPasswordValid = BCrypt.Net.BCrypt.Verify(request.ContrasenaActual, user.Contrasena);
+                bool isCurrentPasswordValid = BCrypt.Net.BCrypt.Verify(request.ContrasenaActual, user.Contrasena);
                 if (!isCurrentPasswordValid)
                 {
                     _logger.LogWarning("Cambio de contraseña fallido: contraseña actual incorrecta. IdUsuario={IdUsuario}, IpCliente={IpCliente}",
@@ -998,7 +1001,7 @@ namespace SmileTrack_MVC.Services
             }
 
             using var sha256 = SHA256.Create();
-            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(code.Trim()));
+            byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(code.Trim()));
             return Convert.ToHexString(bytes);
         }
 
@@ -1012,7 +1015,7 @@ namespace SmileTrack_MVC.Services
                 if (ctx.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) &&
                     !string.IsNullOrWhiteSpace(xff))
                 {
-                    var primerIp = xff.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+                    string primerIp = xff.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries)[0].Trim();
                     if (!string.IsNullOrWhiteSpace(primerIp)) return primerIp;
                 }
 
@@ -1032,10 +1035,10 @@ namespace SmileTrack_MVC.Services
         {
             try
             {
-                var jwtKey = _configuration["Jwt:Key"] ?? "TuClaveSecretaSuperSegura123!_CambiaEstoEnProduccion_SmileTrack2025";
-                var jwtIssuer = _configuration["Jwt:Issuer"] ?? "SmileTrack";
-                var jwtAudience = _configuration["Jwt:Audience"] ?? "SmileTrackClient";
-                var expiryMinutes = int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var minutes) && minutes > 0 ? minutes : 60;
+                string jwtKey = _configuration["Jwt:Key"] ?? "TuClaveSecretaSuperSegura123!_CambiaEstoEnProduccion_SmileTrack2025";
+                string jwtIssuer = _configuration["Jwt:Issuer"] ?? "SmileTrack";
+                string jwtAudience = _configuration["Jwt:Audience"] ?? "SmileTrackClient";
+                int expiryMinutes = int.TryParse(_configuration["Jwt:ExpiryMinutes"], out int minutes) && minutes > 0 ? minutes : 60;
 
                 if (jwtKey.Length < 32)
                 {

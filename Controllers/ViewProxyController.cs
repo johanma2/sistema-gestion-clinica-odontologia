@@ -12,7 +12,7 @@ public class ViewProxyController : Controller
             return NotFound();
         }
 
-        var normalizedPath = path
+        string normalizedPath = path
             .Replace('\\', '/')
             .Trim('/')
             .Replace("//", "/");
@@ -22,7 +22,7 @@ public class ViewProxyController : Controller
             return NotFound();
         }
 
-        var viewPath = normalizedPath.StartsWith("Views/", StringComparison.OrdinalIgnoreCase)
+        string viewPath = normalizedPath.StartsWith("Views/", StringComparison.OrdinalIgnoreCase)
             ? $"~/{normalizedPath}"
             : $"~/Views/{normalizedPath}";
 

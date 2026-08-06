@@ -741,6 +741,12 @@ button { font-family: inherit; cursor: pointer; }
   .page-header { flex-direction: column; align-items: flex-start; }
   .filter-bar { flex-direction: column; align-items: stretch; }
   .filter-bar .search-wrap { min-width: 100%; }
+  .filter-bar .filter-wrap,
+  .filter-bar .status-select,
+  .filter-bar .btn-primary,
+  .filter-bar .btn-secondary { width: 100%; }
+  .btn-text { display: none; }
+  .action-btn { padding: 6px 8px; }
   .view-toggles { width: 100%; overflow-x: auto; padding-bottom: 4px; }
   .mobile-nav { display: flex; }
   .fab { display: flex; }
@@ -755,6 +761,48 @@ button { font-family: inherit; cursor: pointer; }
   .table-base td:nth-child(5) { display: none; }
   .pagination { flex-direction: column; align-items: center; }
 }
+/* ═══ ACCIONES DE TABLA: btn-icon, btn-text (estándar SmileTrack) ═══ */
+.actions-cell { display: flex; align-items: center; gap: 6px; justify-content: center; }
+.btn-icon {
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 5px 10px;
+  cursor: pointer; font-size: 14px;
+  /* gap para separar emoji de span.btn-text */
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: background var(--tr), border-color var(--tr), transform var(--tr);
+  line-height: 1; box-shadow: 0 4px 10px rgba(15, 32, 87, 0.05);
+  text-decoration: none; color: var(--text-muted);
+}
+.btn-icon:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+.btn-icon:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.btn-icon.view, .btn-icon.btn-view { color: var(--primary); }
+.btn-icon.edit { color: #d97706; }
+.btn-icon.btn-delete { color: var(--danger); border-color: #fecaca; }
+.btn-icon.btn-delete:hover { background: #fee2e2; color: #991b1b; }
+.btn-icon .btn-text { font-size: 0.76rem; font-weight: 600; }
+
+/* Reglas base para botones con texto (compatibilidad action-btn legacy) */
+.action-btn { display: inline-flex; align-items: center; gap: 5px; }
+.action-btn .btn-text { display: inline; font-size: 0.78rem; font-weight: 600; }
+
+/* Filtros: wrap uniforme */
+.filter-bar .filter-wrap { flex-shrink: 0; display: flex; align-items: center; }
+
+/* ═══ AVATAR DE PACIENTE EN TABLA (patrón canónico) ═══ */
+/* td-paciente: contenedor flex para avatar + nombre, mismo patrón que st-adm-07 */
+.td-paciente { display: flex; align-items: center; gap: 8px; }
+.pac-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .68rem; font-weight: 700; flex-shrink: 0; color: #fff;
+}
+.pac-avatar--blue   { background: #2563eb; }
+.pac-avatar--green  { background: #16a34a; }
+.pac-avatar--purple { background: #7c3aed; }
+.pac-avatar--orange { background: #d97706; }
+.pac-avatar--red    { background: #dc2626; }
+.pac-name { font-weight: 600; font-size: .83rem; }
+
 /* ═════ NUEVO: SOLO PARA COMPORTAMIENTO DESPLEGABLE ═════ */
 .nav-group { margin-bottom: 6px; }
 .nav-group-header {

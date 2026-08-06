@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Gestión de Citas Recepción (st-rec-03-gestion-citas)
 ============================================
 Autor: Johan Santamaria
@@ -93,14 +93,6 @@ const debounce = (fn, delay) => {
   return (...args) => { clearTimeout(timeoutId); timeoutId = setTimeout(() => fn(...args), delay); };
 };
 
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-  if (toast._tid) clearTimeout(toast._tid);
-  toast._tid = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 const shouldUseServerRenderedList = () => {
   const tbody = safeGetElement('appointmentsTable');
@@ -310,20 +302,55 @@ const createAppointmentRow = (appt) => {
   if (appt.highlight) tr.classList.add('row-highlight');
   if (appt.noShow) tr.classList.add('row-no-show');
 
+  // Avatar de paciente: iniciales del nombre (máx. 2 letras)
+  const parts = (appt.patient || '').trim().split(/\s+/).filter(Boolean);
+  const initials = parts.length > 1
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : (parts[0] || '?').slice(0, 2).toUpperCase();
+  const PALETTE = ['blue', 'green', 'purple', 'orange', 'red'];
+  let hash = 0;
+  for (let i = 0; i < initials.length; i++) hash = ((hash << 5) - hash) + initials.charCodeAt(i);
+  const avatarColor = PALETTE[Math.abs(hash) % PALETTE.length];
+
   tr.innerHTML = `
     <td class="col-fecha">${appt.date}</td>
     <td class="col-hora"><span class="pill-hora" aria-label="Hora: ${appt.time}">${appt.time}</span></td>
-    <td class="col-paciente${appt.highlight ? ' highlight' : ''}">${appt.patient}</td>
+    <td class="col-paciente">
+      <div class="td-paciente">
+        <div class="pac-avatar pac-avatar--${avatarColor}" aria-hidden="true">${initials}</div>
+        <span class="pac-name">${appt.patient}</span>
+      </div>
+    </td>
     <td class="col-profesional">${appt.doctor}</td>
     <td class="col-servicio">${appt.service}</td>
     <td class="col-consultorio">${appt.office}</td>
     <td><span class="status-badge ${appt.statusClass}" role="status" aria-label="Estado: ${appt.status}">${appt.status}</span></td>
     <td>
       <div class="actions-cell" role="group" aria-label="Acciones para ${appt.patient}">
-        <button class="action-icon" data-action="view" data-id="${appt.id}" aria-label="Ver detalles de ${appt.patient}">👁️</button>
-        <button class="action-icon" data-action="edit" data-id="${appt.id}" aria-label="Editar cita de ${appt.patient}">✏️</button>
-        <button class="action-icon" data-action="sync" data-id="${appt.id}" aria-label="Sincronizar cita de ${appt.patient}">🔄</button>
-        <button class="action-icon danger" data-action="cancel" data-id="${appt.id}" aria-label="Cancelar cita de ${appt.patient}">✕</button>
+        <button class="btn-icon action-btn btn-view" type="button"
+                data-action="view" data-id="${appt.id}"
+                aria-label="Ver detalles de ${appt.patient}"
+                title="Ver detalles de ${appt.patient}">
+          👁️ <span class="btn-text">Ver</span>
+        </button>
+        <button class="btn-icon action-btn edit" type="button"
+                data-action="edit" data-id="${appt.id}"
+                aria-label="Editar cita de ${appt.patient}"
+                title="Editar cita de ${appt.patient}">
+          ✏️ <span class="btn-text">Editar</span>
+        </button>
+        <button class="btn-icon action-btn" type="button"
+                data-action="sync" data-id="${appt.id}"
+                aria-label="Sincronizar cita de ${appt.patient}"
+                title="Sincronizar cita de ${appt.patient}">
+          🔄 <span class="btn-text">Sincronizar</span>
+        </button>
+        <button class="btn-icon action-btn btn-delete" type="button"
+                data-action="cancel" data-id="${appt.id}"
+                aria-label="Cancelar cita de ${appt.patient}"
+                title="Cancelar cita de ${appt.patient}">
+          ✕ <span class="btn-text">Cancelar</span>
+        </button>
       </div>
     </td>
   `;
@@ -440,39 +467,10 @@ const handleTableAction = async (e) => {
   if (action === 'edit')   return openEditModal(id);
   if (action === 'sync')   return openSyncModal(id);
   if (action === 'cancel') {
-    if (!confirm('¿Estás seguro de cancelar esta cita?')) return;
-
-    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-    if (!tokenInput) {
-      showToast('No se pudo cancelar la cita: token antiforgery no encontrado.', 'error');
-      return;
+    // Abrir modal de confirmación personalizado en lugar de window.confirm() nativo
+    if (typeof window.openConfirmDeleteCita === 'function') {
+      window.openConfirmDeleteCita(id, '');
     }
-
-    const form = document.createElement('form');
-    form.method = 'post';
-    form.action = '/gestion-de-citas/eliminar-cita';
-    form.style.display = 'none';
-
-    const tokenField = document.createElement('input');
-    tokenField.type = 'hidden';
-    tokenField.name = '__RequestVerificationToken';
-    tokenField.value = tokenInput.value;
-    form.appendChild(tokenField);
-
-    const idField = document.createElement('input');
-    idField.type = 'hidden';
-    idField.name = 'IdCita';
-    idField.value = id;
-    form.appendChild(idField);
-
-    const returnUrlField = document.createElement('input');
-    returnUrlField.type = 'hidden';
-    returnUrlField.name = 'ReturnUrl';
-    returnUrlField.value = window.location.pathname + window.location.search;
-    form.appendChild(returnUrlField);
-
-    document.body.appendChild(form);
-    form.submit();
     return;
   }
 };
@@ -535,7 +533,7 @@ const submitEditAppointment = (e) => {
   const form = e.currentTarget;
   if (!validateForm(form)) {
     e.preventDefault();
-    showToast('Por favor completa los campos requeridos.', 'error');
+    window.ToastService.error('Por favor completa los campos requeridos.');
     return;
   }
   const submitBtn = form.querySelector('[type="submit"]');
@@ -558,7 +556,7 @@ const openSyncModal = (id) => {
     fresh.addEventListener('click', () => {
       const platform = fresh.dataset.platform || 'calendario';
       showToast(`Sincronizando con ${platform}…`, 'info');
-      setTimeout(() => { showToast(`Cita sincronizada con ${platform}`); modalManager.close('modalSyncCalendar'); }, 1500);
+      setTimeout(() => { window.ToastService.success(`Cita sincronizada con ${platform}`); modalManager.close('modalSyncCalendar'); }, 1500);
     });
   });
   modalManager.open('modalSyncCalendar');
@@ -662,7 +660,7 @@ const submitNewAppointment = (e) => {
   const form = e.currentTarget;
   if (!validateForm(form)) {
     e.preventDefault();
-    showToast('Por favor completa los campos requeridos.', 'error');
+    window.ToastService.error('Por favor completa los campos requeridos.');
     return;
   }
   const submitBtn = form.querySelector('[type="submit"]');

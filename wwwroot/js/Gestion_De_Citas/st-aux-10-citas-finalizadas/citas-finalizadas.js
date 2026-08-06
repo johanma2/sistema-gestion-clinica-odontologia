@@ -41,16 +41,6 @@ const debounce = (fn, delay) => {
 };
 
 // WHY: Las notificaciones no bloqueantes informan el resultado de la exportación sin interrumpir la revisión del resumen
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 // WHY: La clave incluye la fecha para que los datos del día no contaminen ni se mezclen con los de jornadas anteriores
 const finalizedStorage = {
@@ -256,7 +246,7 @@ const initExportButton = () => {
       btn.style.background = '#dcfce7';
       btn.style.borderColor = '#22c55e';
       btn.style.color = '#166534';
-      showToast('Resumen descargado exitosamente', 'success');
+      window.ToastService.success('Resumen descargado exitosamente');
       
       // Restaura botón
       setTimeout(() => {
@@ -271,7 +261,7 @@ const initExportButton = () => {
       console.error('Error al exportar:', error);
       btn.innerHTML = original;
       btn.disabled = false;
-      showToast('Error al generar resumen', 'error');
+      window.ToastService.error('Error al generar resumen');
     }
   });
 };

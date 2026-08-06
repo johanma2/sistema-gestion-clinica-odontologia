@@ -41,16 +41,6 @@ const debounce = (fn, delay) => {
 };
 
 // WHY: Las notificaciones no bloqueantes brindan retroalimentación al usuario sin interrumpir el flujo durante el procedimiento
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 // WHY: La clave incluye fecha y hora para evitar colisiones entre sesiones de diferentes procedimientos en el mismo dispositivo
 const procedureStorage = {

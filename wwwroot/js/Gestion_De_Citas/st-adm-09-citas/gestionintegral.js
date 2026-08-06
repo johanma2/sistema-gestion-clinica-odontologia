@@ -110,29 +110,6 @@ const debounce = (callback, delay) => {
  * @param {string} message - Mensaje a mostrar
  * @param {string} type - Tipo de toast: 'success', 'error', 'warning'
  */
-const showToast = (message, type = 'success') => {
-    const toastElement = safeGetElement('toast');
-    if (!toastElement) return;
-
-    toastElement.textContent = message;
-
-    // Construir clases CSS según el tipo
-    const toastClasses = ['toast'];
-    if (type === 'error') toastClasses.push('error');
-    if (type === 'warning') toastClasses.push('warning');
-    toastClasses.push('show');
-    toastElement.className = toastClasses.join(' ');
-
-    // Limpiar timeout anterior si existe
-    if (toastElement._timeoutId) {
-        clearTimeout(toastElement._timeoutId);
-    }
-
-    // Programar ocultamiento después de 3.5 segundos
-    toastElement._timeoutId = setTimeout(() => {
-        toastElement.classList.remove('show');
-    }, 3500);
-};
 
 /**
  * Abre el modal de Crear/Editar Cita y gestiona el cierre por click fuera.
@@ -170,49 +147,98 @@ window.closeModalCita = () => {
     document.body.style.overflow = '';
 };
 
+// setFieldError removed in favor of ValidationUtils
+
+const validateCitaForm = (form) => {
+    let valid = true;
+    const requiredFields = [
+        { field: document.getElementById('idPacienteCita'), message: 'Selecciona un paciente.' },
+        { field: document.getElementById('idProfesionalCita'), message: 'Selecciona un profesional.' },
+        { field: document.getElementById('fechaCita'), message: 'Selecciona una fecha válida.' },
+        { field: document.getElementById('horaInicioCita'), message: 'Selecciona una hora de inicio.' },
+        { field: document.getElementById('idEstadoCita'), message: 'Selecciona un estado.' }
+    ];
+
+    if (window.ValidationUtils) {
+        requiredFields.forEach(({ field }) => {
+            if (field) window.ValidationUtils.clearError(field);
+        });
+    }
+
+    requiredFields.forEach(({ field, message }) => {
+        const value = field?.value?.trim() || '';
+        const isValid = Boolean(value);
+        if (field) {
+            field.setAttribute('aria-invalid', String(!isValid));
+        }
+        if (!isValid) {
+            if (window.ValidationUtils && field) {
+                window.ValidationUtils.showError(field, null, message);
+            }
+            valid = false;
+        }
+    });
+
+    const fecha = document.getElementById('fechaCita')?.value;
+    const horaInicio = document.getElementById('horaInicioCita')?.value;
+    const horaFin = document.getElementById('horaFinCita')?.value;
+    
+    if (window.AppointmentUtils && fecha && horaInicio && horaFin) {
+        const errors = window.AppointmentUtils.validateAppointmentTime(fecha, horaInicio, horaFin);
+        if (errors.length > 0) {
+            errors.forEach(err => {
+                if (err.field !== 'general' && window.ValidationUtils) {
+                    let inputId = err.field === 'fecha' ? 'fechaCita' : 
+                                  err.field === 'horaInicio' ? 'horaInicioCita' : 'horaFinCita';
+                    const inputEl = document.getElementById(inputId);
+                    if (inputEl) window.ValidationUtils.showError(inputEl, null, err.message);
+                }
+            });
+            valid = false;
+        }
+    } else if (fecha && horaInicio) {
+        const selectedDate = new Date(`${fecha}T${horaInicio}`);
+        if (selectedDate < new Date()) {
+            const fField = document.getElementById('fechaCita');
+            if (fField && window.ValidationUtils) {
+                window.ValidationUtils.showError(fField, null, 'No puedes agendar en un horario pasado.');
+            }
+            valid = false;
+        }
+    }
+
+    return valid;
+};
+
+const submitCitaForm = (event) => {
+    const form = event.currentTarget;
+    const submitButton = form.querySelector('#btnGuardarCita');
+
+    if (!validateCitaForm(form)) {
+        event.preventDefault();
+        window.ToastService.warning('⚠️ Completa los campos obligatorios del formulario.');
+        const firstInvalid = form.querySelector('[aria-invalid="true"]');
+        if (firstInvalid) {
+            firstInvalid.focus();
+        } else {
+            const fallbackInvalid = form.querySelector('select:invalid, input:invalid, textarea:invalid');
+            if (fallbackInvalid) fallbackInvalid.focus();
+        }
+        return;
+    }
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.dataset.originalText = submitButton.textContent;
+        submitButton.textContent = 'Guardando...';
+    }
+};
+
 // ════════════════════════════════════════════════════════════════════
 //  MAPEO ENTRE FORMATOS: Server (JSON) ↔ Cliente (fila renderizada)
 // ════════════════════════════════════════════════════════════════════
 
-/**
- * Paleta de colores para avatares generados dinámicamente.
- */
-const AVATAR_COLOR_PALETTE = ['blue', 'green', 'purple', 'red', 'slate'];
-
-/**
- * Selecciona un color de la paleta basado en las iniciales del nombre.
- * Usa un hash simple para distribuir colores de manera consistente.
- *
- * @param {string} initials - Iniciales del nombre
- * @returns {string} Color de la paleta
- */
-const pickColorByInitials = (initials) => {
-    if (!initials) return 'blue';
-
-    let hash = 0;
-    for (let i = 0; i < initials.length; i++) {
-        hash = ((hash << 5) - hash) + initials.charCodeAt(i);
-    }
-
-    return AVATAR_COLOR_PALETTE[Math.abs(hash) % AVATAR_COLOR_PALETTE.length];
-};
-
-/**
- * Extrae las iniciales de un nombre completo.
- *
- * @param {string} fullName - Nombre completo
- * @returns {string} Iniciales en mayúsculas (2 caracteres)
- */
-const getInitials = (fullName) => {
-    if (!fullName) return 'XX';
-
-    const parts = fullName.trim().split(/\s+/).filter(Boolean);
-
-    if (parts.length === 0) return 'XX';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
+// Funciones de formato de nombre y color removidas, usando AppointmentUtils
 
 /**
  * Genera un slug a partir de un nombre completo.
@@ -253,8 +279,8 @@ const mapServerToClient = (serverData) => {
 
     // Datos del paciente
     const patientFullName = serverData.Paciente?.NombreCompleto || '—';
-    const patientInitials = getInitials(patientFullName);
-    const patientColor = pickColorByInitials(patientInitials);
+    const patientInitials = window.AppointmentUtils ? window.AppointmentUtils.getInitials(patientFullName) : 'XX';
+    const patientColor = window.AppointmentUtils ? window.AppointmentUtils.pickColorByInitials(patientInitials) : 'blue';
 
     // El servidor no expone Documento/Paciente en listado;
     // usamos "Id" como identificación temporal.
@@ -284,21 +310,11 @@ const mapServerToClient = (serverData) => {
  * @returns {string} Estado normalizado para el cliente
  */
 const mapEstadoServerToClient = (estado) => {
+    if (window.AppointmentUtils) {
+        return window.AppointmentUtils.mapEstadoServerToClient(estado);
+    }
     if (!estado) return 'programada';
-
-    const estadoNormalized = estado.toLowerCase().trim();
-
-    if (estadoNormalized === 'atendida' || estadoNormalized === 'finalizada' || estadoNormalized === 'en_proceso') {
-        return 'atendida';
-    }
-    if (estadoNormalized === 'no_asistida') {
-        return 'no-show';
-    }
-    if (['programada', 'confirmada', 'cancelada'].includes(estadoNormalized)) {
-        return estadoNormalized;
-    }
-
-    return 'programada';
+    return estado.toLowerCase().trim();
 };
 
 /**
@@ -433,14 +449,16 @@ const shouldUseServerRenderedList = () => {
 
 /**
  * Configuración de labels y clases CSS para cada estado de cita.
+ * Usa AppointmentUtils si está disponible.
  */
-const statusLabels = {
-    programada: { label: 'Programada', class: 'programada' },
-    confirmada: { label: 'Confirmada', class: 'confirmada' },
-    atendida: { label: 'Atendida', class: 'atendida' },
-    cancelada: { label: 'Cancelada', class: 'cancelada' },
-    'no-show': { label: 'No asistió', class: 'cancelada' }
-};
+const statusLabels = new Proxy({}, {
+    get: function(target, prop) {
+        if (window.AppointmentUtils) {
+            return window.AppointmentUtils.getStatusLabelAndClass(prop);
+        }
+        return { label: prop, class: 'programada' };
+    }
+});
 
 // ════════════════════════════════════════════════════════════════════
 //  UTILIDADES DE FORMATO
@@ -577,9 +595,15 @@ const renderAppointments = () => {
                 </div>
                 <div class="table-col col-acciones text-right" role="cell" data-label="Acciones">
                     <div class="actions-cell">
-                        <button class="action-btn btn-view" aria-label="Ver detalle de cita de ${appointment.patient}" data-id="${appointment.id}" title="Ver">👁️</button>
-                        <button class="action-btn btn-edit" aria-label="Editar cita de ${appointment.patient}" data-id="${appointment.id}" title="Editar">✏️</button>
-                        <button class="action-btn btn-delete" aria-label="Cancelar cita de ${appointment.patient}" data-id="${appointment.id}" title="Cancelar">❌</button>
+                        <button class="action-btn btn-view" aria-label="Ver detalle de cita de ${appointment.patient}" data-id="${appointment.id}" title="Ver detalle">
+                          👁️ <span class="btn-text">Ver</span>
+                        </button>
+                        <button class="action-btn btn-edit" aria-label="Editar cita de ${appointment.patient}" data-id="${appointment.id}" title="Editar cita">
+                          ✏️ <span class="btn-text">Editar</span>
+                        </button>
+                        <button class="action-btn btn-delete" aria-label="Cancelar cita de ${appointment.patient}" data-id="${appointment.id}" title="Cancelar cita">
+                          ❌ <span class="btn-text">Cancelar</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -654,7 +678,7 @@ const openAppointmentModal = (id, mode) => {
     const appointment = getAppointmentById(id);
 
     if (!appointment) {
-        showToast('Cita no encontrada', 'warning');
+        window.ToastService.warning('Cita no encontrada');
         return;
     }
 
@@ -753,7 +777,7 @@ const saveAppointmentEdit = (id) => {
     const rawData = appointment._raw || {};
     const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
     if (!tokenInput) {
-        showToast('No se pudo guardar la cita: token antiforgery no encontrado.', 'error');
+        window.ToastService.error('No se pudo guardar la cita: token antiforgery no encontrado.');
         return;
     }
 
@@ -790,40 +814,60 @@ const saveAppointmentEdit = (id) => {
 };
 
 /**
- * Cancela una cita con confirmación y DELETE soft (server: Estado=cancelada).
+ * Abre el modal de confirmación de eliminación de cita (SSR o client-side).
+ * Reemplaza window.confirm() para mejorar UX y respetar el diseño del sistema.
  *
  * @param {number} id - ID de la cita a cancelar
+ * @param {string} [patientName] - Nombre del paciente para el mensaje de confirmación
  */
-const cancelAppointment = (id) => {
-    if (!confirm('¿Estás seguro de cancelar esta cita?')) return;
+window.openConfirmDeleteCita = (id, patientName) => {
+    const modal = document.getElementById('modalConfirmDeleteCita');
+    const msgEl = document.getElementById('modalConfirmDeleteCitaMessage');
+    const idInput = document.getElementById('deleteCitaId');
+    const returnUrlInput = document.getElementById('deleteCitaReturnUrl');
 
-    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-    if (!tokenInput) {
-        showToast('No se pudo cancelar la cita: token antiforgery no encontrado.', 'error');
-        return;
+    if (!modal) return;
+
+    if (msgEl) {
+        const nombre = patientName ? ` de ${patientName}` : '';
+        msgEl.textContent = `¿Está seguro de eliminar esta cita${nombre}? Esta acción no se puede deshacer.`;
     }
+    if (idInput) idInput.value = id;
+    if (returnUrlInput) returnUrlInput.value = window.location.pathname + window.location.search;
 
-    const form = document.createElement('form');
-    form.method = 'post';
-    form.action = '/gestion-de-citas/eliminar-cita';
-    form.style.display = 'none';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    modal.removeAttribute('inert');
+    document.body.style.overflow = 'hidden';
 
-    const fields = {
-        __RequestVerificationToken: tokenInput.value,
-        ReturnUrl: window.location.pathname + window.location.search,
-        IdCita: id
-    };
+    // Focus en botón cancelar para prevenir confirmación accidental
+    setTimeout(() => {
+        const cancelBtn = document.getElementById('modalConfirmDeleteCitaCancel');
+        if (cancelBtn) cancelBtn.focus();
+    }, 50);
+};
 
-    Object.entries(fields).forEach(([name, value]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = String(value ?? '');
-        form.appendChild(input);
-    });
+/**
+ * Cierra el modal de confirmación de eliminación de cita.
+ */
+window.closeConfirmDeleteCita = () => {
+    const modal = document.getElementById('modalConfirmDeleteCita');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('inert', '');
+    document.body.style.overflow = '';
+};
 
-    document.body.appendChild(form);
-    form.submit();
+/**
+ * Cancela una cita usando modal de confirmación personalizado (no window.confirm).
+ * Se activa desde botones de la tabla renderizada en cliente (modo fallback).
+ *
+ * @param {number} id - ID de la cita a cancelar
+ * @param {string} [patientName] - Nombre del paciente (opcional)
+ */
+const cancelAppointment = (id, patientName) => {
+    window.openConfirmDeleteCita(id, patientName || '');
 };
 
 // ════════════════════════════════════════════════════════════════════
@@ -1059,6 +1103,7 @@ const initModal = () => {
     const modalCloseButton = safeGetElement('modalAppointmentClose');
     const modalCancelButton = safeGetElement('modalAppointmentCancel');
     const modalElement = safeGetElement('modalAppointment');
+    const citaForm = safeGetElement('modalCita')?.querySelector('form');
 
     modalCloseButton?.addEventListener('click', closeAppointmentModal);
     modalCancelButton?.addEventListener('click', closeAppointmentModal);
@@ -1075,6 +1120,8 @@ const initModal = () => {
             closeAppointmentModal();
         }
     });
+
+    citaForm?.addEventListener('submit', submitCitaForm);
 };
 
 /**
@@ -1084,7 +1131,7 @@ const initBanner = () => {
     const optimizeButton = safeGetElement('btnOptimize');
 
     optimizeButton?.addEventListener('click', () => {
-        showToast('⚙️ Optimizando agenda... (simulado)', 'success');
+        window.ToastService.success('⚙️ Optimizando agenda... (simulado)');
     });
 };
 

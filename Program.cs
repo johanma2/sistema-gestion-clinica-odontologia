@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Models.Entities;
@@ -53,6 +55,57 @@ builder.Configuration
     .AddCommandLine(args);
 
 builder.Services.AddControllersWithViews();
+
+// ─── RATE LIMITING (Sprint 1) ─────────────────────────────────────────────
+// Política combinada: 10 intentos por IP + 5 intentos por correo en 15 minutos.
+// WHY: Doble capa protege contra ataques de diccionario distribuidos (IP) y
+// contra targeting de cuentas específicas (correo). ASP.NET 9 tiene soporte nativo.
+builder.Services.AddRateLimiter(options =>
+{
+    // ── Política por IP: ventana fija de 10 peticiones / 15 min ──────────
+    options.AddFixedWindowLimiter("LoginByIp", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window = TimeSpan.FromMinutes(15);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0; // Sin cola: rechazar de inmediato al superar el límite
+    });
+
+    // ── Política por correo: ventana fija de 5 peticiones / 15 min ───────
+    // Se aplica mediante una política con partición por el campo "email" del body.
+    // WHY: Permite identificar targeting de cuentas específicas sin depender solo de IP
+    // (usuarios corporativos con proxy comparten IP pero tienen correos distintos).
+    options.AddFixedWindowLimiter("LoginByEmail", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(15);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+
+    // Respuesta 429 con mensaje amigable en lugar del predeterminado vacío
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json; charset=utf-8";
+        bool esApi = context.HttpContext.Request.Headers["Accept"].ToString()
+            .Contains("application/json", StringComparison.OrdinalIgnoreCase);
+        if (esApi)
+        {
+            await context.HttpContext.Response.WriteAsync(
+                """{"success":false,"message":"Demasiados intentos de inicio de sesión. Por favor espera 15 minutos antes de intentar nuevamente."}""",
+                ct);
+        }
+        else
+        {
+            // Para peticiones de navegador, devolver HTML mínimo con redirect
+            context.HttpContext.Response.ContentType = "text/html; charset=utf-8";
+            await context.HttpContext.Response.WriteAsync(
+                """<meta http-equiv="refresh" content="2;url=/acceso-y-seguridad/login?rateLimited=1" /><p>Demasiados intentos. Redirigiendo...</p>""",
+                ct);
+        }
+    };
+});
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
@@ -62,7 +115,7 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     connectionString = "Server=(localdb)\\mssqllocaldb;Database=SmileTrackDB;Trusted_Connection=True;TrustServerCertificate=True;";
@@ -77,9 +130,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         errorNumbersToAdd: null)));
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection.GetValue<string>("Key") ?? "TuClaveSecretaSuperSegura123!_CambiaEstoEnProduccion_SmileTrack2025";
-var jwtIssuer = jwtSection.GetValue<string>("Issuer") ?? "SmileTrack";
-var jwtAudience = jwtSection.GetValue<string>("Audience") ?? "SmileTrackClient";
+string jwtKey = jwtSection.GetValue<string>("Key") ?? "TuClaveSecretaSuperSegura123!_CambiaEstoEnProduccion_SmileTrack2025";
+string jwtIssuer = jwtSection.GetValue<string>("Issuer") ?? "SmileTrack";
+string jwtAudience = jwtSection.GetValue<string>("Audience") ?? "SmileTrackClient";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -104,14 +157,14 @@ builder.Services.AddAuthentication(options =>
                     return;
                 }
 
-                var userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!int.TryParse(userIdValue, out var userId))
+                string? userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(userIdValue, out int userId))
                 {
                     context.RejectPrincipal();
                     return;
                 }
 
-                var lastLogoutClaim = principal.FindFirst("LastLogoutUtc")?.Value;
+                string? lastLogoutClaim = principal.FindFirst("LastLogoutUtc")?.Value;
                 using var scope = context.HttpContext.RequestServices.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var user = await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.IdUsuario == userId, context.HttpContext.RequestAborted);
@@ -159,8 +212,8 @@ builder.Services.AddAuthentication(options =>
                     return;
                 }
 
-                var userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!int.TryParse(userIdValue, out var userId))
+                string? userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(userIdValue, out int userId))
                 {
                     context.Fail("Usuario inválido en token.");
                     return;
@@ -177,9 +230,9 @@ builder.Services.AddAuthentication(options =>
                     return;
                 }
 
-                var issuedAtClaim = principal.FindFirst(JwtRegisteredClaimNames.Iat)?.Value;
+                string? issuedAtClaim = principal.FindFirst(JwtRegisteredClaimNames.Iat)?.Value;
                 if (!string.IsNullOrWhiteSpace(issuedAtClaim) &&
-                    long.TryParse(issuedAtClaim, out var issuedAtSeconds) &&
+                    long.TryParse(issuedAtClaim, out long issuedAtSeconds) &&
                     usuario.UltimoLogout.HasValue)
                 {
                     var tokenIssuedUtc = DateTimeOffset.FromUnixTimeSeconds(issuedAtSeconds).UtcDateTime;
@@ -219,16 +272,16 @@ builder.Services.AddScoped<SmileTrack_MVC.Services.IAuthService, SmileTrack_MVC.
 builder.Services.Configure<SmileTrack_MVC.Services.Email.EmailServiceOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddScoped<SmileTrack_MVC.Services.Email.IEmailService, SmileTrack_MVC.Services.Email.EmailService>();
 
-var urlsConfig = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5000";
-var configuredUrls = urlsConfig.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-var candidateUrls = new[]
+string urlsConfig = builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5000";
+string[] configuredUrls = urlsConfig.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+string[] candidateUrls = new[]
 {
     "http://localhost:5000",
     "http://localhost:5001",
     "http://127.0.0.1:5000",
     "http://127.0.0.1:5001"
 };
-var selectedUrl = SelectFirstAvailableUrl(configuredUrls.Concat(candidateUrls).Distinct().ToArray());
+string selectedUrl = SelectFirstAvailableUrl(configuredUrls.Concat(candidateUrls).Distinct().ToArray());
 builder.WebHost.UseUrls(selectedUrl);
 
 var app = builder.Build();
@@ -239,7 +292,7 @@ await EnsureDatabaseSchemaAsync(app.Services, app.Logger);
 
 app.Use(async (context, next) =>
 {
-    var requestId = context.TraceIdentifier;
+    string requestId = context.TraceIdentifier;
     if (context.Request.Headers.TryGetValue("X-Request-ID", out var incomingId) && !string.IsNullOrWhiteSpace(incomingId))
     {
         requestId = incomingId.ToString().Trim();
@@ -253,9 +306,9 @@ app.Use(async (context, next) =>
     catch (Exception ex)
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        if (ex is OperationCanceledException ocex)
+        if (ex is OperationCanceledException)
         {
-            logger.LogWarning(ocex, "Solicitud cancelada por el cliente: {Metodo} {Ruta}", context.Request.Method, context.Request.Path);
+            logger.LogWarning(ex, "Solicitud cancelada por el cliente: {Metodo} {Ruta}", context.Request.Method, context.Request.Path);
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return;
         }
@@ -269,7 +322,7 @@ app.Use(async (context, next) =>
             throw;
         }
 
-        var esApi = context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
+        bool esApi = context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
                   || (context.Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase));
 
         context.Response.Clear();
@@ -294,7 +347,7 @@ app.Use(async (context, next) =>
         else
         {
             context.Response.ContentType = "text/html; charset=utf-8";
-            var mensajeHtml = $@"
+            string mensajeHtml = $@"
 <!DOCTYPE html>
 <html lang='es'>
 <head><meta charset='utf-8'><title>Error Interno - SmileTrack</title>
@@ -326,12 +379,12 @@ a{{color:#0f766e;text-decoration:none;font-weight:600;}}
 
     app.Use(async (context, next) =>
     {
-        var path = context.Request.Path.Value;
+        string? path = context.Request.Path.Value;
         if (!string.IsNullOrWhiteSpace(path) &&
             path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase) &&
             !path.StartsWith("/ViewProxy/Render/", StringComparison.OrdinalIgnoreCase))
         {
-            var normalized = path.Trim('/');
+            string normalized = path.Trim('/');
             context.Request.Path = $"/ViewProxy/Render/{normalized}";
         }
 
@@ -364,6 +417,7 @@ a{{color:#0f766e;text-decoration:none;font-weight:600;}}
 
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseRateLimiter();
 
     // InferirModuloDesdeRuta removed — unused helper created earlier; keeping codebase minimal avoids dead code warnings
 
@@ -387,27 +441,76 @@ static async Task EnsureDatabaseSchemaAsync(IServiceProvider services, ILogger l
     {
         await db.Database.EnsureCreatedAsync();
 
-        var scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "Database", "SCRIPT_SQL_UNICO_SMILETRACK.sql");
+        string scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "Database", "SCRIPT_SQL_UNICO_SMILETRACK.sql");
 
         if (File.Exists(scriptPath))
         {
-            var sql = await File.ReadAllTextAsync(scriptPath);
-            var batches = Regex.Split(sql, @"^\s*GO\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
-            foreach (var batch in batches)
+            // Seguridad: ejecutar solo si el archivo forma parte del repositorio versionado.
+            // Intentar verificar usando 'git ls-files --error-unmatch <path>' al root del repo.
+            bool isTracked = false;
+            try
             {
-                var trimmed = batch.Trim();
-                if (string.IsNullOrWhiteSpace(trimmed))
-                    continue;
+                var relative = Path.GetRelativePath(Directory.GetCurrentDirectory(), scriptPath).Replace("\\", "/");
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = $"ls-files --error-unmatch \"{relative}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
 
-                await db.Database.ExecuteSqlRawAsync(trimmed);
+                using var proc = System.Diagnostics.Process.Start(psi);
+                if (proc != null)
+                {
+                    await proc.WaitForExitAsync();
+                    if (proc.ExitCode == 0)
+                    {
+                        isTracked = true;
+                    }
+                    else
+                    {
+                        var err = await proc.StandardError.ReadToEndAsync();
+                        logger.LogWarning("El script {ScriptPath} no está en el index de git (salida: {Error}). No se ejecutará por seguridad.", scriptPath, err);
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("No se pudo iniciar proceso 'git' para verificar {ScriptPath}. Se omitirá la ejecución.", scriptPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Si git no está disponible o falla, NO ejecutar el script por seguridad.
+                logger.LogWarning(ex, "No fue posible verificar si {ScriptPath} está versionado. No se ejecutará por seguridad.", scriptPath);
+                isTracked = false;
             }
 
-            logger.LogInformation("✅ Script unificado ejecutado desde {ScriptPath}", scriptPath);
+            if (isTracked)
+            {
+                string sql = await File.ReadAllTextAsync(scriptPath);
+                string[] batches = Regex.Split(sql, @"^\s*GO\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+                foreach (string batch in batches)
+                {
+                    string trimmed = batch.Trim();
+                    if (string.IsNullOrWhiteSpace(trimmed))
+                        continue;
+
+                    await db.Database.ExecuteSqlRawAsync(trimmed);
+                }
+
+                logger.LogInformation("✅ Script unificado ejecutado desde {ScriptPath}", scriptPath);
+            }
+            else
+            {
+                logger.LogWarning("El script {ScriptPath} existe localmente pero no se ejecutó porque no está comprobado como parte del repositorio versionado.", scriptPath);
+            }
         }
         else
         {
             // Fallback: apply minimal column fixes required by the runtime model
-            var statements = new[]
+            string[] statements = new[]
             {
                 """
                 IF COL_LENGTH(N'dbo.Usuario', N'codigo_recuperacion') IS NULL
@@ -447,7 +550,7 @@ static async Task EnsureDatabaseSchemaAsync(IServiceProvider services, ILogger l
                 """
             };
 
-            foreach (var statement in statements)
+            foreach (string? statement in statements)
             {
                 await db.Database.ExecuteSqlRawAsync(statement);
             }
@@ -463,7 +566,7 @@ static async Task EnsureDatabaseSchemaAsync(IServiceProvider services, ILogger l
 
 static string SelectFirstAvailableUrl(string[] urls)
 {
-    foreach (var url in urls)
+    foreach (string url in urls)
     {
         if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
@@ -503,7 +606,7 @@ static async Task WaitForSqlServerAsync(string connectionString, ILogger logger)
     const int maxAttempts = 12;
     var delay = TimeSpan.FromSeconds(2);
 
-    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    for (int attempt = 1; attempt <= maxAttempts; attempt++)
     {
         try
         {
@@ -778,7 +881,7 @@ _ = Task.Run(async () =>
     var fakePacientes = await db.Pacientes.Where(p => p.Nombres == "Paciente" && p.Apellidos == "Prueba").ToListAsync();
     if (fakePacientes.Count > 0)
     {
-        var fakePacienteIds = fakePacientes.Select(p => p.IdPaciente).ToArray();
+            int[] fakePacienteIds = fakePacientes.Select(p => p.IdPaciente).ToArray();
         var pacientesConHistoria = await db.HistoriasClinicas
             .Where(h => fakePacienteIds.Contains(h.IdPaciente))
             .Select(h => h.IdPaciente)

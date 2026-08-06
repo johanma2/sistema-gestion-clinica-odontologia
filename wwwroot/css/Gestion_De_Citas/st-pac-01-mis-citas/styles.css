@@ -190,10 +190,15 @@ td.td-doctor { font-weight: 600; font-size: .82rem; }
 .badge-cancelada { background:#fee2e2; color:#991b1b; } .badge-cancelada::before { background: #ef4444; }
 
 /* Acciones */
-.actions-cell { display: flex; align-items: center; gap: 4px; }
+.actions-cell { display: flex; align-items: center; gap: 8px; justify-content: center; }
 .btn-icon { background: none; border: none; cursor: pointer; font-size: 16px; padding: 5px 7px; border-radius: 6px; transition: background var(--tr), color var(--tr); color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
 .btn-icon:hover { background: var(--primary-light); color: var(--primary); }
 .btn-icon.danger:hover { background: #fee2e2; color: #dc2626; }
+.btn-icon.action-btn { background: var(--white); border: 1.5px solid var(--border); padding: 7px 12px; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06); }
+.btn-icon.action-btn .btn-text { display: inline; }
+.btn-icon.action-btn:hover { background: #eff6ff; color: var(--primary); }
+.btn-icon.action-btn.danger { color: #b91c1c; border-color: #fecaca; }
+.btn-icon.action-btn.danger:hover { background: #fee2e2; color: #991b1b; }
 
 /* Empty state */
 .empty-state { text-align: center; padding: 40px 24px; color: var(--text-muted); }

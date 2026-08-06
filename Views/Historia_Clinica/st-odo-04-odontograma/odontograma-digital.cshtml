@@ -1,4 +1,4 @@
-﻿@using System.Text.Json
+﻿﻿﻿@using System.Text.Json
 @using SmileTrack_MVC.Models.ViewModels
 @model OdontogramaViewModel
 @{
@@ -36,6 +36,8 @@
     <!-- API de Sketchfab -->
     <script type="text/javascript" src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/Historia_Clinica/st-odo-04-odontograma/odontograma-digital.css")" />
+    <!-- Shared: sidebar responsive (Sprint 1) -->
+    <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -58,20 +60,11 @@
   <!-- ═════ MAIN ═════ -->
   <main class="main" id="main-content">
 
-    <!-- HAMBURGER -->
-    <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-    </button>
-
     <!-- BANNER MODO MAPEO -->
     <div class="modo-mapeo-banner" id="modo-mapeo-banner" role="status" aria-live="polite">
         🎯 MODO MAPEO ACTIVO — Haz clic en un diente del modelo 3D
     </div>
 
-    <!-- ═════ MAIN ═════ -->
-    <main class="main" id="main-content">
 
         <!-- HEADER -->
         <header class="page-header">
@@ -276,5 +269,10 @@
         <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
     </footer>
 
+
+    <!-- Shared modules (Sprint 1): sidebar interactivo, toasts y confirm modal -->
+    <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+    @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+    @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>

@@ -1,4 +1,4 @@
-@* ============================================
+﻿@* ============================================
 SmileTrack — Reportes Clínicos (st-adm-14-reportes-clinicos)
 ============================================
 Autor: Johan Santamaria
@@ -41,7 +41,10 @@ NOTAS DE MANTENIMIENTO:
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/styles.css?v=2")" />
+    <link rel="stylesheet" href="@Url.Content("~/css/footer.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -49,24 +52,7 @@ NOTAS DE MANTENIMIENTO:
     <!-- Enlace para saltar al contenido principal (accesibilidad) -->
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-    <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-        <div class="sidebar-logo">
-            <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-        </div>
-        @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-        <div class="sidebar-user">
-            @{
-                var userName = User.Identity?.Name ?? "Administrador";
-                var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin@smiletrack.co";
-                var userInitials = string.Concat(userName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
-            }
-            <div class="user-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(userInitials) ? "AD" : userInitials)</div>
-            <div class="user-info">
-                <span class="user-role">@userName</span>
-                <span class="user-email">@userEmail</span>
-            </div>
-        </div>
-    </aside>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
 
 
     <!-- ═══ HAMBURGER (móvil) ═══ -->
@@ -114,7 +100,7 @@ NOTAS DE MANTENIMIENTO:
         <section class="filters-section" aria-label="Filtros de búsqueda">
             <form method="get" class="filters-row">
                 <div class="search-wrap">
-                    <span class="search-icon" aria-hidden="true">🔍</span>
+                    <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
                     <input type="search" id="searchInput" name="search" class="search-input" placeholder="Buscar por nombre o documento..." aria-label="Buscar paciente" value="@ViewData["SearchFilter"]">
                 </div>
                 <div class="filter-wrap">
@@ -123,8 +109,8 @@ NOTAS DE MANTENIMIENTO:
                         <option value="">Todos los profesionales</option>
                         @foreach (var prof in profesionales)
                         {
-                            var selected = ViewData["ProfesionalFilter"]?.ToString() == prof ? "selected" : "";
-                            <option value="@prof" @(selected)>@prof</option>
+                            var profSelected = ViewData["ProfesionalFilter"]?.ToString() == prof;
+                            <option value="@prof" @(profSelected ? "selected" : null)>@prof</option>
                         }
                     </select>
                 </div>
@@ -136,8 +122,8 @@ NOTAS DE MANTENIMIENTO:
                         {
                             var mes = DateTime.Now.AddMonths(-i).ToString("yyyy-MM");
                             var mesTexto = DateTime.Now.AddMonths(-i).ToString("MMMM yyyy");
-                            var selected = ViewData["MesFilter"]?.ToString() == mes ? "selected" : "";
-                            <option value="@mes" @(selected)>@mesTexto</option>
+                            var mesSelected = ViewData["MesFilter"]?.ToString() == mes;
+                            <option value="@mes" @(mesSelected ? "selected" : null)>@mesTexto</option>
                         }
                     </select>
                 </div>
@@ -301,41 +287,21 @@ NOTAS DE MANTENIMIENTO:
 
     <footer id="dynamic-footer" class="site-footer" role="contentinfo">
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-            <span style="font-size:1rem;">🦷</span>
-            <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+            <span class="material-symbols-outlined" aria-hidden="true" style="font-size:1rem;">favorite</span>
+            <p>© @DateTime.Now.Year Smile Track. Todos los derechos reservados.</p>
         </div>
         <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
-        <script src="@Url.Content("~/js/footer.js")"></script>
-        <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
     </footer>
 
+    <script src="@Url.Content("~/js/footer.js")"></script>
     <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-adm-14-reportes-clinicos/reportes.js")"></script>
 
-   <script>
-@@ -296,24 +298,6 @@
-                    sel.addEventListener('change', () => filterForm.submit());
-                });
-            }
-
-            // Sidebar nav-group collapsible
-            document.querySelectorAll('.nav-group-header').forEach(header => {
-                const items = header.nextElementSibling;
-                const arrow = header.querySelector('.nav-arrow');
-                if (!items || !arrow) return;
-                const setExpanded = (isExpanded) => {
-                    items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-                    arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-                    header.setAttribute('aria-expanded', String(isExpanded));
-                };
-                setExpanded(false);
-                const toggle = () => { const isExpanded = header.getAttribute('aria-expanded') === 'true'; setExpanded(!isExpanded); };
-                header.addEventListener('click', toggle);
-                header.addEventListener('keydown', e => {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
-                });
-            });
-        });
-    </script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
+    <script src="@Url.Content("~/js/shared/validation-utils.js")"></script>
 </body>
 
 </html>
+
+

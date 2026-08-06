@@ -1,4 +1,4 @@
-@* ============================================
+﻿﻿@* ============================================
    SmileTrack — Gestión Integral de Citas (st-adm-09-citas)
    ============================================
    Autor: Johan Santamaria
@@ -57,34 +57,17 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
         rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-adm-09-citas/gestionintegral.css")" />
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
     <!-- Enlace de accesibilidad: saltar al contenido principal -->
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-    <!-- Sidebar de navegación principal -->
-    <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-        <div class="sidebar-logo">
-            <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-        </div>
-
-        @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-
-        <div class="sidebar-user">
-            <div class="user-avatar" aria-hidden="true">
-                @(User.Identity?.Name?.Length >= 2 
-                    ? User.Identity.Name.Substring(0, 2).ToUpperInvariant() 
-                    : "U")
-            </div>
-            <div class="user-info">
-                <span class="user-role">@User.Identity?.Name</span>
-                <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
-            </div>
-        </div>
-    </aside>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
 
     <!-- Botón hamburguesa para dispositivos móviles -->
     <button 
@@ -190,7 +173,7 @@
             <section class="filters-section" aria-label="Filtros de búsqueda">
                 <form method="get" class="filters-row">
                     <div class="search-wrap">
-                        <span class="search-icon" aria-hidden="true">🔍</span>
+                        <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
                         <input 
                             type="search" 
                             id="searchAppointments" 
@@ -355,7 +338,8 @@
                                     name="Estado" 
                                     class="status-badge status-select-inline @((cita.Estado ?? string.Empty).ToLowerInvariant())" 
                                     onchange="this.form.submit()" 
-                                    aria-label="Cambiar estado de la cita">
+                                    aria-label="Cambiar estado de la cita"
+                                    title="Cambiar estado de la cita">
                                     @foreach (var estado in new[] { "Programada", "Confirmada", "Atendida", "Cancelada" })
                                     {
                                         var isSelected = string.Equals(cita.Estado, estado, StringComparison.OrdinalIgnoreCase);
@@ -379,40 +363,39 @@
                                 var cEstado = cita.EstadoCita?.NombreEstado ?? cita.Estado ?? "Sin estado";
                                 var cNotas = cita.NotasPrevias ?? "";
                             }
-                            <button
-                                type="button"
-                                class="action-btn btn-view"
-                                aria-label="Ver detalle de la cita"
-                                title="Ver detalles"
-                                data-id="@cita.IdCita"
-                                data-fecha="@cFecha"
-                                data-hora="@cHora"
-                                data-paciente="@cPaciente"
-                                data-profesional="@cProfesional"
-                                data-servicio="@cServicio"
-                                data-consultorio="@cConsultorio"
-                                data-estado="@cEstado"
-                                data-notas="@cNotas.Replace("\"", "&quot;")">
-                                👁️
-                            </button>
-                            <a 
-                                class="action-btn" 
-                                href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })" 
-                                title="Editar">
-                                ✏️
-                            </a>
-                            <form method="post" action="/gestion-de-citas/eliminar-cita" style="display:inline;">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="IdCita" value="@cita.IdCita" />
-                                <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
-                                <button 
-                                    class="action-btn btn-delete" 
-                                    type="submit" 
-                                    onclick="return confirm('¿Eliminar esta cita?');" 
-                                    title="Eliminar">
-                                    ❌
+                            <div class="actions-cell">
+                                <button
+                                    type="button"
+                                    class="action-btn btn-icon btn-view view"
+                                    aria-label="@Html.Encode($"Ver detalles de la cita de {cPaciente}")"
+                                    title="Ver detalles de la cita de @Html.Encode(cPaciente)"
+                                    data-id="@cita.IdCita"
+                                    data-fecha="@Html.Encode(cFecha)"
+                                    data-hora="@Html.Encode(cHora)"
+                                    data-paciente="@Html.Encode(cPaciente)"
+                                    data-profesional="@Html.Encode(cProfesional)"
+                                    data-servicio="@Html.Encode(cServicio)"
+                                    data-consultorio="@Html.Encode(cConsultorio)"
+                                    data-estado="@Html.Encode(cEstado)"
+                                    data-notas="@Html.Encode(cNotas)">
+                                    👁️ <span class="btn-text">Ver</span>
                                 </button>
-                            </form>
+                                <a
+                                    class="action-btn btn-icon edit"
+                                    href="@Url.Action("Stadm09Citas", "GestionCitas", new { editId = cita.IdCita })"
+                                    aria-label="Editar la cita de @cPaciente"
+                                    title="Editar la cita de @Html.Encode(cPaciente)">
+                                    ✏️ <span class="btn-text">Editar</span>
+                                </a>
+                                <button
+                                    type="button"
+                                    class="action-btn btn-icon btn-delete toggle"
+                                    aria-label="Eliminar la cita de @cPaciente"
+                                    title="Eliminar la cita de @Html.Encode(cPaciente)"
+                                    onclick="openConfirmDeleteCita(@cita.IdCita, '@cPaciente.Replace("'", "\\'")' )">
+                                    ❌ <span class="btn-text">Eliminar</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 }
@@ -526,8 +509,8 @@
             <h2 class="modal-title" id="modalAppointmentTitle">Detalle de Cita</h2>
             <div id="modalAppointmentContent" class="modal-content" role="document"></div>
             <div class="modal-footer">
-                <button class="btn-secondary" id="modalAppointmentCancel">Cerrar</button>
-                <button class="btn-primary" id="modalAppointmentEdit">Editar</button>
+                <button class="btn-secondary" id="modalAppointmentCancel" aria-label="Cerrar detalles de la cita actual">Cerrar</button>
+                <button class="btn-primary" id="modalAppointmentEdit" aria-label="Abrir formulario de edición de la cita actual">Editar</button>
             </div>
         </div>
     </div>
@@ -535,21 +518,49 @@
     <!-- Navegación inferior para móviles -->
     <nav class="mobile-nav" aria-label="Navegación móvil">
         <a href="/gestion-de-citas/st-adm-01-dashboard" class="mobile-nav-item">
-            <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+            <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">space_dashboard</span>
             <span>Dashboard</span>
         </a>
         <a href="#" class="mobile-nav-item active" aria-current="page">
-            <span class="mobile-nav-icon" aria-hidden="true">🗓️</span>
+            <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">event</span>
             <span>Citas</span>
         </a>
         <a href="/gestion-de-citas/st-adm-08-agenda" class="mobile-nav-item">
-            <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+            <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">calendar_month</span>
             <span>Agenda</span>
         </a>
     </nav>
 
     <!-- Contenedor de notificaciones toast -->
     <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    @if (TempData["MensajeExito"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const toast = document.getElementById('toast');
+                if (toast) {
+                    toast.textContent = '✅ @TempData["MensajeExito"]';
+                    toast.className = 'toast show';
+                    setTimeout(() => toast.classList.remove('show'), 4000);
+                }
+            });
+        </script>
+    }
+
+    @if (TempData["ErrorValidacion"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const toast = document.getElementById('toast');
+                if (toast) {
+                    toast.textContent = '⚠️ @TempData["ErrorValidacion"]';
+                    toast.className = 'toast warning show';
+                    setTimeout(() => toast.classList.remove('show'), 5000);
+                }
+            });
+        </script>
+    }
 
     <!-- Modal: Crear/Editar Cita -->
     <div 
@@ -622,6 +633,22 @@
                             }
                         </select>
                         <span class="error-message" id="error-idConsultorioCita" role="alert">Por favor selecciona un consultorio.</span>
+                    </div>
+
+                    <!-- Servicio -->
+                    <div class="form-group">
+                        <label class="form-label" for="idServicioCita">Servicio *</label>
+                        <select id="idServicioCita" name="IdServicio" class="form-input" required aria-required="true" aria-describedby="error-idServicioCita">
+                            <option value="">Seleccione servicio</option>
+                            @foreach (var servicio in servicios)
+                            {
+                                var isSelectedServicio = editingCita?.IdServicio == servicio.IdServicio;
+                                <option value="@servicio.IdServicio" @(isSelectedServicio ? "selected" : "")>
+                                    @servicio.Nombre
+                                </option>
+                            }
+                        </select>
+                        <span class="error-message" id="error-idServicioCita" role="alert">Por favor selecciona un servicio.</span>
                     </div>
 
                     <!-- Fecha -->
@@ -715,8 +742,37 @@
                     <button type="button" class="btn-secondary" onclick="closeModalCita()">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn-primary">
+                    <button type="submit" class="btn-primary" id="btnGuardarCita">
                         @(isEditing ? "Guardar cambios" : "Crear cita")
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmar Eliminación de Cita -->
+    <div
+        class="modal-overlay"
+        id="modalConfirmDeleteCita"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalConfirmDeleteCitaTitle"
+        aria-hidden="true"
+        inert>
+        <div class="modal modal--sm">
+            <button class="modal-close" id="modalConfirmDeleteCitaClose" aria-label="Cerrar ventana">×</button>
+            <h2 class="modal-title" id="modalConfirmDeleteCitaTitle">Confirmar eliminación</h2>
+            <p id="modalConfirmDeleteCitaMessage" style="margin:16px 0 24px; line-height:1.5; color:var(--text-muted, #64748b);">
+                ¿Está seguro de eliminar esta cita? Esta acción no se puede deshacer.
+            </p>
+            <form id="formDeleteCita" method="post" action="/gestion-de-citas/eliminar-cita">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="deleteCitaId" name="IdCita" value="" />
+                <input type="hidden" id="deleteCitaReturnUrl" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="modalConfirmDeleteCitaCancel">Cancelar</button>
+                    <button type="submit" class="btn-primary" style="background:var(--red,#ef4444); border-color:var(--red,#ef4444);">
+                        Eliminar
                     </button>
                 </div>
             </form>
@@ -739,6 +795,22 @@
     <!-- Script de inicialización específico de la vista -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // ═══ MODAL CONFIRMAR ELIMINACIÓN DE CITA ═══
+            const modalDeleteCita = document.getElementById('modalConfirmDeleteCita');
+            document.getElementById('modalConfirmDeleteCitaClose')?.addEventListener('click', window.closeConfirmDeleteCita);
+            document.getElementById('modalConfirmDeleteCitaCancel')?.addEventListener('click', window.closeConfirmDeleteCita);
+            modalDeleteCita?.addEventListener('click', (e) => {
+                if (e.target === modalDeleteCita) window.closeConfirmDeleteCita();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modalDeleteCita?.classList.contains('open')) {
+                    e.preventDefault();
+                    window.closeConfirmDeleteCita();
+                }
+            });
+
+            // Accordion y hamburger manejados por ~/js/shared/sidebar.js
+
             // ═══ FILTROS AUTO-ENVÍO ═══
             const filterForm = document.querySelector('form[method="get"]');
             if (filterForm) {
@@ -778,39 +850,6 @@
                             row.style.display = (estado === 'no_asistio' || estado === 'no asistio' || estado === 'inasistencia') ? '' : 'none';
                         }
                     });
-                });
-            });
-
-            // ═══ SIDEBAR: GRUPOS DE NAVEGACIÓN COLAPSABLES ═══
-            document.querySelectorAll('.nav-group-header').forEach(header => {
-                const itemsContainer = header.nextElementSibling;
-                const arrowIcon = header.querySelector('.nav-arrow');
-
-                if (!itemsContainer || !arrowIcon) return;
-
-                // Función para actualizar estado visual y aria-expanded
-                const setExpandedState = (isExpanded) => {
-                    itemsContainer.style.maxHeight = isExpanded ? `${itemsContainer.scrollHeight}px` : '0px';
-                    arrowIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-                    header.setAttribute('aria-expanded', String(isExpanded));
-                };
-
-                // Estado inicial: colapsado
-                setExpandedState(false);
-
-                // Alternar estado al hacer clic
-                const toggleMenu = () => {
-                    const currentState = header.getAttribute('aria-expanded') === 'true';
-                    setExpandedState(!currentState);
-                };
-
-                // Eventos de interacción
-                header.addEventListener('click', toggleMenu);
-                header.addEventListener('keydown', event => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        toggleMenu();
-                    }
                 });
             });
 
@@ -894,34 +933,12 @@
                 });
             }
         });
-
-        // ═══ FUNCIONES GLOBALES PARA MODAL DE CITA ═══
-        function openModalCita() {
-            const modal = document.getElementById('modalCita');
-            if (modal) {
-                modal.classList.add('open');
-                modal.setAttribute('aria-hidden', 'false');
-                modal.removeAttribute('inert');
-                document.body.style.overflow = 'hidden';
-
-                modal.addEventListener('click', function outsideHandler(e) {
-                    if (e.target === modal) {
-                        closeModalCita();
-                        modal.removeEventListener('click', outsideHandler);
-                    }
-                });
-            }
-        }
-
-        function closeModalCita() {
-            const modal = document.getElementById('modalCita');
-            if (modal) {
-                modal.classList.remove('open');
-                modal.setAttribute('aria-hidden', 'true');
-                modal.setAttribute('inert', '');
-                document.body.style.overflow = '';
-            }
-        }
     </script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
+    <script src="@Url.Content("~/js/shared/validation-utils.js")"></script>
+    <script src="@Url.Content("~/js/shared/appointment-utils.js")"></script>
 </body>
 </html>
+

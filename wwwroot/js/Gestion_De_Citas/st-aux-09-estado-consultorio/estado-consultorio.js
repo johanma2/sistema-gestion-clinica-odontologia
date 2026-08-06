@@ -41,16 +41,6 @@ const debounce = (fn, delay) => {
 };
 
 // WHY: Las notificaciones no bloqueantes brindan retroalimentación sin interrumpir el flujo clínico del auxiliar
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 // WHY: La clave incluye consultorio y fecha para evitar colisiones entre sesiones de distintos consultorios en el mismo dispositivo
 const consultorioStorage = {
@@ -267,7 +257,7 @@ const initAddItem = () => {
   const addItem = () => {
     const text = input.value.trim();
     if (!text) {
-      showToast('Por favor escribe un ítem', 'warning');
+      window.ToastService.warning('Por favor escribe un ítem');
       input.focus();
       return;
     }
@@ -316,7 +306,7 @@ const initAddItem = () => {
     // Actualiza progreso
     updateProgressUI();
     
-    showToast('Ítem agregado', 'success');
+    window.ToastService.success('Ítem agregado');
   };
   
   // Event listeners para agregar ítem
@@ -372,7 +362,7 @@ const initStatusSelector = () => {
       consultorioStorage.updateStatus(value);
       
       // Feedback visual
-      showToast(`Estado actualizado: ${option.querySelector('strong')?.textContent}`, 'info');
+      window.ToastService.success(`Estado actualizado: ${option.querySelector('strong')?.textContent}`, 'info');
     });
     
     // Soporte para teclado en opciones de estado
@@ -437,7 +427,7 @@ const initConfirmButtons = () => {
       const progress = calculateProgress();
       
       if (progress.checked < progress.total) {
-        showToast(`Completa ${progress.total - progress.checked} ítem(s) pendiente(s)`, 'warning');
+        window.ToastService.warning(`Completa ${progress.total - progress.checked} ítem(s) pendiente(s)`);
         return;
       }
       
@@ -445,7 +435,7 @@ const initConfirmButtons = () => {
       consultorioStorage.addToHistory('Auxiliar', 'Preparación del consultorio confirmada');
       
       // Feedback visual
-      showToast('✅ Preparación del consultorio confirmada', 'success');
+      window.ToastService.success('✅ Preparación del consultorio confirmada');
       
       // Deshabilita botón temporalmente
       btnPreparation.disabled = true;
@@ -468,7 +458,7 @@ const initConfirmButtons = () => {
       consultorioStorage.addToHistory('Auxiliar', `Estado actualizado a: ${status}`);
       
       // Feedback visual
-      showToast(`✅ Estado actualizado: ${status}`, 'success');
+      window.ToastService.success(`✅ Estado actualizado: ${status}`);
       
       // Deshabilita botón temporalmente
       btnStatus.disabled = true;

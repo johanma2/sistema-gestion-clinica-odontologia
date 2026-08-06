@@ -1,4 +1,4 @@
-﻿@{ Layout = null; }
+﻿﻿﻿﻿@{ Layout = null; }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -11,7 +11,9 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
         rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="@Url.Content("~/css/Perfiles/st-rec-06-perfil-recepcionista/perfil-recepcionista.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -19,58 +21,8 @@
     <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-    <!-- ═════ SIDEBAR UNIFICADO (Activo: Mi perfil) ═════ -->
-    <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="nav-item" data-icon="👥">Gestión de Pacientes</a>
-        <a href="/gestion-de-pacientes/st-rec-02-registrar-paciente" class="nav-item" data-icon="➕">Registrar Paciente + Cita</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/perfiles/st-rec-06-perfil-recepcionista" class="nav-item active" data-icon="👤" aria-current="page">Perfil del Recepcionista</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-citas/st-rec-01-dashboard" class="nav-item" data-icon="📊">Panel de Recepción</a>
-        <a href="/gestion-de-citas/st-rec-03-gestion-citas" class="nav-item" data-icon="📅">Gestión de Citas</a>
-        <a href="/gestion-de-citas/st-rec-05-recordatorios" class="nav-item" data-icon="🔔">Recordatorios</a>
-        <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="nav-item" data-icon="✅">Citas Finalizadas</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/facturacion-y-pagos/st-rec-04-generar-factura" class="nav-item" data-icon="🧾">Generar Factura y Pago</a>
-      </div>
-    </div>
-    <div class="nav-separator" aria-hidden="true"></div>
-    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
-  </nav>
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">RE</div>
-    <div class="user-info">
-      <span class="user-role">Recepción</span>
-      <span class="user-email">recepcion@smiletrack.co</span>
-    </div>
-  </div>
-</aside>
-    <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
+    @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
+    <!-- Botón hamburguesa para menú mÓvil, con atributos ARIA para accesibilidad -->
     <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
         <span aria-hidden="true"></span>
         <span aria-hidden="true"></span>
@@ -78,13 +30,13 @@
     </button>
     <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-    <!-- ═════ MAIN ═════ -->
+    <!-- ----- MAIN ----- -->
     <main class="main" id="main-content">
 
         <!-- Page header -->
         <header class="page-header">
             <div class="header-left">
-                <div class="breadcrumb">Recepción → Mi perfil</div>
+                <div class="breadcrumb">Recepción ? Mi perfil</div>
                 <h1 class="page-title">Mi Perfil</h1>
                 <p class="page-subtitle">Gestiona tu información personal y preferencias de cuenta</p>
             </div>
@@ -98,10 +50,9 @@
                 <h2 id="profileHeading" class="visually-hidden">Información del perfil</h2>
                 <div class="profile-avatar-large" id="profileAvatar" aria-label="Foto de perfil">RE</div>
                 <p class="profile-name" id="profileName">Recepcionista</p>
-                <p class="profile-role">Recepción • SmileTrack</p>
+                <p class="profile-role">Recepción — SmileTrack</p>
                 <p class="profile-email" id="profileEmail">recepcion@smiletrack.co</p>
-                <button class="btn-upload" id="btnUploadPhoto" aria-label="Cambiar foto de perfil">📷 Cambiar
-                    foto</button>
+                <button class="btn-upload" id="btnUploadPhoto" aria-label="Cambiar foto de perfil"><span class="material-symbols-outlined" aria-hidden="true">photo_camera</span> Cambiar foto</button>
                 <input type="file" id="fileInput" accept="image/*" class="visually-hidden"
                     aria-label="Seleccionar imagen de perfil" />
             </aside>
@@ -125,56 +76,56 @@
                                     autocomplete="organization-title" />
                             </div>
                             <div class="form-group">
-                                <label class="form-label" for="email">Correo electrónico</label>
+                                <label class="form-label" for="email">Correo electrÓnico</label>
                                 <input type="email" id="email" name="email" class="form-input"
                                     value="recepcion@smiletrack.co" autocomplete="email" />
                             </div>
                             <div class="form-group">
-                                <label class="form-label" for="telefono">Teléfono</label>
+                                <label class="form-label" for="telefono">TelÉfono</label>
                                 <input type="tel" id="telefono" name="telefono" class="form-input"
                                     value="+57 300 123 4567" autocomplete="tel" />
                             </div>
                             <div class="form-group full-width">
                                 <label class="form-label" for="bio">Biografía</label>
                                 <textarea id="bio" name="bio" class="form-textarea"
-                                    placeholder="Cuéntanos sobre ti...">Encargada de recepción en SmileTrack. Apasionada por la atención al paciente.</textarea>
+                                    placeholder="Cu—ntanos sobre ti...">Encargada de recepción en SmileTrack. Apasionada por la atención al paciente.</textarea>
                             </div>
                         </div>
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" id="btnCancel">Cancelar</button>
-                            <button type="submit" class="btn-primary" id="btnSaveProfile">💾 Guardar cambios</button>
+                            <button type="submit" class="btn-primary" id="btnSaveProfile"><span class="material-symbols-outlined" aria-hidden="true">save</span> Guardar cambios</button>
                         </div>
                     </form>
                 </section>
 
                 <!-- Sección: Cambiar contraseña -->
                 <section class="profile-form password-section" aria-labelledby="passwordTitle">
-                    <h3 class="password-section-title" id="passwordTitle">🔐 Cambiar contraseña</h3>
+                    <h3 class="password-section-title" id="passwordTitle"><span class="material-symbols-outlined" aria-hidden="true">lock</span> Cambiar contraseña</h3>
                     <form id="passwordForm" class="modal-form" novalidate>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label" for="currentPassword">Contraseña actual</label>
                                 <input type="password" id="currentPassword" name="currentPassword" class="form-input"
-                                    placeholder="••••••••" autocomplete="current-password" required />
+                                    placeholder="" autocomplete="current-password" required />
                                 <span class="error-message" id="error-currentPassword">Por favor ingresa tu contraseña
                                     actual</span>
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="newPassword">Nueva contraseña</label>
                                 <input type="password" id="newPassword" name="newPassword" class="form-input"
-                                    placeholder="••••••••" autocomplete="new-password" required minlength="8" />
+                                    placeholder="" autocomplete="new-password" required minlength="8" />
                                 <span class="error-message" id="error-newPassword">Mínimo 8 caracteres</span>
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="confirmPassword">Confirmar nueva contraseña</label>
                                 <input type="password" id="confirmPassword" name="confirmPassword" class="form-input"
-                                    placeholder="••••••••" autocomplete="new-password" required />
+                                    placeholder="" autocomplete="new-password" required />
                                 <span class="error-message" id="error-confirmPassword">Las contraseñas no
                                     coinciden</span>
                             </div>
                         </div>
                         <div class="form-actions">
-                            <button type="submit" class="btn-success" id="btnChangePassword">✓ Actualizar
+                            <button type="submit" class="btn-success" id="btnChangePassword"><span class="material-symbols-outlined" aria-hidden="true">lock</span> Actualizar
                                 contraseña</button>
                         </div>
                     </form>
@@ -182,7 +133,7 @@
 
                 <!-- Sección: Preferencias -->
                 <section class="profile-form preferences-section" aria-labelledby="preferencesTitle">
-                    <h3 class="profile-form-title" id="preferencesTitle">⚙️ Preferencias</h3>
+                    <h3 class="profile-form-title" id="preferencesTitle"><span class="material-symbols-outlined" aria-hidden="true">settings</span> Preferencias</h3>
 
                     <div class="preference-item">
                         <div>
@@ -220,25 +171,25 @@
 
                 <!-- Sección: Historial de actividad -->
                 <section class="activity-section" aria-labelledby="activityTitle">
-                    <h3 class="activity-section-title" id="activityTitle">📋 Actividad reciente</h3>
+                    <h3 class="activity-section-title" id="activityTitle"><span class="material-symbols-outlined" aria-hidden="true">history</span> Actividad reciente</h3>
                     <div class="activity-list" role="list" aria-label="Lista de actividades recientes">
                         <div class="activity-item" role="listitem">
-                            <span class="activity-icon" aria-hidden="true">🔐</span>
+                            <span class="activity-icon material-symbols-outlined" aria-hidden="true">login</span>
                             <div class="activity-info">
                                 <p class="activity-title">Inicio de sesión</p>
-                                <p class="activity-time"><time datetime="2026-03-20T09:47">Hoy, 09:47 AM</time> •
+                                <p class="activity-time"><time datetime="2026-03-20T09:47">Hoy, 09:47 AM</time> —
                                     Bogotá, CO</p>
                             </div>
                         </div>
                         <div class="activity-item" role="listitem">
-                            <span class="activity-icon" aria-hidden="true">✏️</span>
+                            <span class="activity-icon material-symbols-outlined" aria-hidden="true">edit</span>
                             <div class="activity-info">
                                 <p class="activity-title">Perfil actualizado</p>
                                 <p class="activity-time"><time datetime="2026-03-19T15:22">Ayer, 03:22 PM</time></p>
                             </div>
                         </div>
                         <div class="activity-item" role="listitem">
-                            <span class="activity-icon" aria-hidden="true">🔔</span>
+                            <span class="activity-icon material-symbols-outlined" aria-hidden="true">settings</span>
                             <div class="activity-info">
                                 <p class="activity-title">Preferencias modificadas</p>
                                 <p class="activity-time"><time datetime="2026-03-15T11:05">15 Mar, 11:05 AM</time></p>
@@ -249,14 +200,14 @@
 
                 <!-- Sección: Zona de peligro -->
                 <section class="danger-section" aria-labelledby="dangerTitle">
-                    <h3 class="danger-section-title" id="dangerTitle">⚠️ Zona de peligro</h3>
+                    <h3 class="danger-section-title" id="dangerTitle"><span class="material-symbols-outlined" aria-hidden="true">warning</span> Zona de peligro</h3>
                     <p class="danger-section-desc">Estas acciones son irreversibles. Por favor, procede con precaución.
                     </p>
                     <div style="display:flex;gap:12px;flex-wrap:wrap;">
                         <button class="btn-danger" id="btnLogoutAll"
-                            aria-label="Cerrar sesión en todos los dispositivos">🚪 Cerrar sesión en todos</button>
+                            aria-label="Cerrar sesión en todos los dispositivos"><span class="material-symbols-outlined" aria-hidden="true">logout</span> Cerrar sesión en todos</button>
                         <button class="btn-danger" id="btnDeleteAccount"
-                            aria-label="Eliminar cuenta permanentemente">🗑️ Eliminar cuenta</button>
+                            aria-label="Eliminar cuenta permanentemente"><span class="material-symbols-outlined" aria-hidden="true">delete_forever</span> Eliminar cuenta</button>
                     </div>
                 </section>
 
@@ -265,26 +216,26 @@
 
     </main>
 
-    <!-- Mobile bottom nav con aria-label para navegación móvil -->
-    <nav class="mobile-nav" aria-label="Navegación móvil">
+    <!-- Mobile bottom nav con aria-label para navegación mÓvil -->
+    <nav class="mobile-nav" aria-label="Navegación mÓvil">
         <a href="/gestion-de-citas/st-rec-01-dashboard" class="mobile-nav-item">
-            <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+            <span class="mobile-nav-icon material-symbols-outlined" aria-hidden="true">dashboard</span>
             <span>Panel</span>
         </a>
         <a href="/gestion-de-pacientes/st-rec-02-registrar-paciente" class="mobile-nav-item">
-            <span class="mobile-nav-icon" aria-hidden="true">👥</span>
+            <span class="mobile-nav-icon material-symbols-outlined" aria-hidden="true">person_add</span>
             <span>Pacientes</span>
         </a>
         <a href="/gestion-de-citas/st-rec-03-gestion-citas" class="mobile-nav-item">
-            <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+            <span class="mobile-nav-icon material-symbols-outlined" aria-hidden="true">calendar_month</span>
             <span>Citas</span>
         </a>
         <a href="/facturacion-y-pagos/st-rec-04-generar-factura" class="mobile-nav-item">
-            <span class="mobile-nav-icon" aria-hidden="true">🧾</span>
+            <span class="mobile-nav-icon material-symbols-outlined" aria-hidden="true">receipt_long</span>
             <span>Facturas</span>
         </a>
         <a href="#" class="mobile-nav-item active" aria-current="page">
-            <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+            <span class="mobile-nav-icon material-symbols-outlined" aria-hidden="true">person</span>
             <span>Perfil</span>
         </a>
     </nav>
@@ -325,46 +276,20 @@
 
     <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
-      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+      <span class="material-symbols-outlined" aria-hidden="true" style="font-size:1rem;">copyright</span>
+      <p>— 2025 Smile Track. Todos los derechos reservados.</p>
     </div>
-    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <p class="footer-sub">Proyecto Formativo ADSO — SENA</p>
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
     <script src="@Url.Content("~/js/Perfiles/st-rec-06-perfil-recepcionista/perfil-recepcionista.js")"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
 
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
-  });
-</script>
-
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 
 </html>
+
+

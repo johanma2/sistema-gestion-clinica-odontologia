@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewData["Title"] = "Gestión de Roles";
 }
 <!DOCTYPE html>
@@ -21,6 +21,7 @@
 
   <!-- Preload critical assets -->
   <link rel="preload" href="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" as="image" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -34,19 +35,7 @@
 
   <!-- ═════ SIDEBAR UNIFICADO ═════ -->
   
-<aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AD</div>
-    <div class="user-info">
-      <span class="user-role">Administrador</span>
-      <span class="user-email">admin@smiletrack.co</span>
-    </div>
-  </div>
-</aside>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
 
   <!-- ═════ HAMBURGER PARA MÓVIL ═════ -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú de navegación" aria-expanded="false"
@@ -452,42 +441,15 @@
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
-  });
-</script>
 <script>
   window.RAZOR_ROLES = @Html.Raw(ViewData["RolesJson"] ?? "[]");
 </script>
 <script src="@Url.Content("~/js/Acceso_Y_Seguridad/st-adm-03-gestion-roles/script.js")" defer></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 
 </html>
+
+

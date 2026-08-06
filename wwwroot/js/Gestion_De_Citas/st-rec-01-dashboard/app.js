@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Dashboard Recepción (st-rec-01-dashboard)
 ============================================
 Autor: Johan Santamaria
@@ -40,17 +40,6 @@ const debounce = (fn, delay) => {
 };
 
 // WHY: Muestra retroalimentación temporal autolimpiable para no interrumpir el flujo visual de la recepción
-const showToast = (msg) => {
-  const t = safeGetElement('toast');
-  if (!t) return;
-  
-  t.textContent = msg;
-  t.classList.add('show');
-  
-  // [MEJORA]: Limpiar timeout anterior si existe
-  if (t._timeoutId) clearTimeout(t._timeoutId);
-  t._timeoutId = setTimeout(() => t.classList.remove('show'), 3000);
-};
 
 // ═══ DATOS DE CITAS ═══
 const appointments = [
@@ -99,31 +88,43 @@ const appointments = [
 // ═══ UTILIDADES DE RENDERIZADO ═══
 
 /**
- * Mapeo de iconos para acciones de tabla
- * @param {string} action - Tipo de acción
- * @returns {Object} Objeto con icono, título y clase danger
+ * Mapeo de iconos para acciones de tabla.
+ * Cada entrada incluye icono, texto visible (btn-text) y si es acción de riesgo.
+ * WHY: el patrón canónico del sistema (st-adm-07) requiere emoji + <span class="btn-text">
+ * junto al ícono para que la acción sea legible sin depender de tooltip.
  */
 const getActionMeta = (action) => {
   const map = {
-    'pencil': { icon: '✏️', title: 'Editar', danger: true },
-    'file-invoice': { icon: '🧾', title: 'Facturar', danger: true },
-    'eye': { icon: '👁️', title: 'Ver', danger: false }
+    'pencil':       { icon: '✏️', label: 'Editar',   cls: 'btn-icon action-btn edit',     danger: false },
+    'file-invoice': { icon: '🧾', label: 'Facturar', cls: 'btn-icon action-btn btn-facturar', danger: false },
+    'eye':          { icon: '👁️', label: 'Ver',      cls: 'btn-icon action-btn btn-view',  danger: false }
   };
-  return map[action] || { icon: '👁️', title: 'Ver', danger: false };
+  return map[action] || { icon: '👁️', label: 'Ver', cls: 'btn-icon action-btn btn-view', danger: false };
 };
 
 /**
- * Crea el elemento de fila para una cita individual
- * @param {Object} appt - Datos de la cita
- * @returns {HTMLTableRowElement} Elemento tr con la cita
+ * Crea el elemento de fila para una cita individual.
+ * BUG FIX patrón canónico: los botones de acción ahora siguen la misma estructura
+ * que st-adm-07 — clase "btn-icon action-btn", emoji + <span class="btn-text">texto</span>,
+ * data-action para event delegation, y aria-label descriptivo con nombre del paciente.
+ * Antes solo tenían emoji sin texto visible, lo que rompía consistencia visual y
+ * dejaba sin contexto a usuarios con modo alto contraste o sin soporte de emoji.
  */
 const createAppointmentRow = (appt) => {
   const tr = document.createElement('tr');
   if (appt.highlight) tr.classList.add('row-highlight');
-  
-  // [MEJORA]: Atributos ARIA para accesibilidad de fila interactiva
   tr.setAttribute('role', 'row');
-  
+
+  const actionButtons = appt.actions.map(action => {
+    const meta = getActionMeta(action);
+    return `<button class="${meta.cls}" type="button"
+              data-action="${action}"
+              title="${meta.label} cita de ${appt.patient}"
+              aria-label="${meta.label} cita de ${appt.patient}">
+              ${meta.icon} <span class="btn-text">${meta.label}</span>
+            </button>`;
+  }).join('');
+
   tr.innerHTML = `
     <td class="col-hora">${appt.time}</td>
     <td class="col-paciente">${appt.patient}</td>
@@ -132,17 +133,11 @@ const createAppointmentRow = (appt) => {
     <td><span class="status-badge ${appt.statusClass}" role="status" aria-label="Estado: ${appt.status}">${appt.status}</span></td>
     <td>
       <div class="actions-cell" role="group" aria-label="Acciones para ${appt.patient}">
-        ${appt.actions.map(action => {
-          const meta = getActionMeta(action);
-          return `<button class="action-icon${meta.danger ? ' danger' : ''}" 
-            title="${meta.title}" 
-            data-action="${action}"
-            aria-label="${meta.title} cita de ${appt.patient}">${meta.icon}</button>`;
-        }).join('')}
+        ${actionButtons}
       </div>
     </td>
   `;
-  
+
   return tr;
 };
 
@@ -181,25 +176,25 @@ const renderAppointments = () => {
 // ═══ MANEJADORES DE EVENTOS ═══
 
 /**
- * [MEJORA]: Event delegation para manejar acciones en tabla dinámica
- * Evita attach de listeners individuales por fila (mejor performance)
- * @param {Event} e - Evento de click
+ * Event delegation para acciones en la tabla de citas.
+ * BUG FIX: el selector antes era '.action-icon' — clase que ya no se usa tras el cambio
+ * al patrón canónico. Ahora busca '[data-action]' directamente, que es más robusto
+ * y no depende de ninguna clase CSS específica.
  */
 const handleTableAction = (e) => {
-  const btn = e.target.closest('.action-icon');
+  const btn = e.target.closest('[data-action]');
   if (!btn) return;
-  
+
   const action = btn.dataset.action;
   const row = btn.closest('tr');
-  const patientName = row?.querySelector('.col-paciente')?.textContent || 'el paciente';
-  
-  // [MEJORA]: Feedback visual inmediato para acciones
+  const patientName = row?.querySelector('.col-paciente')?.textContent?.trim() || 'el paciente';
+
   if (action === 'pencil') {
-    showToast(`Editando cita de ${patientName}…`);
+    window.ToastService?.success('Editando cita', `Editando cita de ${patientName}…`);
   } else if (action === 'file-invoice') {
-    showToast(`Generando factura para ${patientName}…`);
+    window.ToastService?.success('Facturando', `Generando factura para ${patientName}…`);
   } else if (action === 'eye') {
-    showToast(`Viendo detalles de ${patientName}`);
+    window.ToastService?.info('Detalle', `Viendo detalles de ${patientName}`);
   }
 };
 
@@ -268,23 +263,27 @@ const initMobileMenu = () => {
 };
 
 /**
- * Inicializa botones de acción principal
+ * Inicializa botones de acción principal del header.
+ * BUG FIX: los handlers existían pero la navegación estaba comentada como placeholder.
+ * Ahora navegan a las rutas reales del módulo:
+ *   - "Nuevo paciente"    → /gestion-de-pacientes/st-rec-02-registrar-paciente
+ *   - "Generar factura"   → /facturacion-y-pagos/st-rec-04-generar-factura
+ * Estas rutas coinciden con las entradas del _SidebarRecepcionista, garantizando
+ * consistencia con la navegación lateral.
  */
 const initActionButtons = () => {
-  const btnNuevo = safeGetElement('btnNuevoPaciente');
+  const btnNuevo   = safeGetElement('btnNuevoPaciente');
   const btnFactura = safeGetElement('btnGenerarFactura');
-  
+
   if (btnNuevo) {
     btnNuevo.addEventListener('click', () => {
-      showToast('Redirigiendo a registro de paciente…');
-      // [MEJORA]: Aquí iría la navegación real
+      window.location.href = '/gestion-de-pacientes/st-rec-02-registrar-paciente';
     });
   }
-  
+
   if (btnFactura) {
     btnFactura.addEventListener('click', () => {
-      showToast('Abriendo generador de facturas…');
-      // [MEJORA]: Aquí iría la navegación real
+      window.location.href = '/facturacion-y-pagos/st-rec-04-generar-factura';
     });
   }
 };
@@ -304,7 +303,7 @@ const initAlertButtons = () => {
         ? 'Notificaciones de confirmación enviadas' 
         : 'Recordatorio de pago enviado';
       
-      showToast(msg);
+      window.ToastService.success(msg);
       
       // [MEJORA]: Deshabilitar botón con feedback visual
       btn.disabled = true;

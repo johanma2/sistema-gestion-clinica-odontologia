@@ -1,4 +1,4 @@
-@model SmileTrack_MVC.Models.ViewModels.ReportesProfesionalViewModel
+﻿@model SmileTrack_MVC.Models.ViewModels.ReportesProfesionalViewModel
 @{
     Layout = null;
     ViewData["Title"] = "Reportes Profesional";
@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Reportes/vista_prof/styles.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -332,5 +333,9 @@
   </main>
 
   <script src="@Url.Content("~/js/Reportes/vista_prof/main.js")"></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>
+

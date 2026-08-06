@@ -1,3 +1,4 @@
+﻿@removeTagHelper "Microsoft.AspNetCore.Mvc.TagHelpers.BodyTagHelper, Microsoft.AspNetCore.Mvc.TagHelpers"
 @{ Layout = null; }
 
 <!DOCTYPE html>
@@ -8,7 +9,6 @@
     <meta name="csrf-request-token" content="@requestToken" />
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Recuperar contraseña de SmileTrack - Sistema de Gestión Clínica Odontológica" />
     <title>Recuperar Contraseña - Smile Track</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -37,7 +37,16 @@
             }
         }
     </script>
-    <style>.dental-gradient-overlay { background: linear-gradient(135deg, rgba(0,53,95,0.85) 0%, rgba(25,28,30,0.7) 100%); }</style>
+    <style>.dental-gradient-overlay { background: linear-gradient(135deg, rgba(0,53,95,0.85) 0%, rgba(25,28,30,0.7) 100%); }
+    .otp-digit:focus { border-color: #a0c9ff !important; box-shadow: 0 0 0 3px rgba(160,201,255,.25); }
+    .otp-digit.filled { border-color: rgba(255,255,255,.5) !important; }
+    .otp-digit.error  { border-color: #f87171 !important; animation: otp-shake .35s ease; }
+    @@keyframes otp-shake {
+        0%,100% { transform: translateX(0); }
+        25%      { transform: translateX(-4px); }
+        75%      { transform: translateX(4px); }
+    }
+    </style>
 </head>
 <body class="bg-background font-body text-text-primary antialiased min-h-screen flex items-center justify-center p-6">
 
@@ -87,7 +96,7 @@
                 </button>
             </form>
 
-            <!-- FORMULARIO PASO 2: Código de verificación -->
+            <!-- FORMULARIO PASO 2: Código de verificación OTP (6 recuadros con auto-avance) -->
             <form id="step2" class="step-form px-10 pb-10 space-y-6 hidden" novalidate>
                 <div class="text-center mb-4">
                     <p class="text-white/80 text-sm">Hemos enviado un código de 6 dígitos a:</p>
@@ -95,9 +104,30 @@
                     <button type="button" id="resendCode" class="text-[#a0c9ff] text-sm hover:underline mt-2">¿No recibiste el código? Reenviar</button>
                 </div>
                 <div class="space-y-3">
-                    <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide" for="code">Código de Verificación</label>
-                    <input class="w-full text-center text-2xl tracking-[1em] py-4 bg-[#0f1f33]/80 border border-white/20 rounded-2xl focus:ring-3 focus:ring-white/30 focus:border-white transition-all duration-400 font-mono text-white placeholder:text-white/40 outline-none" id="code" name="code" type="text" placeholder="••••••" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required />
-                    <p id="codeError" class="text-error text-sm hidden" role="alert"></p>
+                    <label class="font-body text-label text-white/80 block font-medium uppercase tracking-wide text-center" id="otpLabel">
+                        Código de Verificación
+                    </label>
+                    <!-- 6 recuadros OTP con auto-avance, auto-retroceso y soporte de pegado -->
+                    <div class="otp-inputs" role="group" aria-labelledby="otpLabel"
+                         style="display:flex;gap:10px;justify-content:center;">
+                        @for (int i = 0; i < 6; i++)
+                        {
+                            <input class="otp-digit"
+                                   type="text"
+                                   inputmode="numeric"
+                                   pattern="[0-9]"
+                                   maxlength="1"
+                                   autocomplete="@(i == 0 ? "one-time-code" : "off")"
+                                   aria-label="Dígito @(i+1) de 6"
+                                   style="width:46px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;
+                                          background:rgba(15,31,51,.8);border:2px solid rgba(255,255,255,.2);
+                                          border-radius:12px;color:#fff;outline:none;
+                                          transition:border-color .2s,box-shadow .2s;" />
+                        }
+                    </div>
+                    <!-- Input oculto que agrega el valor completo para el submit -->
+                    <input type="hidden" id="code" name="code" value="" />
+                    <p id="codeError" class="text-error text-sm hidden text-center" role="alert"></p>
                 </div>
                 <div class="flex gap-3">
                     <button type="button" id="backToStep1" class="flex-1 bg-white/10 text-white py-4 rounded-2xl font-title text-button hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 font-semibold">
@@ -178,9 +208,10 @@
         </footer>
     </main>
 
-    <!-- Toast Container -->
-    <div id="toastContainer" class="fixed top-4 right-4 z-[10000] space-y-2"></div>
-
+    <script src="@Url.Content("~/js/shared/validation-utils.js")" defer></script>
     <script src="@Url.Content("~/js/Acceso_Y_Seguridad/recover/recover.js")" defer></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>
+

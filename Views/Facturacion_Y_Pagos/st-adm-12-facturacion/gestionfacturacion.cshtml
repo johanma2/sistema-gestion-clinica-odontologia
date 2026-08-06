@@ -1,4 +1,4 @@
-@{ Layout = null; }
+﻿@{ Layout = null; }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -14,6 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Facturacion_Y_Pagos/st-adm-12-facturacion/gestionfacturacion.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -21,75 +22,7 @@
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Acceso y Seguridad <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/acceso-y-seguridad/st-adm-02-gestion-usuarios" class="nav-item" data-icon="👥">Gestión de Usuarios</a>
-        <a href="/acceso-y-seguridad/st-adm-03-gestion-roles" class="nav-item" data-icon="🛡️">Gestión de Roles</a>
-        <a href="/acceso-y-seguridad/st-adm-15-bitacora" class="nav-item" data-icon="📜">Bitácora del Sistema</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-pacientes/st-adm-05-gestion-pacientes" class="nav-item" data-icon="👥">Gestión de Pacientes</a>
-
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-profesionales/st-adm-07-gestion-profesionales" class="nav-item" data-icon="🩺">Gestión de Profesionales</a>
-        <a href="/gestion-de-profesionales/st-adm-14-reportes-clinicos" class="nav-item" data-icon="📈">Reportes Clínicos</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-citas/st-adm-01-dashboard" class="nav-item" data-icon="📊">Dashboard General</a>
-        <a href="/gestion-de-citas/st-adm-08-agenda" class="nav-item" data-icon="📅">Agenda General</a>
-        <a href="/gestion-de-citas/st-adm-09-citas" class="nav-item" data-icon="🗓️">Gestión Integral de Citas</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Facturación y Pagos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/facturacion-y-pagos/st-adm-12-facturacion" class="nav-item active" data-icon="💰" aria-current="page">Gestión de Facturación</a>
-        <a href="/facturacion-y-pagos/st-adm-13-reportes-financieros" class="nav-item" data-icon="📊">Reportes Financieros</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Servicios y Recursos <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/servicios-y-recursos/st-adm-10-servicios" class="nav-item" data-icon="🔧">Catálogo de Servicios</a>
-        <a href="/servicios-y-recursos/st-adm-16-configuracion-general" class="nav-item" data-icon="⚙️">Configuración General</a>
-      </div>
-    </div>
-    <div class="nav-separator" aria-hidden="true"></div>
-    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
-  </nav>
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AD</div>
-    <div class="user-info">
-      <span class="user-role">Administrador</span>
-      <span class="user-email">admin@smiletrack.co</span>
-    </div>
-  </div>
-</aside>
+    @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
 
 
 
@@ -314,6 +247,11 @@
   window.RAZOR_INVOICES = @Html.Raw(ViewData["FacturasJson"] ?? "[]");
 </script>
 <script src="@Url.Content("~/js/Facturacion_Y_Pagos/st-adm-12-facturacion/gestionfacturacion.js")"></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 
 </html>
+
+

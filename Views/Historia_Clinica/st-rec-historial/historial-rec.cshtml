@@ -1,4 +1,4 @@
-﻿@{
+﻿﻿﻿﻿﻿﻿@{
     Layout = null;
     ViewData["Title"] = "Historial Clínico";
     ViewData["Description"] = "Consulta del historial clínico con navegación de recepción en SmileTrack.";
@@ -15,26 +15,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href='@(Url.Content("~/css/Historia_Clinica/st-rec-historial/historial-rec.css"))' asp-append-version="true" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 <body>
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-    <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-        <div class="sidebar-logo">
-            <img src='@(Url.Content("~/images/Imagenes/Logos/logo.jpg"))' alt="SmileTrack" class="logo-img" />
-        </div>
-
-        @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
-
-        <div class="sidebar-user">
-            <div class="user-avatar" aria-hidden="true">RE</div>
-            <div class="user-info">
-                <span class="user-role">Recepción</span>
-                <span class="user-email">recepcion@smiletrack.co</span>
-            </div>
-        </div>
-    </aside>
+    @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
 
     <div class="overlay" id="overlay" aria-hidden="true"></div>
 
@@ -48,7 +36,7 @@
         <div class="content">
             <nav class="breadcrumb" aria-label="Ruta de navegación">
                 <span>Recepción</span>
-                <span class="sep" aria-hidden="true">→</span>
+                <span class="sep" aria-hidden="true">›</span>
                 <span class="current">Historial Clínico</span>
             </nav>
 
@@ -57,7 +45,7 @@
                     <h1 class="page-title">Historial Clínico</h1>
                     <p class="page-subtitle">Consulta rápida de pacientes, odontólogos y alertas médicas.</p>
                 </div>
-                <div class="badge-admin">🔒 Solo lectura</div>
+                <div class="badge-admin"><span class="material-symbols-outlined" aria-hidden="true">visibility</span> Solo lectura</div>
             </header>
 
             <section class="stats-grid" aria-label="Resumen de historiales">
@@ -82,7 +70,7 @@
             <section class="filters-section" aria-label="Filtros de búsqueda">
                 <div class="filters-row">
                     <div class="search-wrap">
-                        <span class="search-icon" aria-hidden="true">🔍</span>
+                        <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
                         <input id="searchInput" class="search-input" type="search" placeholder="Buscar pacientes, cédula o correo" />
                     </div>
                     <select id="filterOdontologo" class="status-select" aria-label="Filtro por odontólogo">
@@ -128,7 +116,7 @@
                                 <th scope="col">Paciente</th>
                                 <th scope="col">Cédula</th>
                                 <th scope="col">Odontólogo</th>
-                                <th scope="col">Última consulta</th>
+                                <th scope="col">última consulta</th>
                                 <th scope="col">Alerta</th>
                                 <th scope="col">Estado</th>
                                 <th scope="col">Acción</th>
@@ -138,14 +126,14 @@
                     </table>
                 </div>
                 <div class="no-results" id="noResults" style="display:none;">
-                    <span aria-hidden="true">🔍</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
                     <p>No se encontraron pacientes con ese criterio</p>
                 </div>
                 <footer class="page-footer" id="paginationControls" style="display:none;">
                     <span class="pagination-info" id="paginationInfo">Mostrando <strong id="pageShowing">0</strong> de <strong id="pageTotal">0</strong> pacientes</span>
                     <nav class="pagination" aria-label="Páginas de resultados">
-                        <button class="pagination-btn" id="btnPrev" aria-label="Página anterior" disabled>‹</button>
-                        <button class="pagination-btn" id="btnNext" aria-label="Página siguiente">›</button>
+                        <button class="pagination-btn" id="btnPrev" aria-label="Página anterior" disabled>—</button>
+                        <button class="pagination-btn" id="btnNext" aria-label="Página siguiente">—</button>
                     </nav>
                 </footer>
             </section>
@@ -168,7 +156,7 @@
                         <div id="historyOdontologo">—</div>
                     </div>
                     <div class="history-block">
-                        <div class="block-label">Última consulta</div>
+                        <div class="block-label">última consulta</div>
                         <div id="historyUltimaConsulta">—</div>
                     </div>
                     <div class="history-block">
@@ -192,5 +180,10 @@
         </div>
     </main>
     <script src='@(Url.Content("~/js/Historia_Clinica/st-rec-historial/historial-rec.js"))' asp-append-version="true"></script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>
+
+

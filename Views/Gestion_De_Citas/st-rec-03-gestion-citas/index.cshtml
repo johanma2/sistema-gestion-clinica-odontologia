@@ -1,4 +1,4 @@
-@* ============================================
+﻿@* ============================================
 SmileTrack — Gestión de Citas Recepción (st-rec-03-gestion-citas)
 ============================================
 Autor: Johan Santamaria
@@ -53,6 +53,8 @@ NOTAS DE MANTENIMIENTO:
     rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-rec-03-gestion-citas/styles.css")" />
   <link rel="stylesheet" href="@Url.Content("~/css/footer.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/print.css")" media="print" />
 </head>
 
 <body>
@@ -60,20 +62,7 @@ NOTAS DE MANTENIMIENTO:
   <!-- Skip link para accesibilidad -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <!-- ═════ SIDEBAR UNIFICADO (Activo: Citas) ═════ -->
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
-    <div class="sidebar-user">
-      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Substring(0, 2).ToUpperInvariant() ?? "U")</div>
-      <div class="user-info">
-        <span class="user-role">@User.Identity?.Name</span>
-        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
-      </div>
-    </div>
-</aside>
+    @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
 
   <!-- ═════ HAMBURGER (móvil) ═════ -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
@@ -98,6 +87,7 @@ NOTAS DE MANTENIMIENTO:
         <p class="page-subtitle">Programa, modifica y cancela citas de manera eficiente.</p>
       </div>
       <button class="btn-primary" id="btnNuevaCita" aria-label="Crear nueva cita">➕ Nueva cita</button>
+      <button type="button" class="btn-secondary no-print" onclick="window.print()" aria-label="Imprimir listado de citas" style="display:flex;align-items:center;gap:6px;">🖨️ Imprimir</button>
     </header>
 
     <!-- View toggles -->
@@ -182,6 +172,23 @@ NOTAS DE MANTENIMIENTO:
             </tr>
           </thead>
           <tbody id="appointmentsTable" aria-live="polite">
+            @if (!citas.Any())
+            {
+              <tr>
+                <td colspan="8">
+                  <div class="empty-state" role="status" aria-label="Sin citas registradas" style="padding:48px 24px;text-align:center;">
+                    <div style="font-size:3rem;margin-bottom:12px;" aria-hidden="true">📅</div>
+                    <p style="font-size:1.05rem;font-weight:600;color:var(--text-primary,#1e293b);margin:0 0 6px;">Sin citas para mostrar</p>
+                    <p style="font-size:.9rem;color:var(--text-muted,#64748b);margin:0 0 20px;">No hay citas que coincidan con los filtros seleccionados.</p>
+                    <button type="button" class="btn-primary" id="btnNuevaCitaEmpty" onclick="document.getElementById('btnNuevaCita')?.click()" aria-label="Crear nueva cita">
+                      ➕ Agendar primera cita
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+            else
+            {
             @foreach (var cita in citas)
             {
               var citaFecha = cita.Fecha.ToString("dd/MM/yyyy");
@@ -192,29 +199,74 @@ NOTAS DE MANTENIMIENTO:
               var citaConsultorio = cita.Consultorio?.Nombre ?? "—";
               var citaEstado = cita.EstadoCita?.NombreEstado ?? cita.Estado ?? "Sin estado";
               var citaNotas = cita.Notas ?? "";
+
+              @* Avatar: iniciales del paciente (máx. 2 letras) para el bloque paciente *@
+              var pacNombre = citaPaciente.Trim();
+              var pacIniciales = string.Concat(
+                pacNombre.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                         .Take(2)
+                         .Select(s => s[0])
+              ).ToUpperInvariant();
+              if (string.IsNullOrWhiteSpace(pacIniciales)) pacIniciales = "?";
+
+              @* Color del avatar determinístico: hash del nombre → índice 0-4 *@
+              var avatarColors = new[] { "blue", "green", "purple", "orange", "red" };
+              var colorIdx = Math.Abs(pacNombre.GetHashCode()) % avatarColors.Length;
+              var avatarColor = avatarColors[colorIdx];
+
+              @* Badge de estado: normalizar a clase CSS *@
+              var estadoLower = (citaEstado ?? "").ToLowerInvariant();
+              var estadoCls = estadoLower switch {
+                "atendida" or "finalizada" => "status-atendida",
+                "en consulta" or "en_proceso" or "en proceso" => "status-consulta",
+                "agendada" or "programada" or "confirmada" => "status-agendada",
+                _ => "status-no-asistio"
+              };
+
               <tr>
-                <td>@citaFecha</td>
-                <td>@citaHora</td>
-                <td>@citaPaciente</td>
-                <td>@citaProfesional</td>
-                <td>@citaServicio</td>
-                <td>@citaConsultorio</td>
-                <td>@citaEstado</td>
+                <td class="col-fecha">@citaFecha</td>
+                <td class="col-hora">
+                  <span class="pill-hora" aria-label="Hora: @citaHora">@citaHora</span>
+                </td>
+                <td class="col-paciente">
+                  <div class="td-paciente">
+                    <div class="pac-avatar pac-avatar--@avatarColor" aria-hidden="true">@pacIniciales</div>
+                    <span class="pac-name">@citaPaciente</span>
+                  </div>
+                </td>
+                <td class="col-profesional">@citaProfesional</td>
+                <td class="col-servicio">@citaServicio</td>
+                <td class="col-consultorio">@citaConsultorio</td>
                 <td>
-                  <button type="button" class="action-btn btn-view" aria-label="Ver detalles de la cita"
-                    data-fecha="@citaFecha"
-                    data-hora="@citaHora"
-                    data-paciente="@citaPaciente"
-                    data-profesional="@citaProfesional"
-                    data-servicio="@citaServicio"
-                    data-consultorio="@citaConsultorio"
-                    data-estado="@citaEstado"
-                    data-notas="@citaNotas.Replace("\"", "&quot;")">
-                    👁️
-                  </button>
-                  <a class="action-btn" href="@Url.Action("Strec03GestionCitas", "GestionCitas", new { editId = cita.IdCita })">✏️</a>
+                  <span class="status-badge @estadoCls" role="status" aria-label="Estado: @citaEstado">@citaEstado</span>
+                </td>
+                <td>
+                  <div class="actions-cell" role="group" aria-label="Acciones para @Html.Encode(citaPaciente)">
+                    <button type="button"
+                            class="btn-icon action-btn btn-view"
+                            aria-label="Ver detalles de la cita de @Html.Encode(citaPaciente)"
+                            title="Ver detalles de la cita de @Html.Encode(citaPaciente)"
+                            data-fecha="@Html.Encode(citaFecha)"
+                            data-hora="@Html.Encode(citaHora)"
+                            data-paciente="@Html.Encode(citaPaciente)"
+                            data-profesional="@Html.Encode(citaProfesional)"
+                            data-servicio="@Html.Encode(citaServicio)"
+                            data-consultorio="@Html.Encode(citaConsultorio)"
+                            data-estado="@Html.Encode(citaEstado)"
+                            data-notas="@Html.Encode(citaNotas)">
+                      👁️ <span class="btn-text">Ver</span>
+                    </button>
+                    <a class="btn-icon action-btn edit"
+                       href="@Url.Action("Strec03GestionCitas", "GestionCitas", new { editId = cita.IdCita })"
+                       aria-label="Editar la cita de @Html.Encode(citaPaciente)"
+                       title="Editar la cita de @Html.Encode(citaPaciente)"
+                       role="button">
+                      ✏️ <span class="btn-text">Editar</span>
+                    </a>
+                  </div>
                 </td>
               </tr>
+            }
             }
           </tbody>
         </table>
@@ -372,8 +424,8 @@ NOTAS DE MANTENIMIENTO:
       <h2 class="modal-title" id="modalViewTitle">Detalles de la Cita</h2>
       <div id="modalViewContent" class="modal-content"></div>
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" id="modalViewCancel">Cerrar</button>
-        <button type="button" class="btn-primary" id="modalViewEdit">Editar cita</button>
+        <button type="button" class="btn-secondary" id="modalViewCancel" aria-label="Cerrar detalles de la cita">Cerrar</button>
+        <button type="button" class="btn-primary" id="modalViewEdit" aria-label="Editar la cita mostrada actualmente">Editar cita</button>
       </div>
     </div>
   </div>
@@ -517,33 +569,7 @@ NOTAS DE MANTENIMIENTO:
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
+    // Accordion y hamburger manejados por ~/js/shared/sidebar.js
 
     // ═══ MODAL VER DETALLES: poblar desde data attributes del botón 👁️ ═══
     const modalView = document.getElementById('modalViewAppointment');
@@ -661,6 +687,15 @@ NOTAS DE MANTENIMIENTO:
   });
 </script>
 
+    <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
+    <script src="@Url.Content("~/js/shared/validation-utils.js")"></script>
+    <script src="@Url.Content("~/js/shared/appointment-utils.js")"></script>
 </body>
 
 </html>
+
+
+
+

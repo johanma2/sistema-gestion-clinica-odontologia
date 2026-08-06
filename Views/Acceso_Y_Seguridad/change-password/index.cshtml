@@ -1,4 +1,4 @@
-@{
+﻿@{
     Layout = null;
     var mensajeErrorServidor = string.Empty;
     foreach (var estadoModelo in ViewData.ModelState.Values)
@@ -108,5 +108,7 @@
     </main>
 
     <script src="@Url.Content("~/js/Acceso_Y_Seguridad/change-password/change-password.js")" defer></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 </html>

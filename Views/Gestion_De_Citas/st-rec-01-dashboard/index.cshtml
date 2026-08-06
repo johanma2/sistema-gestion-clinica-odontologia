@@ -1,4 +1,4 @@
-﻿@* ============================================
+﻿﻿﻿﻿@* ============================================
 SmileTrack — Dashboard Recepción (st-rec-01-dashboard)
 ============================================
 Autor: Johan Santamaria
@@ -9,7 +9,7 @@ Vista principal para el rol de recepcionista que muestra el control de flujo de 
 
 FUNCIONALIDADES PRINCIPALES:
 - Visualización de pacientes en sala de espera y tiempos acumulados
-- Resumen numérico del estado de las citas diarias
+- Resumen numÉrico del estado de las citas diarias
 - Control rápido para marcar asistencia y canalizar pacientes al consultorio correspondiente
 
 DEPENDENCIAS TÉCNICAS:
@@ -34,31 +34,20 @@ NOTAS DE MANTENIMIENTO:
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Citas/st-rec-01-dashboard/styles.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
 
-  <!-- [MEJORA]: Skip link para accesibilidad keyboard-first (consistente con módulos anteriores) -->
+  <!-- [MEJORA]: Skip link para accesibilidad keyboard-first (consistente con mÓdulos anteriores) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <!-- ═════ SIDEBAR UNIFICADO (Activo: Panel) ═════ -->
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
-    <div class="sidebar-user">
-      <div class="user-avatar" aria-hidden="true">@(User.Identity?.Name?.Substring(0, 2).ToUpperInvariant() ?? "U")</div>
-      <div class="user-info">
-        <span class="user-role">@User.Identity?.Name</span>
-        <span class="user-email">@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value</span>
-      </div>
-    </div>
-</aside>
+    @{ await Html.RenderPartialAsync("_SidebarRecepcionista"); }
 
-  <!-- ═════ HAMBURGER (móvil) ═════ -->
-  <!-- [MEJORA]: aria-expanded y aria-controls para accesibilidad de menú móvil -->
+  <!-- ----- HAMBURGER (mÓvil) ----- -->
+  <!-- [MEJORA]: aria-expanded y aria-controls para accesibilidad de menú mÓvil -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
@@ -67,16 +56,16 @@ NOTAS DE MANTENIMIENTO:
   <!-- [MEJORA]: aria-hidden inicial para overlay -->
   <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <!-- ═════ MAIN ═════ -->
+  <!-- ----- MAIN ----- -->
   <main class="main" id="main-content">
 
     <!-- Page header -->
     <header class="page-header">
       <div class="header-left">
-        <div class="breadcrumb">Recepción → Panel</div>
+        <div class="breadcrumb">Recepción ? Panel</div>
         <h1 class="page-title">Panel de Recepción</h1>
         <!-- [MEJORA]: time datetime para accesibilidad de fecha/hora -->
-        <p class="page-subtitle">Miércoles 20 de marzo 2026 - <time class="text-primary font-bold"
+        <p class="page-subtitle">Mi—rcoles 20 de marzo 2026 - <time class="text-primary font-bold"
             datetime="2026-03-20T09:47">09:47 AM</time></p>
       </div>
     </header>
@@ -84,7 +73,7 @@ NOTAS DE MANTENIMIENTO:
     <!-- Alert Banner (próximas citas) -->
     <!-- [MEJORA]: role="region" + aria-label para sección importante -->
     <div class="alert-banner" role="region" aria-label="Próximas citas en los siguientes 30 minutos">
-      <div class="alert-banner-icon" aria-hidden="true">⏰</div>
+      <div class="alert-banner-icon material-symbols-outlined" aria-hidden="true">notifications</div>
       <div class="alert-banner-content">
         <h3 class="alert-banner-title">Próximas citas — en los siguientes 30 minutos</h3>
         <div class="alert-banner-desc">
@@ -98,7 +87,7 @@ NOTAS DE MANTENIMIENTO:
     </div>
 
     <!-- Stats Grid (usando clases unificadas) -->
-    <!-- [MEJORA]: aria-label para sección de estadísticas -->
+    <!-- [MEJORA]: aria-label para sección de estadÍdsticas -->
     <section class="stats-grid" aria-label="Resumen de actividad del día">
       <div class="stat-card" data-color="blue">
         <span class="stat-number">24</span>
@@ -123,10 +112,10 @@ NOTAS DE MANTENIMIENTO:
     <div class="action-buttons-row" role="group" aria-label="Acciones rápidas">
       <!-- [MEJORA]: aria-label descriptivo para cada botón -->
       <button class="btn-action btn-green" id="btnNuevoPaciente" aria-label="Registrar nuevo paciente en el sistema">
-        <span aria-hidden="true">➕</span> Nuevo paciente
+        <span class="material-symbols-outlined" aria-hidden="true">person_add</span> Nuevo paciente
       </button>
       <button class="btn-action btn-blue" id="btnGenerarFactura" aria-label="Generar nueva factura para paciente">
-        <span aria-hidden="true">🧾</span> Generar factura
+        <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span> Generar factura
       </button>
     </div>
 
@@ -160,12 +149,12 @@ NOTAS DE MANTENIMIENTO:
 
         <!-- Alertas Pendientes -->
         <div class="sidebar-card">
-          <h4 class="sidebar-card-title" id="alertasTitle">⚠️ Alertas pendientes</h4>
+          <h4 class="sidebar-card-title" id="alertasTitle"><span class="material-symbols-outlined" aria-hidden="true">notifications</span> Alertas pendientes</h4>
           <!-- [MEJORA]: role="list" + aria-labelledby para estructura semántica -->
           <div class="alerts-list" role="list" aria-labelledby="alertasTitle">
             <div class="alert-item-card" role="listitem">
               <div class="alert-item-header">
-                <span class="icon red" aria-hidden="true">✕</span>
+                <span class="icon red material-symbols-outlined" aria-hidden="true">warning</span>
                 <span>3 pacientes sin confirmar</span>
               </div>
               <!-- [MEJORA]: aria-label descriptivo para botón de acción -->
@@ -174,7 +163,10 @@ NOTAS DE MANTENIMIENTO:
             </div>
             <div class="alert-item-card" role="listitem">
               <div class="alert-item-header">
-                <span class="icon orange" aria-hidden="true">🔥</span>
+                <!-- BUG FIX: 'invoice' no es un nombre de ligature válido en Material Symbols
+                     y se renderizaba como texto literal "invoice". El ícono correcto para
+                     facturas/cobros en la biblioteca es 'receipt_long'. -->
+                <span class="icon orange material-symbols-outlined" aria-hidden="true">receipt_long</span>
                 <span>2 facturas vencidas</span>
               </div>
               <button class="btn-notify btn-notify-orange" data-alert="facturas-vencidas"
@@ -185,9 +177,9 @@ NOTAS DE MANTENIMIENTO:
 
         <!-- Sistema en línea -->
         <div class="sidebar-card">
-          <h4 class="sidebar-card-title">🟢 Estado del sistema</h4>
+          <h4 class="sidebar-card-title"><span class="material-symbols-outlined" aria-hidden="true">monitor_heart</span> Estado del sistema</h4>
           <p style="font-size:.85rem;color:var(--text-muted);">Todos los servicios operativos</p>
-          <p style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">Última verificación: hace 2 min</p>
+          <p style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">última verificación: hace 2 min</p>
         </div>
 
       </aside>
@@ -203,47 +195,23 @@ NOTAS DE MANTENIMIENTO:
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
-      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+      <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">copyright</span>
+      <p>— 2025 Smile Track. Todos los derechos reservados.</p>
     </div>
-    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <p class="footer-sub">Proyecto Formativo ADSO — SENA</p>
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
-  });
-</script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
+    <script src="@Url.Content("~/js/shared/validation-utils.js")"></script>
+    <script src="@Url.Content("~/js/shared/appointment-utils.js")"></script>
 </body>
 
 </html>
+
+
 
 
 

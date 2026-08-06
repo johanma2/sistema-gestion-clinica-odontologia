@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Dashboard del Odontólogo (st-odo-01-dashboard)
 ============================================
 Autor: Johan Santamaria
@@ -50,16 +50,6 @@ const debounce = (fn, delay) => {
 };
 
 // Muestra notificación temporal con auto-cierre
-const showToast = (message, type = 'success') => {
-  const toast = safeGetElement('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-  if (toast._timeoutId) clearTimeout(toast._timeoutId);
-  toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 // ═══════════════════════════════════════════════════════════════════
 //  DATOS DE EJEMPLO (Fallback si API falla)
@@ -383,13 +373,13 @@ const initExport = () => {
       const success = await exportReport();
       
       if (success) {
-        showToast('✅ Reporte generado y descargado (PDF + Excel)');
+        window.ToastService.error('✅ Reporte generado y descargado (PDF + Excel)');
       } else {
-        showToast('❌ Error al generar reporte', 'error');
+        window.ToastService.success('❌ Error al generar reporte');
       }
     } catch (error) {
       console.warn('Error en exportación:', error);
-      showToast('❌ Error de conexión', 'error');
+      window.ToastService.error('❌ Error de conexión');
     } finally {
       // Restaurar botón
       setTimeout(() => {
@@ -428,7 +418,7 @@ const init = async () => {
   
   // Toast de bienvenida (después de cargar datos)
   setTimeout(() => {
-    showToast('✅ Conexión establecida con SmileTrack');
+    window.ToastService.success('✅ Conexión establecida con SmileTrack');
   }, 800);
   
   // Limpieza al unload para evitar memory leaks

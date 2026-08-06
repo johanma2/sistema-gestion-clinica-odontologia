@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
 SmileTrack — Reportes Clínicos (st-adm-14-reportes-clinicos)
 ============================================
 Autor: Johan Santamaria
@@ -41,16 +41,6 @@ const debounce = (fn, delay) => {
     };
 };
 
-const showToast = (message, type = 'success') => {
-    const toast = safeGetElement('toast');
-    if (!toast) return;
-
-    toast.textContent = message;
-    toast.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''} show`;
-
-    if (toast._timeoutId) clearTimeout(toast._timeoutId);
-    toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
-};
 
 // ═══════════════════════════════════════════════════════════════════
 // ANIMACIÓN DE CONTADORES (igual a st-adm-07)

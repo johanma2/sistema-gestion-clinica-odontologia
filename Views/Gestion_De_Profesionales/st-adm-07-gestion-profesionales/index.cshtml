@@ -1,4 +1,4 @@
-@* ============================================
+﻿@* ============================================
 SmileTrack — Gestión de Profesionales (st-adm-07-gestion-profesionales)
 ============================================
 Autor: Johan Santamaria
@@ -55,8 +55,10 @@ NOTAS DE MANTENIMIENTO:
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/styles.css?v=2")" />
   <link rel="stylesheet" href="@Url.Content("~/css/footer.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -64,24 +66,7 @@ NOTAS DE MANTENIMIENTO:
   <!-- Enlace para saltar al contenido principal (accesibilidad) -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-    <div class="sidebar-logo">
-      <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-    </div>
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
-    <div class="sidebar-user">
-      @{
-        var userName = User.Identity?.Name ?? "Administrador";
-        var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin@smiletrack.co";
-        var userInitials = string.Concat(userName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(s => s[0])).ToUpperInvariant();
-      }
-      <div class="user-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(userInitials) ? "AD" : userInitials)</div>
-      <div class="user-info">
-        <span class="user-role">@userName</span>
-        <span class="user-email">@userEmail</span>
-      </div>
-    </div>
-  </aside>
 
 
   <!-- ═════ HAMBURGER (móvil) ═════ -->
@@ -141,7 +126,7 @@ NOTAS DE MANTENIMIENTO:
     <section class="filters-section" aria-label="Filtros de búsqueda">
       <form method="get" class="filters-row">
         <div class="search-wrap">
-          <span class="search-icon" aria-hidden="true">🔍</span>
+          <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
           <input type="search" id="searchInput" name="search" class="search-input"
             placeholder="Buscar por nombre, especialidad o registro..." aria-label="Buscar profesional" value="@ViewData["SearchFilter"]">
         </div>
@@ -151,8 +136,8 @@ NOTAS DE MANTENIMIENTO:
             <option value="">Todas las especialidades</option>
             @foreach (var especialidad in especialidades)
             {
-              var selected = ViewData["EspecialidadFilter"]?.ToString() == especialidad.Nombre ? "selected" : "";
-              <option value="@especialidad.Nombre" @(selected)>@especialidad.Nombre</option>
+              var espSelected = ViewData["EspecialidadFilter"]?.ToString() == especialidad.Nombre;
+              <option value="@especialidad.Nombre" @(espSelected ? "selected" : null)>@especialidad.Nombre</option>
             }
           </select>
         </div>
@@ -179,7 +164,7 @@ NOTAS DE MANTENIMIENTO:
         </div>
         <!-- Resetear page=1 al filtrar: evita quedarse en una página que ya no existe tras filtrar -->
         <input type="hidden" name="page" value="1" />
-        <button class="btn-primary" type="submit">Aplicar</button>
+        <button class="btn-primary" type="submit">Aplicar filtros</button>
         <!-- Limpiar: enlace simple al GET sin params — más limpio que resetear el form con JS -->
         <a class="btn-secondary" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales")">Limpiar</a>
       </form>
@@ -255,24 +240,26 @@ NOTAS DE MANTENIMIENTO:
             <!-- Ver detalles: abrir modal con data desde atributos -->
             <button class="btn-icon action-btn btn-view" type="button"
                     data-id="@profesional.IdProfesional"
-                    data-name="@profNombreCompleto"
-                    data-initials="@profIniciales"
-                    data-specialty="@especialidadPrincipal"
-                    data-registry="@profesional.RegistroMedico"
-                    data-phone="@profesional.Telefono"
-                    data-status="@profesional.Estado"
-                    aria-label="Ver detalles de profesional @profesional.Nombres @profesional.Apellidos">
+                    data-name="@Html.Encode(profNombreCompleto)"
+                    data-initials="@Html.Encode(profIniciales)"
+                    data-specialty="@Html.Encode(especialidadPrincipal)"
+                    data-registry="@Html.Encode(profesional.RegistroMedico)"
+                    data-phone="@Html.Encode(profesional.Telefono)"
+                    data-status="@Html.Encode(profesional.Estado)"
+                    aria-label="@Html.Encode($"Ver detalles del profesional {profesional.Nombres} {profesional.Apellidos}")"
+                    title="Ver detalles del profesional @Html.Encode(profNombreCompleto)">
               👁️ <span class="btn-text">Ver</span>
             </button>
             <!-- Editar: GET con editId para que el Controller cargue el profesional en ViewData -->
-            <a class="btn-icon edit action-btn" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { editId = profesional.IdProfesional })" aria-label="Editar profesional @profesional.Nombres @profesional.Apellidos" role="button">
+            <a class="btn-icon edit action-btn" href="@Url.Action("Stadm07GestionProfesionales", "GestionProfesionales", new { editId = profesional.IdProfesional })" aria-label="Editar el profesional @profesional.Nombres @profesional.Apellidos" title="Editar profesional @Html.Encode(profNombreCompleto)" role="button">
               ✏️ <span class="btn-text">Editar</span>
             </a>
             <!-- Eliminar: abrir modal de confirmación -->
             <button class="btn-icon toggle action-btn btn-delete" type="button" 
                     data-id="@profesional.IdProfesional" 
                     data-name="@profesional.Nombres @profesional.Apellidos"
-                    aria-label="Eliminar profesional @profesional.Nombres @profesional.Apellidos">
+                    aria-label="Eliminar el profesional @profesional.Nombres @profesional.Apellidos"
+                    title="Eliminar profesional @Html.Encode(profNombreCompleto)">
               ❌ <span class="btn-text">Eliminar</span>
             </button>
           </div>
@@ -476,8 +463,8 @@ NOTAS DE MANTENIMIENTO:
         <input type="hidden" name="IdProfesional" id="deleteProfesionalId" value="" />
         <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" id="modalConfirmDeleteCancel">Cancelar</button>
-          <button type="submit" class="btn-primary" style="background-color: var(--red); border-color: var(--red);">Eliminar</button>
+          <button type="button" class="btn-secondary" id="modalConfirmDeleteCancel" aria-label="Cancelar eliminación del profesional">Cancelar</button>
+          <button type="submit" class="btn-primary" style="background-color: var(--red); border-color: var(--red);" aria-label="Confirmar eliminación del profesional seleccionado">Eliminar</button>
         </div>
       </form>
     </div>
@@ -502,18 +489,29 @@ NOTAS DE MANTENIMIENTO:
   <!-- Toast -->
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Errores de validación server-side (TempData) -->
+  @if (TempData["MensajeExito"] != null)
+  {
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const toast = document.getElementById('toast');
+        if (toast) {
+          toast.textContent = '✅ @TempData["MensajeExito"]';
+          toast.className = 'toast show';
+          setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+      });
+    </script>
+  }
+
   @if (TempData["ErrorValidacion"] != null)
   {
     <script>
-      // Se ejecuta cuando el servidor rechazó el formulario por campos inválidos.
-      // TempData solo vive UN request — se consume aquí y desaparece.
       document.addEventListener('DOMContentLoaded', () => {
         const toast = document.getElementById('toast');
         if (toast) {
           toast.textContent = '⚠️ @TempData["ErrorValidacion"]';
           toast.className = 'toast warning show';
-          setTimeout(() => toast.classList.remove('show'), 4000);
+          setTimeout(() => toast.classList.remove('show'), 5000);
         }
       });
     </script>
@@ -553,7 +551,7 @@ NOTAS DE MANTENIMIENTO:
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
+      <span class="material-symbols-outlined" aria-hidden="true" style="font-size:1rem;">favorite</span>
       <p>© @DateTime.Now.Year Smile Track. Todos los derechos reservados.</p>
     </div>
     <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
@@ -563,30 +561,20 @@ NOTAS DE MANTENIMIENTO:
   <script src="@Url.Content("~/js/Gestion_De_Profesionales/st-adm-07-gestion-profesionales/app.js")"></script>
 
 <script>
-   document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
-      if (!items || !arrow) return;
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-      setExpanded(false);
-      const toggle = () => { const isExpanded = header.getAttribute('aria-expanded') === 'true'; setExpanded(!isExpanded); };
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
-      });
-    });
-    const isEditing = '@(editingProfesional != null ? "true" : "false")' === 'true';
+   // Accordion y hamburger manejados por ~/js/shared/sidebar.js
+   const isEditing = '@(editingProfesional != null ? "true" : "false")' === 'true';
     if (isEditing) {
       const modal = document.getElementById('modalForm');
       if (modal) {
         modal.classList.add('open');
-        modal.removeAttribute('aria-hidden');
+        // CORRECCIÓN: setAttribute en lugar de removeAttribute para compatibilidad ARIA
+        modal.setAttribute('aria-hidden', 'false');
         modal.removeAttribute('inert');
         document.body.style.overflow = 'hidden';
+        // Focus en primer campo del formulario (WCAG 2.4.3)
+        setTimeout(() => {
+          modal.querySelector('input:not([type="hidden"])')?.focus();
+        }, 100);
       }
     };
 
@@ -655,6 +643,12 @@ NOTAS DE MANTENIMIENTO:
       }
     })();
 </script>
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
+    <script src="@Url.Content("~/js/shared/validation-utils.js")"></script>
 </body>
 
 </html>
+
+

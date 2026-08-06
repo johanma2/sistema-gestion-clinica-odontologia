@@ -1,6 +1,6 @@
-﻿@{ Layout = null; }
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿@{ Layout = null; }
 
-﻿<!DOCTYPE html>
+?<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -11,7 +11,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap"
     rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="@Url.Content("~/css/Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.css")" />
+  <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 
 <body>
@@ -19,61 +21,9 @@
   <!-- Enlace para saltar al contenido principal, accesibilidad keyboard-first -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-  <!-- ═════ SIDEBAR UNIFICADO (Activo: Mi perfil) ═════ -->
-  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-  <div class="sidebar-logo">
-    <img src="@Url.Content("~/images/Imagenes/Logos/logo.jpg")" alt="SmileTrack" class="logo-img" />
-  </div>
-  @{ await Html.RenderPartialAsync("_SidebarAuxiliar"); }
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Inicio <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/" class="nav-item" data-icon="🏠">Homepage</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Pacientes <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-pacientes/st-aux-03-preparacion-consulta" class="nav-item" data-icon="📋">Preparación de Consulta</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Profesionales <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/perfiles/st-aux-11-perfil-auxiliar" class="nav-item active" data-icon="👤" aria-current="page">Perfil del Auxiliar</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Gestión de Citas <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="nav-item" data-icon="📊">Panel Operativo</a>
-        <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="nav-item" data-icon="🗓️">Agenda de Apoyo</a>
-        <a href="/gestion-de-citas/st-aux-05-historial-parcial" class="nav-item" data-icon="📋">Historial Parcial</a>
-        <a href="/gestion-de-citas/st-aux-06-asistencia-procedi" class="nav-item" data-icon="🔄">Asistencia en Procedimiento</a>
-        <a href="/gestion-de-citas/st-aux-09-estado-consultorio" class="nav-item" data-icon="🚑">Estado de Consultorio</a>
-        <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="nav-item" data-icon="✅">Citas Finalizadas</a>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-header" role="button" tabindex="0">Historia Clínica <span class="nav-arrow" aria-hidden="true">▼</span></div>
-      <div class="nav-group-items">
-        <a href="/historia-clinica/st-aux-07-control-postoperato" class="nav-item" data-icon="🏥">Control Postoperatorio</a>
-        <a href="/historia-clinica/st-aux-08-documentos-clinicos" class="nav-item" data-icon="📎">Documentos Clínicos</a>
-      </div>
-    </div>
-    <div class="nav-separator" aria-hidden="true"></div>
-    <a href="/acceso-y-seguridad/login" class="nav-item nav-item--logout" data-icon="🚪" aria-label="Cerrar sesión y volver al login">Cerrar sesión</a>
-  </nav>
-  <div class="sidebar-user">
-    <div class="user-avatar" aria-hidden="true">AU</div>
-    <div class="user-info">
-      <span class="user-role">Auxiliar</span>
-      <span class="user-email">auxiliar@smiletrack.co</span>
-    </div>
-  </div>
-</aside>
+    @{ await Html.RenderPartialAsync("_SidebarAuxiliar"); }
 
-  <!-- Botón hamburguesa para menú móvil, con atributos ARIA para accesibilidad -->
+  <!-- Botón hamburguesa para menú mÓvil, con atributos ARIA para accesibilidad -->
   <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
@@ -81,14 +31,14 @@
   </button>
   <div class="overlay" id="overlay" aria-hidden="true"></div>
 
-  <!-- ═════ MAIN ═════ -->
+  <!-- ----- MAIN ----- -->
   <main class="main" id="main-content">
 
     <!-- Header con saludo dinámico accesible -->
     <header class="page-header">
       <nav class="breadcrumb" aria-label="Ruta de navegación">
         <span>Auxiliar</span>
-        <span class="bc-sep" aria-hidden="true">→</span>
+        <span class="bc-sep" aria-hidden="true">›</span>
         <span class="bc-active">Mi perfil</span>
       </nav>
       <p class="greeting" id="greeting" aria-live="polite">Cargando saludo...</p>
@@ -105,7 +55,7 @@
           <div class="avatar-large" id="userAvatar" aria-label="Avatar de usuario: Sara Jiménez">SJ</div>
           <h2 class="profile-title" id="personalDataTitle">Datos personales</h2>
           <button class="btn-edit" id="btnEditProfile" aria-label="Editar información personal">
-            <span>Editar</span><span class="edit-icon" aria-hidden="true">✏️</span>
+            <span>Editar</span><span class="material-symbols-outlined edit-icon" aria-hidden="true">edit</span>
           </button>
         </div>
 
@@ -127,7 +77,7 @@
             </div>
             <div class="info-group" role="listitem">
               <label class="info-label" for="numeroDoc">Número de documento</label>
-              <span class="info-value" id="numeroDoc" aria-label="Número de documento: 1234567890">••••••••••</span>
+              <span class="info-value" id="numeroDoc" aria-label="Número de documento: 1234567890">—</span>
             </div>
             <div class="info-group" role="listitem">
               <label class="info-label" for="fechaIngreso">Fecha de ingreso</label>
@@ -142,11 +92,11 @@
               </span>
             </div>
             <div class="info-group" role="listitem">
-              <label class="info-label" for="telefono">Teléfono</label>
+              <label class="info-label" for="telefono">TelÉfono</label>
               <span class="info-value" id="telefono">312456 7890</span>
             </div>
             <div class="info-group" role="listitem">
-              <label class="info-label" for="email">Correo electrónico</label>
+              <label class="info-label" for="email">Correo electrÓnico</label>
               <span class="info-value" id="email">auxiliar@smiletrack.co</span>
             </div>
           </div>
@@ -175,10 +125,10 @@
             <div class="input-with-icon">
               <button type="button" class="toggle-password" id="toggleCurrent" aria-label="Mostrar contraseña actual"
                 aria-pressed="false" aria-controls="currentPassword">
-                <span class="visually-hidden">Mostrar/ocultar</span>👁
+                <span class="visually-hidden">Mostrar/ocultar</span><span class="material-symbols-outlined" aria-hidden="true">visibility</span>
               </button>
               <input type="password" class="form-input" id="currentPassword" name="currentPassword"
-                placeholder="••••••••" required autocomplete="current-password" aria-required="true" />
+                placeholder="" required autocomplete="current-password" aria-required="true" />
             </div>
             <span class="error-message" id="error-currentPassword">Por favor ingresa tu contraseña actual</span>
           </div>
@@ -189,9 +139,9 @@
             <div class="input-with-icon">
               <button type="button" class="toggle-password" id="toggleNew" aria-label="Mostrar nueva contraseña"
                 aria-pressed="false" aria-controls="newPassword">
-                <span class="visually-hidden">Mostrar/ocultar</span>👁
+                <span class="visually-hidden">Mostrar/ocultar</span><span class="material-symbols-outlined" aria-hidden="true">visibility</span>
               </button>
-              <input type="password" class="form-input" id="newPassword" name="newPassword" placeholder="••••••••"
+              <input type="password" class="form-input" id="newPassword" name="newPassword" placeholder=""
                 required autocomplete="new-password" aria-required="true"
                 aria-describedby="passwordStrength passwordRequirements" />
             </div>
@@ -201,7 +151,7 @@
               <span class="visually-hidden" id="strengthText">Débil</span>
             </div>
             <small id="passwordRequirements" class="password-requirements">
-              Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 símbolo
+              Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 sÍmbolo
             </small>
           </div>
 
@@ -211,10 +161,10 @@
             <div class="input-with-icon">
               <button type="button" class="toggle-password" id="toggleConfirm"
                 aria-label="Mostrar confirmación de contraseña" aria-pressed="false" aria-controls="confirmPassword">
-                <span class="visually-hidden">Mostrar/ocultar</span>👁
+                <span class="visually-hidden">Mostrar/ocultar</span><span class="material-symbols-outlined" aria-hidden="true">visibility</span>
               </button>
               <input type="password" class="form-input" id="confirmPassword" name="confirmPassword"
-                placeholder="••••••••" required autocomplete="new-password" aria-required="true" />
+                placeholder="" required autocomplete="new-password" aria-required="true" />
             </div>
             <span class="error-message" id="error-confirmPassword">Las contraseñas no coinciden</span>
           </div>
@@ -230,22 +180,22 @@
 
   </main>
 
-  <!-- Mobile bottom nav con aria-label para navegación móvil -->
-  <nav class="mobile-nav" aria-label="Navegación móvil">
+  <!-- Mobile bottom nav con aria-label para navegación mÓvil -->
+  <nav class="mobile-nav" aria-label="Navegación mÓvil">
     <a href="/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📊</span>
+      <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">dashboard</span>
       <span>Panel</span>
     </a>
     <a href="/gestion-de-citas/st-aux-02-agenda-apoyo" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">📅</span>
+      <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">event</span>
       <span>Agenda</span>
     </a>
     <a href="#" class="mobile-nav-item active" aria-current="page">
-      <span class="mobile-nav-icon" aria-hidden="true">👤</span>
+      <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">person</span>
       <span>Perfil</span>
     </a>
     <a href="/gestion-de-citas/st-aux-10-citas-finalizadas" class="mobile-nav-item">
-      <span class="mobile-nav-icon" aria-hidden="true">✅</span>
+      <span class="material-symbols-outlined mobile-nav-icon" aria-hidden="true">check_circle</span>
       <span>Finalizadas</span>
     </a>
   </nav>
@@ -285,49 +235,21 @@
   <script src="@Url.Content("~/js/Perfiles/st-aux-11-perfil-auxiliar/mi-perfil.js")"></script>
 <footer id="dynamic-footer" class="site-footer" role="contentinfo">
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span style="font-size:1rem;">🦷</span>
-      <p>© 2025 Smile Track. Todos los derechos reservados.</p>
+      <span class="material-symbols-outlined" aria-hidden="true" style="font-size:1rem;">favorite</span>
+      <p>— 2025 Smile Track. Todos los derechos reservados.</p>
     </div>
-    <p class="footer-sub">Proyecto Formativo ADSO – SENA</p>
+    <p class="footer-sub">Proyecto Formativo ADSO — SENA</p>
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
 
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-group-header').forEach(header => {
-      const items = header.nextElementSibling;
-      const arrow = header.querySelector('.nav-arrow');
 
-      if (!items || !arrow) return;
-
-      const setExpanded = (isExpanded) => {
-        items.style.maxHeight = isExpanded ? `${items.scrollHeight}px` : '0px';
-        arrow.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        header.setAttribute('aria-expanded', String(isExpanded));
-      };
-
-      setExpanded(false);
-
-      const toggle = () => {
-        const isExpanded = header.getAttribute('aria-expanded') === 'true';
-        setExpanded(!isExpanded);
-      };
-
-      header.addEventListener('click', toggle);
-      header.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggle();
-        }
-      });
-    });
-  });
-</script>
-
-
-
+  <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
+  @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
+  @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }
 </body>
 
 </html>
+
+
