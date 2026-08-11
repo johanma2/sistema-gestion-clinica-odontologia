@@ -558,33 +558,6 @@ kbd {
 .change-item .role-badge { font-size: .7rem; padding: 2px 8px; }
 .change-arrow { color: var(--orange); font-weight: bold; }
 
-/* ═══ TOAST ═══ */
-.toast {
-  position: fixed; bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: var(--text); color: #fff;
-  padding: 12px 20px; border-radius: var(--radius-sm);
-  font-size: .85rem; font-weight: 500;
-  opacity: 0; pointer-events: none;
-  transition: opacity .25s, transform .25s;
-  z-index: 500; white-space: nowrap;
-  display: flex; align-items: center; gap: 10px;
-  box-shadow: var(--shadow-md);
-  max-width: 90%;
-}
-.toast[hidden] { display: none; }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.error { background: var(--danger); }
-.toast.warning { background: var(--orange); }
-#toastIcon { font-size: 1.2rem; }
-.toast-close {
-  background: none; border: none; cursor: pointer;
-  color: inherit; font-size: 1.2rem; margin-left: 8px;
-  padding: 2px; border-radius: 4px;
-}
-.toast-close:hover { background: rgba(255,255,255,.2); }
-.toast-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 1200px) {
   .matrix-col-roles, .matrix-row-roles { grid-template-columns: repeat(4, 1fr); }

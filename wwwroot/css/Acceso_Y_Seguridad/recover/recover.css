@@ -1,4 +1,4 @@
-﻿/* ════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════
    SMILETRACK — RECUPERAR CONTRASEÑA
    recover.css
    ════════════════════════════════════════════════════════ */
@@ -48,28 +48,14 @@ input:focus { transform: translateY(-1px); box-shadow: 0 10px 25px rgba(30, 136,
 .toggle-password { background: none; border: none; cursor: pointer; padding: 4px; }
 .toggle-password:hover { color: white !important; }
 
-/* Toast notifications */
-.toast {
-    min-width: 320px; max-width: 400px; padding: 1rem 1.25rem;
-    border-radius: 1rem; font-weight: 500; font-size: 0.9rem; color: white;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.25); backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 12px;
-    transform: translateX(400px); opacity: 0; transition: transform 0.4s ease, opacity 0.3s ease;
-    pointer-events: auto; z-index: 10000;
-}
-.toast.show { transform: translateX(0); opacity: 1; }
-.toast.success { background: linear-gradient(135deg, #43A047, #4CAF50); }
-.toast.error { background: linear-gradient(135deg, #E53935, #F44336); }
-.toast.info { background: linear-gradient(135deg, #1E88E5, #42A5F5); }
-.toast-close { background: none; border: none; color: white; cursor: pointer; padding: 4px; margin-left: auto; border-radius: 4px; opacity: 0.8; }
-.toast-close:hover { opacity: 1; }
+
 
 /* Responsive */
 @media (max-width: 480px) {
     .font-title.text-h1 { font-size: 26px !important; }
     main { padding: 1rem; margin: 0; }
     main > div { border-radius: 2rem; margin: 0 -1rem; }
-    .toast { min-width: calc(100vw - 3rem); right: 1.5rem; left: 1.5rem; }
+
     #code { font-size: 1.5rem; letter-spacing: 0.5em !important; }
 }
 
