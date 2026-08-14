@@ -1,0 +1,78 @@
+## Archivos de compilación de .NET
+bin/
+obj/
+
+## Archivos de usuario de Visual Studio
+*.user
+*.suo
+*.userprefs
+*.userosscache
+
+## Visual Studio
+.vs/
+*.rsuser
+*.vspx
+*.sap
+
+## Visual Studio Code
+.vscode/
+
+## Rider (JetBrains)
+.idea/
+*.sln.iml
+
+## Archivos de paquetes NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/
+!**/[Pp]ackages/build/
+*.lock.json
+!packages.lock.json
+
+## Archivos de caché
+*.cache
+*.log
+cookies.txt
+
+## Archivos de publicación de ASP.NET
+**/[Pp]ublish/
+**/[Pp]ublished/
+PublishProfiles/
+
+## Archivos temporales del sistema operativo
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+## Archivos de entorno (secretos)
+.env
+.env.local
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+## Archivos de base de datos locales
+*.mdf
+*.ldf
+*.ndf
+
+## Reportes de cobertura de código
+coverage/
+*.coverage
+*.coveragexml
+
+## Archivos de pruebas
+TestResults/
+
+# Carpeta temporal de build local (evitar commits accidentales desde herramientas de CI locales)
+build_temp/
+
+# Archivos de salida de compilación local (generados por dotnet build, no deben commitearse)
+build_output.txt
