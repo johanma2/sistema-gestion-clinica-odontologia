@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="@Url.Content("~/css/shared/sidebar.css")" />
 </head>
 <body>
+  @Html.AntiForgeryToken()
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
     @{ await Html.RenderPartialAsync("_SidebarAdmin"); }
@@ -175,7 +176,7 @@
 <script>
   window.RAZOR_PATIENTS = @Html.Raw(pacientesJson);
 </script>
-<script src="@Url.Content("~/js/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/script.js")"></script>
+<script src="@Url.Content("~/js/Gestion_De_Pacientes/st-adm-05-gestion-pacientes/script.js?v=2")"></script>
   <script src="@Url.Content("~/js/shared/sidebar.js")"></script>
   @{ await Html.RenderPartialAsync("~/Views/shared/_Toasts.cshtml"); }
   @{ await Html.RenderPartialAsync("~/Views/shared/_ConfirmModal.cshtml"); }

@@ -47,48 +47,22 @@ const debounce = (fn, delay) => {
 // ═══════════════════════════════════════════════════════════════════
 class HistoriaParcialController {
   constructor() {
-    this._paciente = {
-      id: 1,
-      nombre: 'Pedro García',
-      tipoDoc: 'CC',
-      documento: '1045678901',
-      alergias: ['Penicilina'],
-      medicamentos: ['Enalapril 5mg'],
-      grupoSanguineo: 'O+',
-      ultimaActualizacion: '20 Mar',
-    };
-    this._limite = 3;
-    this._historial = [
-      {
-        id: 1,
-        fecha: '10 Feb 2026',
-        profesional: 'Dra. Laura Gómez',
-        diagnostico: 'Sarro moderado supragingival. Gingivitis leve.',
-        procedimiento: 'Detartraje supragingival completo con ultrasonido.',
-      },
-      {
-        id: 2,
-        fecha: '05 Ene 2026',
-        profesional: 'Dr. Carlos Méndez',
-        diagnostico: 'Caries incipiente en pieza 12.',
-        procedimiento: 'Se realiza obturación con resina compuesta en cara vestibular.',
-      },
-      {
-        id: 3,
-        fecha: '20 Dic 2025',
-        profesional: 'Dra. Laura Gómez',
-        diagnostico: 'Caries incipiente en pieza 23.',
-        procedimiento: 'Se realiza obturación con resina compuesta en cara vestibular.',
-      },
-    ];
+    const data = window.smiletrackHistorialParcialData || {};
+    this._paciente = data.paciente || { id: null, nombre: 'Sin paciente asignado', tipoDoc: '', documento: '', alergias: [], medicamentos: [], grupoSanguineo: 'N/D', ultimaActualizacion: '' };
+    this._limite = data.limite || 3;
+    this._historial = (data.consultas || []).map(c => ({
+      ...c,
+      fecha: c.fecha ? new Date(c.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
+    }));
   }
 
-  // WHY: Devuelve el objeto paciente simulando una respuesta asíncrona de base de datos
+  // Datos reales inyectados por el servidor (ver ConstruirHistorialParcialAsync en
+  // GestionCitasController.cs).
   async getPaciente() {
     return { ...this._paciente };
   }
 
-  // WHY: Estructura la información médica crítica separadamente de los datos personales
+  // Estructura la información médica crítica separadamente de los datos personales
   async getAlertas() {
     return {
       alergias: [...this._paciente.alergias],
@@ -97,12 +71,12 @@ class HistoriaParcialController {
     };
   }
 
-  // WHY: Limita a 3 el historial para cumplir las restricciones visuales y de negocio del panel auxiliar
+  // El límite ya viene aplicado desde el servidor (Take(limite))
   async getConsultas() {
     return this._historial.slice(0, this._limite);
   }
 
-  // WHY: Genera un texto consolidado de identificación para ubicar rápidamente la información
+  // Genera un texto consolidado de identificación para ubicar rápidamente la información
   getMetaString() {
     const p = this._paciente;
     return `${p.nombre} · ${p.tipoDoc} ${p.documento} · Últimas ${this._limite} consultas · Acceso parcial · Actualizado: ${p.ultimaActualizacion}`;

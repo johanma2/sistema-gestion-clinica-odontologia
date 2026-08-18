@@ -84,81 +84,75 @@ const validateForm = (form) => {
 //  PERSISTENCIA CON LOCALSTORAGE
 // ═══════════════════════════════════════════════════════════════════
 
+// Convierte el JSON persistido del odontograma (registros por instanceID + mapeoFDI)
+// en los mapas {numeroDiente: estadoKey} / {numeroDiente: observación} que usa el render
+// de solo lectura de esta vista. Mismo formato que guarda st-odo-04-odontograma.
+const parseOdontogramaPersistido = (estadoPersistidoRaw) => {
+  const tratamientos = {};
+  const observaciones = {};
+  if (!estadoPersistidoRaw) return { tratamientos, observaciones };
+
+  try {
+    const persistido = typeof estadoPersistidoRaw === 'string' ? JSON.parse(estadoPersistidoRaw) : estadoPersistidoRaw;
+    const registros = persistido?.registros || {};
+    const mapeoFDI = persistido?.mapeoFDI || {};
+
+    Object.entries(registros).forEach(([instanceID, registro]) => {
+      const numeroDiente = mapeoFDI[instanceID];
+      if (!numeroDiente) return;
+      const tratamientosPieza = registro?.tratamientos || registro?.Tratamientos || [];
+      if (!tratamientosPieza.length) return;
+      const ultimo = tratamientosPieza[tratamientosPieza.length - 1];
+      const key = ultimo?.key || ultimo?.Key;
+      const obs = ultimo?.obs || ultimo?.Obs;
+      if (key) tratamientos[numeroDiente] = key;
+      if (obs) observaciones[numeroDiente] = obs;
+    });
+  } catch (e) {
+    console.warn('No se pudo interpretar el odontograma guardado', e);
+  }
+
+  return { tratamientos, observaciones };
+};
+
+// Extrae el historial de notas clínicas libres guardadas junto al odontograma
+// (no existe una tabla dedicada; se persisten como parte de ObservacionesGenerales).
+const parseNotasClinicasPersistidas = (estadoPersistidoRaw) => {
+  if (!estadoPersistidoRaw) return [];
+  try {
+    const persistido = typeof estadoPersistidoRaw === 'string' ? JSON.parse(estadoPersistidoRaw) : estadoPersistidoRaw;
+    return persistido?.notasClinicas || [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// Fuente de datos real: inyectada por el servidor en window.smiletrackHistoriaData
+// (ver Views/Historia_Clinica/st-odo-03-historial/gestion-historial.cshtml).
 const historiaStorage = {
-  key: 'smiletrack_historia_pedro_garcia',
-  
-  // Carga datos desde localStorage o usa datos de ejemplo
+  // Carga los datos reales del paciente enviados por el servidor.
   load: () => {
-    const stored = localStorage.getItem(historiaStorage.key);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.warn('Error al cargar historia clínica, usando datos de ejemplo');
-      }
-    }
-    // Datos de ejemplo iniciales
+    const server = window.smiletrackHistoriaData || {};
+    const { tratamientos, observaciones } = parseOdontogramaPersistido(server.estadoPersistido);
+    const notasClinicas = parseNotasClinicasPersistidas(server.estadoPersistido);
+
     return {
       paciente: {
-        id: 1,
-        nombre: 'Pedro García',
-        documento: '1045678901',
-        tipoDoc: 'CC',
-        fechaNacimiento: '1991-03-15',
-        grupoSanguineo: 'O+',
-        codigoHC: 'HC-2026-001',
-        alergias: ['Penicilina'],
-        medicamentos: ['Enalapril 5mg'],
-        odontograma: {
-          17: 'caries', 16: 'caries',
-          22: 'sellante', 23: 'sellante', 24: 'sellante',
-          25: 'restauracion', 26: 'endodoncia',
-          27: 'corona', 28: 'corona',
-        },
-        observaciones: {
-          25: 'Obturación resina clase II',
-          26: 'Conductos obturados con gutapercha',
-        },
-        historial: [
-          { id:1, titulo:'Endodoncia pieza 26', fecha:'2025-12-15', doctor:'Dr. Andrés Torres',
-            diagnostico:'Pulpitis irreversible pieza 26',
-            procedimiento:'Tratamiento de conductos completo. Se obtura con gutapercha.',
-            estado:'Realizado', proximaCita: null },
-          { id:2, titulo:'Restauración pieza 25', fecha:'2025-11-02', doctor:'Dr. Carlos Méndez',
-            diagnostico:'', procedimiento:'Obturación con resina compuesta clase II.',
-            estado:'Realizado', proximaCita:'2026-02-02' },
-          { id:3, titulo:'Exodoncia pieza 48', fecha:'2025-09-10', doctor:'Dr. Andrés Torres',
-            diagnostico:'Tercer molar impactado',
-            procedimiento:'Extracción de tercer molar inferior derecho impactado.',
-            estado:'Realizado', proximaCita: null },
-        ],
-      },
-      nextHistId: 10
+        id: server.pacienteId ?? null,
+        nombre: server.nombre || 'Sin paciente asignado',
+        documento: '',
+        tipoDoc: '',
+        fechaNacimiento: server.fechaNacimiento || null,
+        grupoSanguineo: server.grupoSanguineo || 'N/D',
+        codigoHC: server.codigoHC || 'HC-SIN-ASIGNAR',
+        alergias: server.alergias || [],
+        medicamentos: server.medicamentos || [],
+        odontograma: tratamientos,
+        observaciones,
+        // Notas clínicas libres + historial real de citas del paciente
+        historial: [...notasClinicas, ...(server.historial || [])],
+      }
     };
-  },
-  
-  // Guarda datos en localStorage
-  save: (data) => {
-    try {
-      localStorage.setItem(historiaStorage.key, JSON.stringify(data));
-      return true;
-    } catch (e) {
-      console.error('Error al guardar historia clínica:', e);
-      return false;
-    }
-  },
-  
-  // Agrega nueva entrada al historial
-  addEntry: (entry) => {
-    const data = historiaStorage.load();
-    const nueva = {
-      ...entry,
-      id: data.nextHistId++,
-      estado: 'Realizado'
-    };
-    data.paciente.historial.unshift(nueva);
-    historiaStorage.save(data);
-    return nueva;
   }
 };
 
@@ -178,8 +172,10 @@ const formatFecha = (isoDate, largo = false) => {
 
 // Calcula edad a partir de fecha de nacimiento
 const calcEdad = (fechaIso) => {
+  if (!fechaIso) return null;
   const hoy = new Date();
   const nac = new Date(fechaIso);
+  if (Number.isNaN(nac.getTime())) return null;
   let edad = hoy.getFullYear() - nac.getFullYear();
   const m = hoy.getMonth() - nac.getMonth();
   if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
@@ -187,7 +183,10 @@ const calcEdad = (fechaIso) => {
 };
 
 // Determina tipo de dentición según edad
-const tipoDenticion = (fechaNacimiento) => calcEdad(fechaNacimiento) < 13 ? 'nino' : 'adulto';
+const tipoDenticion = (fechaNacimiento) => {
+  const edad = calcEdad(fechaNacimiento);
+  return edad !== null && edad < 13 ? 'nino' : 'adulto';
+};
 
 // ═══════════════════════════════════════════════════════════════════
 //  RENDER: ALERTAS MÉDICAS
@@ -586,24 +585,40 @@ const initForm = () => {
     const proc = fProc?.value.trim();
     const cita = fCita?.value;
     
+    const pacienteId = window.smiletrackHistoriaData?.pacienteId;
+    if (!pacienteId) {
+      showToast('No hay un paciente seleccionado para guardar la nota', 'error');
+      return;
+    }
+
     try {
       btn.disabled = true;
       btn.textContent = 'Guardando...';
 
-      // Simular guardado (en producción: fetch a API)
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // Agregar entrada a localStorage
-      const nueva = historiaStorage.addEntry({
-        titulo: proc || diag,
-        fecha: new Date().toISOString().split('T')[0],
-        doctor: 'Dr. Andrés Torres',
-        diagnostico: diag,
-        procedimiento: proc,
-        proximaCita: cita || null,
+      const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+      const resp = await fetch('/historia-clinica/st-odo-03-historial/guardar-nota', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'RequestVerificationToken': token } : {})
+        },
+        body: JSON.stringify({
+          pacienteId,
+          diagnostico: diag,
+          procedimiento: proc,
+          proximaCita: cita || null
+        })
       });
+      const result = await resp.json();
+      if (!result.success) throw new Error(result.message || 'No se pudo guardar la nota');
 
-      // Renderizar historial actualizado
+      // Reflejar la nota persistida (y todo el historial guardado) en memoria
+      const estadoActualizado = window.smiletrackHistoriaData?.estadoPersistido
+        ? JSON.parse(window.smiletrackHistoriaData.estadoPersistido)
+        : {};
+      estadoActualizado.notasClinicas = [result.nota, ...(estadoActualizado.notasClinicas || [])];
+      window.smiletrackHistoriaData.estadoPersistido = JSON.stringify(estadoActualizado);
+
       const data = historiaStorage.load();
       renderHistorial(data.paciente.historial);
 
@@ -653,8 +668,9 @@ const init = async () => {
   const metaEl = safeGetElement('patientMeta');
   if (metaEl) {
     const edad = calcEdad(p.fechaNacimiento);
-    metaEl.textContent = `${p.nombre} · ${p.tipoDoc} ${p.documento} · ${edad} años · ${p.grupoSanguineo}`;
-    metaEl.setAttribute('aria-label', `Paciente: ${p.nombre}, ${edad} años, grupo sanguíneo ${p.grupoSanguineo}`);
+    const edadTexto = edad !== null ? `${edad} años` : 'edad no registrada';
+    metaEl.textContent = `${p.nombre} · ${edadTexto} · ${p.grupoSanguineo}`;
+    metaEl.setAttribute('aria-label', `Paciente: ${p.nombre}, ${edadTexto}, grupo sanguíneo ${p.grupoSanguineo}`);
   }
   
   // Actualizar botón de código HC

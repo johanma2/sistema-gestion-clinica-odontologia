@@ -42,42 +42,12 @@ const debounce = (fn, delay) => {
 
 // WHY: Las notificaciones no bloqueantes informan el resultado de la exportación sin interrumpir la revisión del resumen
 
-// WHY: La clave incluye la fecha para que los datos del día no contaminen ni se mezclen con los de jornadas anteriores
+// WHY: Envuelve los datos reales inyectados por el servidor (window.smiletrackCitasFinalizadasData,
+// ver ConstruirCitasFinalizadasAsync en GestionCitasController.cs) en la misma interfaz que
+// usaba el almacenamiento local, para no reescribir el resto del archivo.
 const finalizedStorage = {
-  key: 'smiletrack_finalized_20260320',
-  
-  // WHY: Carga desde LocalStorage para que el resumen sea persistente entre refrescos de página durante la jornada
-  load: () => {
-    const stored = localStorage.getItem(finalizedStorage.key);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.warn('Error al cargar citas finalizadas, usando datos de ejemplo');
-      }
-    }
-    // Datos de ejemplo iniciales
-    return [
-      { id:1, hora:'08:00', paciente:'María López', profesional:'Dr. Méndez', servicio:'Consulta General', estado:'Atendida' },
-      { id:2, hora:'09:00', paciente:'Pedro García', profesional:'Dr. Méndez', servicio:'Control', estado:'Atendida' },
-      { id:3, hora:'10:00', paciente:'Ana Martínez', profesional:'Dr. Méndez', servicio:'Resina', estado:'Cancelada' },
-      { id:4, hora:'11:00', paciente:'Luis Herrera', profesional:'Dra. Ramírez', servicio:'Consulta', estado:'Atendida' },
-      { id:5, hora:'14:00', paciente:'Sandra Pérez', profesional:'Dr. Méndez', servicio:'Limpieza', estado:'Atendida' },
-      { id:6, hora:'15:00', paciente:'Carlos Ruiz', profesional:'Dra. Gómez', servicio:'Extracción', estado:'No asistió' },
-    ];
-  },
-  
-  // WHY: Persiste las citas para garantizar que el resumen no se pierda ante refrescos accidentales del navegador
-  save: (citas) => {
-    try {
-      localStorage.setItem(finalizedStorage.key, JSON.stringify(citas));
-      return true;
-    } catch (e) {
-      console.error('Error al guardar citas finalizadas:', e);
-      return false;
-    }
-  },
-  
+  load: () => (window.smiletrackCitasFinalizadasData?.citas) || [],
+
   // WHY: Centraliza el cálculo de contadores para no duplicar la lógica de filtrado entre la tabla y las tarjetas de resumen
   getCounts: (citas) => {
     return {

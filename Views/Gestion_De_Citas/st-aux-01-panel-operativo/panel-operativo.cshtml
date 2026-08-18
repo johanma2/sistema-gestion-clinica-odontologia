@@ -25,6 +25,8 @@ NOTAS DE MANTENIMIENTO:
 - Se incorporan roles de accesibilidad (role status, progressbar) para soporte a lectores de pantalla (WCAG).
 ============================================ *@
 @{ Layout = null; }
+@using System.Text.Json
+@{ var panelDataJson = JsonSerializer.Serialize(ViewData["PanelOperativoData"]); }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -262,6 +264,9 @@ NOTAS DE MANTENIMIENTO:
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
+  <script>
+    window.smiletrackPanelData = @Html.Raw(panelDataJson);
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.js")"></script>
 
   <script src="@Url.Content("~/js/shared/sidebar.js")"></script>

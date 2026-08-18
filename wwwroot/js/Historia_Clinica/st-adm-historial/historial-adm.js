@@ -1,143 +1,56 @@
-// ── DATOS DE MUESTRA ──────────────────────────────────────────────────────
-const pacientes = [
-{
-id: 1, nombre: 'Pedro García', cedula: '1020345678',
-email: 'pedro.garcia@email.com', telefono: '310 234 5678',
-fechaNac: '12 Mar 1985', odontologo: 'Dr. Carlos Méndez', odontologoKey: 'mendez',
-ultimaConsulta: '20 Mar 2026', estado: 'activo',
-alerta: true, alertaTexto: 'Alérgico a la penicilina. Informar antes de cualquier prescripción.',
-consultas: [
-{ fecha: '20 Mar 2026', proc: 'Endodoncia pieza 23', odo: 'Dr. Carlos Méndez', nota: 'Paciente toleró bien el procedimiento. Se recomienda control en 7 días.' },
-{ fecha: '05 Feb 2026', proc: 'Limpieza dental', odo: 'Dr. Carlos Méndez', nota: 'Sin hallazgos relevantes.' },
-{ fecha: '10 Oct 2025', proc: 'Extracción pieza 48', odo: 'Dr. Carlos Méndez', nota: 'Cicatrización normal.' }
-],
-tratamientos: [
-{ nombre: 'Endodoncia pieza 23', progreso: 80, sesiones: '4/5' },
-{ nombre: 'Ortodoncia fase 1', progreso: 45, sesiones: '9/20' }
-],
-documentos: [
-{ nombre: 'Radiografía panorámica', fecha: '20 Mar 2026', tipo: 'img' },
-{ nombre: 'Consentimiento endodoncia', fecha: '19 Mar 2026', tipo: 'pdf' }
-]
-},
-{
-id: 2, nombre: 'Laura Martínez', cedula: '1015678901',
-email: 'laura.martinez@email.com', telefono: '320 456 7890',
-fechaNac: '07 Jun 1992', odontologo: 'Dra. Laura Torres', odontologoKey: 'torres',
-ultimaConsulta: '18 Mar 2026', estado: 'activo',
-alerta: false, alertaTexto: '',
-consultas: [
-{ fecha: '18 Mar 2026', proc: 'Blanqueamiento dental', odo: 'Dra. Laura Torres', nota: 'Resultado satisfactorio. Cita de mantenimiento en 6 meses.' },
-{ fecha: '02 Ene 2026', proc: 'Revisión general', odo: 'Dra. Laura Torres', nota: 'Sin novedad.' }
-],
-tratamientos: [
-{ nombre: 'Blanqueamiento dental', progreso: 100, sesiones: '3/3' }
-],
-documentos: [
-{ nombre: 'Ficha de ingreso', fecha: '15 Ene 2025', tipo: 'pdf' }
-]
-},
-{
-id: 3, nombre: 'Carlos Ríos', cedula: '1098765432',
-email: 'carlos.rios@email.com', telefono: '315 678 9012',
-fechaNac: '23 Nov 1978', odontologo: 'Dr. Andrés Ruiz', odontologoKey: 'ruiz',
-ultimaConsulta: '15 Mar 2026', estado: 'activo',
-alerta: true, alertaTexto: 'Hipertensión controlada. Tomar presión antes de cada procedimiento.',
-consultas: [
-{ fecha: '15 Mar 2026', proc: 'Cirugía periodontal', odo: 'Dr. Andrés Ruiz', nota: 'Postoperatorio sin complicaciones.' }
-],
-tratamientos: [
-{ nombre: 'Tratamiento periodontal', progreso: 60, sesiones: '3/5' }
-],
-documentos: [
-{ nombre: 'Examen de sangre', fecha: '10 Mar 2026', tipo: 'pdf' },
-{ nombre: 'Radiografía periapical', fecha: '15 Mar 2026', tipo: 'img' }
-]
-},
-{
-id: 4, nombre: 'Sofía Vargas', cedula: '1032109876',
-email: 'sofia.vargas@email.com', telefono: '300 890 1234',
-fechaNac: '14 Abr 2000', odontologo: 'Dra. Patricia Mora', odontologoKey: 'mora',
-ultimaConsulta: '10 Mar 2026', estado: 'activo',
-alerta: false, alertaTexto: '',
-consultas: [
-{ fecha: '10 Mar 2026', proc: 'Ortodoncia control', odo: 'Dra. Patricia Mora', nota: 'Ajuste de brackets. Próxima cita en 4 semanas.' },
-{ fecha: '10 Feb 2026', proc: 'Ortodoncia control', odo: 'Dra. Patricia Mora', nota: 'Avance adecuado.' }
-],
-tratamientos: [
-{ nombre: 'Ortodoncia completa', progreso: 35, sesiones: '7/20' }
-],
-documentos: [
-{ nombre: 'Fotografías iniciales', fecha: '05 Ene 2025', tipo: 'img' },
-{ nombre: 'Consentimiento ortodoncia', fecha: '05 Ene 2025', tipo: 'pdf' }
-]
-},
-{
-id: 5, nombre: 'Andrés Medina', cedula: '1056789012',
-email: 'andres.medina@email.com', telefono: '312 012 3456',
-fechaNac: '30 Sep 1965', odontologo: 'Dr. Felipe Silva', odontologoKey: 'silva',
-ultimaConsulta: '08 Mar 2026', estado: 'inactivo',
-alerta: true, alertaTexto: 'Diabético tipo 2. Cicatrización lenta. Coordinación con médico tratante requerida.',
-consultas: [
-{ fecha: '08 Mar 2026', proc: 'Prótesis parcial removible', odo: 'Dr. Felipe Silva', nota: 'Adaptación inicial. Seguimiento en 2 semanas.' }
-],
-tratamientos: [
-{ nombre: 'Prótesis parcial removible', progreso: 90, sesiones: '9/10' }
-],
-documentos: [
-{ nombre: 'Impresiones dentales', fecha: '01 Mar 2026', tipo: 'img' }
-]
-},
-{
-id: 6, nombre: 'María Ospina', cedula: '1067890123',
-email: 'maria.ospina@email.com', telefono: '318 123 4567',
-fechaNac: '19 Jul 1988', odontologo: 'Dr. Carlos Méndez', odontologoKey: 'mendez',
-ultimaConsulta: '05 Mar 2026', estado: 'activo',
-alerta: false, alertaTexto: '',
-consultas: [
-{ fecha: '05 Mar 2026', proc: 'Corona cerámica pieza 11', odo: 'Dr. Carlos Méndez', nota: 'Colocación definitiva. Paciente conforme.' }
-],
-tratamientos: [
-{ nombre: 'Corona cerámica', progreso: 100, sesiones: '3/3' }
-],
-documentos: [
-{ nombre: 'Foto antes y después', fecha: '05 Mar 2026', tipo: 'img' }
-]
-},
-{
-id: 7, nombre: 'Felipe Cano', cedula: '1078901234',
-email: 'felipe.cano@email.com', telefono: '321 234 5678',
-fechaNac: '02 Feb 2010', odontologo: 'Dra. Laura Torres', odontologoKey: 'torres',
-ultimaConsulta: '01 Mar 2026', estado: 'activo',
-alerta: false, alertaTexto: '',
-consultas: [
-{ fecha: '01 Mar 2026', proc: 'Sellantes preventivos', odo: 'Dra. Laura Torres', nota: 'Aplicados en molares permanentes.' }
-],
-tratamientos: [
-{ nombre: 'Odontología preventiva', progreso: 50, sesiones: '1/2' }
-],
-documentos: [
-{ nombre: 'Ficha pediátrica', fecha: '01 Mar 2026', tipo: 'pdf' }
-]
-},
-{
-id: 8, nombre: 'Isabel Herrera', cedula: '1089012345',
-email: 'isabel.herrera@email.com', telefono: '314 345 6789',
-fechaNac: '11 Dic 1972', odontologo: 'Dr. Andrés Ruiz', odontologoKey: 'ruiz',
-ultimaConsulta: '25 Feb 2026', estado: 'inactivo',
-alerta: true, alertaTexto: 'Anticoagulante (warfarina). Consultar INR antes de procedimientos invasivos.',
-consultas: [
-{ fecha: '25 Feb 2026', proc: 'Implante pieza 36', odo: 'Dr. Andrés Ruiz', nota: 'Fase 1 completada. Espera de osteointegración.' }
-],
-tratamientos: [
-{ nombre: 'Implante dental pieza 36', progreso: 25, sesiones: '1/4' }
-],
-documentos: [
-{ nombre: 'Examen de coagulación', fecha: '20 Feb 2026', tipo: 'pdf' },
-{ nombre: 'TAC maxilofacial', fecha: '22 Feb 2026', tipo: 'img' }
-]
+// ── DATOS REALES (API) ──────────────────────────────────────────────────
+// Se cargan de forma asíncrona desde el servidor; ver cargarPacientes().
+let pacientes = [];
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function fmtFecha(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return `${String(d.getDate()).padStart(2, '0')} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
 }
-];
+
+// Normaliza el DTO recibido de /historia-clinica/st-adm-historial/data al formato
+// que usa el render de esta vista (fechas ya formateadas para mostrar).
+function normalizarPaciente(p) {
+    return {
+        ...p,
+        fechaNac: fmtFecha(p.fechaNac),
+        ultimaConsulta: fmtFecha(p.ultimaConsulta),
+        consultas: (p.consultas || []).map(c => ({ ...c, fecha: fmtFecha(c.fecha) })),
+        tratamientos: p.tratamientos || [],
+        documentos: p.documentos || []
+    };
+}
+
+async function cargarPacientes() {
+    try {
+        const resp = await fetch('/historia-clinica/st-adm-historial/data', { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        pacientes = data.map(normalizarPaciente);
+    } catch (e) {
+        console.error('No se pudo cargar el historial de pacientes:', e);
+        pacientes = [];
+        showToast('No se pudo cargar el historial de pacientes');
+    }
+    poblarFiltroOdontologos();
+    pacientesFiltrados = [...pacientes];
+    renderTabla(pacientesFiltrados);
+    actualizarContadores();
+    animarContadores();
+}
+
+// El select de odontólogo ya no trae opciones fijas en el HTML: se construye
+// dinámicamente a partir de los odontólogos que aparecen en los datos reales.
+function poblarFiltroOdontologos() {
+    const select = document.getElementById('filterOdontologo');
+    if (!select) return;
+    const vistos = new Map();
+    pacientes.forEach(p => { if (p.odontologoKey) vistos.set(p.odontologoKey, p.odontologo); });
+    select.innerHTML = '<option value="">Todos los odontólogos</option>' +
+        [...vistos.entries()].map(([key, nombre]) => `<option value="${key}">${nombre}</option>`).join('');
+}
 
 let pacientesFiltrados = [...pacientes];
 let pacienteActivo = null;
@@ -444,11 +357,8 @@ function inicializarHistoricoAdmin() {
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 function iniciarHistorialAdmin() {
-    console.log('historial-adm.js cargado');
-    renderTabla(pacientes);
-    actualizarContadores();
-    animarContadores();
     inicializarHistoricoAdmin();
+    cargarPacientes();
 }
 
 if (document.readyState === 'loading') {

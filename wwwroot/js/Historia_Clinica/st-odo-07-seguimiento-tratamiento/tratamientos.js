@@ -38,58 +38,6 @@ const showToast = (message, type = 'success') => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  PERSISTENCIA CON LOCALSTORAGE
-// ═══════════════════════════════════════════════════════════════════
-
-const seguimientoStorage = {
-  key: 'smiletrack_seguimiento',
-  
-  load: () => {
-    const stored = localStorage.getItem(seguimientoStorage.key);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.warn('Error al cargar seguimiento, usando datos de ejemplo');
-      }
-    }
-    
-    // Datos de ejemplo actualizados
-    return [
-      { id: 1, nombre: 'Ortodoncia', tipo: 'Ortodoncia', paciente: 'Pedro García', cedula: '1020345678', odontologo: 'Dr. Carlos Méndez', estado: 'en-curso', progreso: 38, inicio: '2026-02-15', estimado: '2026-05-15', sesiones: 3, totalSesiones: 8, nota: '' },
-      { id: 2, nombre: 'Endodoncia pieza 23', tipo: 'Endodoncia', paciente: 'Laura Martínez', cedula: '1015678901', odontologo: 'Dra. Laura Torres', estado: 'completado', progreso: 100, inicio: '2026-02-01', finalizado: '2026-03-20', sesiones: 2, totalSesiones: 2, nota: '' },
-      { id: 3, nombre: 'Blanqueamiento', tipo: 'Estética', paciente: 'Carlos Ríos', cedula: '1098765432', odontologo: 'Dr. Andrés Ruiz', estado: 'pausado', progreso: 40, inicio: '2026-01-10', sesiones: 2, totalSesiones: 5, nota: 'Pausado por paciente' },
-      { id: 4, nombre: 'Limpieza dental', tipo: 'Profilaxis', paciente: 'Sofía Vargas', cedula: '1032109876', odontologo: 'Dra. Patricia Mora', estado: 'completado', progreso: 100, inicio: '2026-03-01', finalizado: '2026-03-10', sesiones: 1, totalSesiones: 1, nota: '' },
-      { id: 5, nombre: 'Extracción muela del juicio', tipo: 'Cirugía', paciente: 'Andrés Medina', cedula: '1056789012', odontologo: 'Dr. Felipe Silva', estado: 'en-curso', progreso: 60, inicio: '2026-03-05', estimado: '2026-03-25', sesiones: 2, totalSesiones: 3, nota: '' },
-      { id: 6, nombre: 'Ortodoncia invisible', tipo: 'Ortodoncia', paciente: 'María Ospina', cedula: '1067890123', odontologo: 'Dr. Carlos Méndez', estado: 'en-curso', progreso: 25, inicio: '2026-02-20', estimado: '2026-08-20', sesiones: 2, totalSesiones: 12, nota: '' },
-      { id: 7, nombre: 'Corona dental', tipo: 'Prótesis', paciente: 'Felipe Cano', cedula: '1078901234', odontologo: 'Dra. Laura Torres', estado: 'pausado', progreso: 50, inicio: '2026-02-01', sesiones: 1, totalSesiones: 3, nota: 'Esperando laboratorio' },
-      { id: 8, nombre: 'Tratamiento de encías', tipo: 'Periodoncia', paciente: 'Isabel Herrera', cedula: '1089012345', odontologo: 'Dr. Andrés Ruiz', estado: 'completado', progreso: 100, inicio: '2026-01-15', finalizado: '2026-02-28', sesiones: 4, totalSesiones: 4, nota: '' },
-    ];
-  },
-  
-  save: (data) => {
-    try {
-      localStorage.setItem(seguimientoStorage.key, JSON.stringify(data));
-      return true;
-    } catch (e) {
-      console.error('Error al guardar seguimiento:', e);
-      return false;
-    }
-  },
-  
-  updateTratamiento: (id, updates) => {
-    const data = seguimientoStorage.load();
-    const idx = data.findIndex(t => t.id === id);
-    if (idx !== -1) {
-      data[idx] = { ...data[idx], ...updates };
-      seguimientoStorage.save(data);
-      return true;
-    }
-    return false;
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════════
 //  DATOS Y CONFIGURACIÓN GLOBAL
 // ═══════════════════════════════════════════════════════════════════
 
@@ -506,15 +454,13 @@ const initSidebar = () => {
 
 async function fetchTratamientos() {
   try {
-    // En producción: descomentar fetch real a API
-    // const res = await fetch(`${API_BASE}/patients/tratamientos`);
-    // if (!res.ok) throw new Error('API error');
-    // return await res.json();
-    
-    return seguimientoStorage.load();
+    const resp = await fetch('/historia-clinica/st-odo-07-seguimiento-tratamiento/data', { headers: { 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return await resp.json();
   } catch (error) {
-    console.warn('Fallback a datos locales:', error);
-    return seguimientoStorage.load();
+    console.error('No se pudo cargar el seguimiento de tratamientos:', error);
+    showToast('No se pudo cargar el seguimiento de tratamientos', 'error');
+    return [];
   }
 }
 

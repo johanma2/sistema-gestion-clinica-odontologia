@@ -10,17 +10,21 @@ namespace SmileTrack_MVC.Models.ViewModels
         [Range(1, int.MaxValue, ErrorMessage = "Seleccione un paciente válido")]
         public int IdPaciente { get; set; }
 
+        [Required(ErrorMessage = "El profesional es obligatorio")]
         [Range(1, int.MaxValue, ErrorMessage = "Seleccione un profesional válido")]
-        public int? IdProfesional { get; set; }
+        public int IdProfesional { get; set; }
 
+        [Required(ErrorMessage = "El consultorio es obligatorio")]
         [Range(1, int.MaxValue, ErrorMessage = "Seleccione un consultorio válido")]
-        public int? IdConsultorio { get; set; }
+        public int IdConsultorio { get; set; }
 
+        [Required(ErrorMessage = "El servicio es obligatorio")]
         [Range(1, int.MaxValue, ErrorMessage = "Seleccione un servicio válido")]
-        public int? IdServicio { get; set; }
+        public int IdServicio { get; set; }
 
+        [Required(ErrorMessage = "El estado es obligatorio")]
         [Range(1, int.MaxValue, ErrorMessage = "Seleccione un estado válido")]
-        public int? IdEstado { get; set; }
+        public int IdEstado { get; set; }
 
         [Required(ErrorMessage = "La fecha es obligatoria")]
         [DataType(DataType.Date, ErrorMessage = "Formato de fecha inválido")]

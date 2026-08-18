@@ -47,11 +47,8 @@ namespace SmileTrack_MVC.Models.Entities
         }
 
         [NotMapped]
-        public TimeSpan? HoraFin
-        {
-            get => FechaHora.AddMinutes(30).TimeOfDay;
-            set => FechaHora = FechaHora.Date.Add(value ?? TimeSpan.Zero);
-        }
+        public TimeSpan HoraFin =>
+        FechaHora.AddMinutes(60).TimeOfDay;
 
         [NotMapped]
         public string? MotivoConsulta

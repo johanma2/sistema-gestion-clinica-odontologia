@@ -221,11 +221,7 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties { IsPersistent = true });
 
-        // Si el cliente solicita JSON (API client), devolvemos token y redirect en JSON
-        if (wantsJson)
-        {
-            return Json(new { success = true, token = authResult.Token, redirectUrl = redirectUrl });
-        }
+
 
         // Guardar el JWT en cookie httpOnly separada cuando exista.
         if (!string.IsNullOrWhiteSpace(authResult.Token))
@@ -426,21 +422,23 @@ public class AccesoYSeguridadController(AppDbContext context, IAuthService authS
     [Authorize]
     [ValidateAntiForgeryToken]
     [Route("acceso-y-seguridad/cambiar-contrasena")]
-    public async Task<IActionResult> ChangePasswordPost(string contrasenaActual, string nuevaContrasena, string confirmarContrasena)
+    public async Task<IActionResult> ChangePasswordPost(
+    string contrasenaActual,
+    string nuevaContrasena,
+    string confirmarContrasena)
     {
-        string? userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdString, out int idUsuario))
+        if (!User.Identity?.IsAuthenticated ?? true)
         {
             return RedirectToAction("Login");
         }
 
-        var response = await _authService.ChangePasswordAsync(new ChangePasswordRequest
-        {
-            IdUsuario = idUsuario,
-            ContrasenaActual = contrasenaActual,
-            NuevaContrasena = nuevaContrasena,
-            ConfirmarContrasena = confirmarContrasena
-        });
+        var response = await _authService.ChangePasswordAsync(
+            new ChangePasswordRequest
+            {
+                ContrasenaActual = contrasenaActual,
+                NuevaContrasena = nuevaContrasena,
+                ConfirmarContrasena = confirmarContrasena
+            });
 
         if (!response.Success)
         {

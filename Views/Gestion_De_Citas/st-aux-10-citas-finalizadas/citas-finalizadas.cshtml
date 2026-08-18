@@ -24,6 +24,8 @@ NOTAS DE MANTENIMIENTO:
 - El tbody se renderiza vía JS para poder aplicar badges de estado dinámicos sin duplicar lógica en Razor.
 ============================================ *@
 @{ Layout = null; }
+@using System.Text.Json
+@{ var citasFinalizadasDataJson = JsonSerializer.Serialize(ViewData["CitasFinalizadasData"]); }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -175,6 +177,9 @@ NOTAS DE MANTENIMIENTO:
   </footer>
 
 
+  <script>
+    window.smiletrackCitasFinalizadasData = @Html.Raw(citasFinalizadasDataJson);
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.js")"></script>
 
   <script src="@Url.Content("~/js/shared/sidebar.js")"></script>

@@ -76,79 +76,22 @@ const modalManager = {
 // ═══════════════════════════════════════════════════════════════════
 // WHY: Clase que encapsula el acceso a datos para desacoplar la lógica de presentación de la capa de API
 // ═══════════════════════════════════════════════════════════════════
+// Controlador de datos: envuelve los datos reales inyectados por el servidor
+// (window.smiletrackPanelData, ver ConstruirPanelOperativoAsync en GestionCitasController.cs)
+// en vez de simular pacientes/alertas de ejemplo.
 class PanelController {
   constructor() {
-    this._fechaHoy = 'martes 24 de marzo 2026';
-
-    this._proximaCita = {
-      minutosRestantes: 15,
-      hora: '10:00 AM',
-      paciente: 'Pedro García',
-      tipo: 'Control',
-      profesional: 'Dr. Carlos Méndez',
-      consultorio: 'Consultorio 1',
-    };
-
-    this._kpis = {
-      citasHoy: 6,
-      completadas: 2,
-      pendientes: 3,
-      consultoriosDisponibles: 2,
-    };
-
-    this._pacientes = [
-      {
-        id: 1, hora: '08:00', paciente: 'María López', profesional: 'Dr. Méndez',
-        alergia: null, consultorio: 'Consultorio 1', estado: 'Atendida', highlight: false,
-        telefono: '+57 310 456 7890', email: 'maria.lopez@email.com', sangre: 'A+', edad: '34 años',
-        medicamentos: ['Ibuprofeno 400mg'],
-        antecedentes: 'Sin antecedentes médicos relevantes.',
-        servicio: 'Limpieza dental',
-      },
-      {
-        id: 2, hora: '08:00', paciente: 'Carlos Ruiz', profesional: 'Dra. Gómez',
-        alergia: null, consultorio: 'Consultorio 2', estado: 'Atendida', highlight: false,
-        telefono: '+57 315 123 4567', email: 'carlos.ruiz@email.com', sangre: 'B+', edad: '45 años',
-        medicamentos: [],
-        antecedentes: 'Diabetes tipo 2 controlada.',
-        servicio: 'Extracción muela del juicio',
-      },
-      {
-        id: 3, hora: '10:00', paciente: 'Pedro García', profesional: 'Dr. Méndez',
-        alergia: 'Penicilina', consultorio: 'Consultorio 1', estado: 'Pendiente', highlight: true,
-        telefono: '+57 318 987 6543', email: 'pedro.garcia@email.com', sangre: 'O+', edad: '52 años',
-        medicamentos: ['Enalapril 5mg'],
-        antecedentes: 'Hipertensión arterial leve. Alérgico a penicilina.',
-        servicio: 'Control de tratamiento',
-      },
-      {
-        id: 4, hora: '11:00', paciente: 'Ana Martínez', profesional: 'Dr. Méndez',
-        alergia: 'Látex', consultorio: 'Consultorio 1', estado: 'Pendiente', highlight: false,
-        telefono: '+57 320 111 2233', email: 'ana.martinez@email.com', sangre: 'AB-', edad: '28 años',
-        medicamentos: ['Ácido fólico'],
-        antecedentes: 'Alergia al látex. Embarazada (12 semanas).',
-        servicio: 'Control prenatal dental',
-      },
-      {
-        id: 5, hora: '14:00', paciente: 'Luis Herrera', profesional: 'Dra. Ramírez',
-        alergia: null, consultorio: 'Consultorio 2', estado: 'Pendiente', highlight: false,
-        telefono: '+57 312 555 6677', email: 'luis.herrera@email.com', sangre: 'O-', edad: '19 años',
-        medicamentos: [],
-        antecedentes: 'Primera visita. Sin antecedentes médicos relevantes.',
-        servicio: 'Valoración inicial',
-      },
-    ];
-
-    this._alertas = [
-      { tipo: 'warning', titulo: 'Paciente con alergia', desc: 'Pedro García — Alérgico a Penicilina' },
-      { tipo: 'warning', titulo: 'Paciente con alergia', desc: 'Ana Martínez — Alérgica a Látex' },
-      { tipo: 'info', titulo: 'Nuevo paciente', desc: 'Luis Herrera — Primera visita' },
-    ];
+    const data = window.smiletrackPanelData || {};
+    this._fechaHoy = data.fechaHoy || '';
+    this._proximaCita = data.proximaCita || null;
+    this._kpis = data.kpis || { citasHoy: 0, completadas: 0, pendientes: 0, consultoriosDisponibles: 0 };
+    this._pacientes = data.citas || [];
+    this._alertas = data.alertas || [];
   }
 
   // Devuelve resumen del panel con fecha, próxima cita y KPIs
   async getResumen() {
-    return { fechaHoy: this._fechaHoy, proximaCita: { ...this._proximaCita }, kpis: { ...this._kpis } };
+    return { fechaHoy: this._fechaHoy, proximaCita: this._proximaCita ? { ...this._proximaCita } : null, kpis: { ...this._kpis } };
   }
 
   // Devuelve lista de citas para la tabla
@@ -172,12 +115,13 @@ class PanelController {
   // Calcula progreso de citas completadas vs total
   async getProgreso() {
     const { completadas, citasHoy } = this._kpis;
-    return { completadas, total: citasHoy, porcentaje: Math.round((completadas / citasHoy) * 100) };
+    return { completadas, total: citasHoy, porcentaje: citasHoy > 0 ? Math.round((completadas / citasHoy) * 100) : 0 };
   }
 
-  // Simula generación de resumen PDF para descarga
+  // NOTA: no existe un endpoint real de generación de PDF todavía; se informa
+  // honestamente en lugar de simular una descarga exitosa (ver initDescargarResumen).
   async descargarResumen() {
-    return { ok: true, nombre: `panel_${this._fechaHoy.replace(/ /g, '_')}.pdf` };
+    return { ok: false, nombre: null };
   }
 }
 
@@ -239,10 +183,17 @@ const renderHeader = (resumen) => {
   const meta = safeGetElement('pageMeta');
   if (meta) meta.textContent = `Resumen en tiempo real · ${resumen.fechaHoy}`;
 
+  const alertBar = safeGetElement('apTitulo')?.closest('.alert-bar, [role="status"]');
   const pc = resumen.proximaCita;
   const titulo = safeGetElement('apTitulo');
   const detalle = safeGetElement('apDetalle');
-  
+
+  if (!pc) {
+    if (titulo) titulo.textContent = 'Sin próximas citas pendientes hoy';
+    if (detalle) detalle.textContent = '';
+    return;
+  }
+
   if (titulo) titulo.textContent = `Próxima cita en ${pc.minutosRestantes} minutos`;
   if (detalle) detalle.textContent = `${pc.hora} · ${pc.paciente} · ${pc.tipo} · ${pc.profesional} · ${pc.consultorio}`;
 };
@@ -484,6 +435,12 @@ const initDescargarResumen = () => {
 
     try {
       const res = await panelCtrl.descargarResumen();
+      if (!res.ok) {
+        btn.textContent = original;
+        btn.disabled = false;
+        window.ToastService.info('La generación de PDF aún no está disponible en el servidor');
+        return;
+      }
       btn.textContent = '✓ Descargado';
       btn.style.color = 'var(--green)';
       btn.style.borderColor = 'var(--green)';

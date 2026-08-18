@@ -34,3 +34,43 @@ public class OdontogramaTratamientoPayload
     public string? Obs { get; set; }
     public string? Fecha { get; set; }
 }
+
+public class NotaClinicaGuardarRequest
+{
+    public int? PacienteId { get; set; }
+    public string? Diagnostico { get; set; }
+    public string? Procedimiento { get; set; }
+    public string? ProximaCita { get; set; }
+}
+
+public class ControlPostoperatorioGuardarRequest
+{
+    public int? CitaId { get; set; }
+    public string? Status { get; set; }
+    public List<ControlPostoperatorioInstruccion>? Instructions { get; set; }
+    public string? Observations { get; set; }
+}
+
+public class ControlPostoperatorioInstruccion
+{
+    public string? Text { get; set; }
+    public bool Checked { get; set; }
+}
+
+public class RecordatorioPendienteDto
+{
+    public int Id { get; set; }
+    public string Paciente { get; set; } = "";
+    public string Iniciales { get; set; } = "";
+    public DateTime FechaHora { get; set; }
+    public bool EsManana { get; set; }
+    public string Canal { get; set; } = "email";
+    public bool Confirmada { get; set; }
+}
+
+public class RecordatoriosViewModel
+{
+    public List<RecordatorioPendienteDto> Pendientes { get; set; } = [];
+    public int SinConfirmar { get; set; }
+    public int FacturasVencidas { get; set; }
+}

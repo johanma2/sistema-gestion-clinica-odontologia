@@ -27,7 +27,7 @@ const ToastService = (function () {
      */
     function show(options) {
         const { title, message, type = 'info', duration = 5000 } = options;
-        
+
         const cont = createContainerIfNeeded();
 
         const toast = document.createElement('div');
@@ -55,7 +55,7 @@ const ToastService = (function () {
         toast.classList.add('show');
 
         const closeBtn = toast.querySelector('.toast-close');
-        
+
         const removeToast = () => {
             toast.classList.remove('show');
             toast.classList.add('hide');
@@ -73,11 +73,47 @@ const ToastService = (function () {
         }
     }
 
+    const normalizeToastArgs = (title, message, duration) => {
+        // Permite usar:
+        // ToastService.warning("Mensaje")
+        // o:
+        // ToastService.warning("Título", "Mensaje", 5000)
+
+        if (message === undefined) {
+            return {
+                title: 'Aviso',
+                message: title,
+                duration: duration ?? 5000
+            };
+        }
+
+        return {
+            title,
+            message,
+            duration: duration ?? 5000
+        };
+    };
+
     return {
-        success: (title, message, duration) => show({ title, message, type: 'success', duration }),
-        error: (title, message, duration) => show({ title, message, type: 'error', duration }),
-        warning: (title, message, duration) => show({ title, message, type: 'warning', duration }),
-        info: (title, message, duration) => show({ title, message, type: 'info', duration })
+        success: (title, message, duration) => {
+            const toast = normalizeToastArgs(title, message, duration);
+            show({ ...toast, type: 'success' });
+        },
+
+        error: (title, message, duration) => {
+            const toast = normalizeToastArgs(title, message, duration);
+            show({ ...toast, type: 'error' });
+        },
+
+        warning: (title, message, duration) => {
+            const toast = normalizeToastArgs(title, message, duration);
+            show({ ...toast, type: 'warning' });
+        },
+
+        info: (title, message, duration) => {
+            const toast = normalizeToastArgs(title, message, duration);
+            show({ ...toast, type: 'info' });
+        }
     };
 })();
 

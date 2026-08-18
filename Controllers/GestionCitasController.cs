@@ -4,29 +4,29 @@
  * ============================================
  * Autor: Johan Santamaria
  * Fecha: 2026-07-30
+ *
  * PROPÓSITO:
  * Centraliza la lógica de negocio para todos los módulos
  * relacionados con citas: dashboards, agenda, gestión integral,
  * paneles auxiliares y vistas de profesionales/pacientes.
+ *
+ * REGLAS PRINCIPALES:
+ * - Una cita tiene una duración fija de 60 minutos.
+ * - FechaHora siempre se calcula a partir de Fecha + HoraInicio.
+ * - HoraFin es un dato derivado y no debe utilizarse para alterar FechaHora.
+ * - Los conflictos de agenda se validan considerando bloques de 60 minutos.
+ * - Las operaciones administrativas de creación/cancelación requieren
+ *   rol Administrador o Recepcionista.
+ * - Las operaciones de paciente/profesional aplican ownership mediante claims.
+ *
  * PATRONES APLICADOS:
- * - Constructor injection para dependencias (ILogger, AppDbContext)
- * - CancellationToken en todas las operaciones asíncronas para soporte de cancelación
- * - Try-catch estratificado: logs específicos por tipo de excepción para debugging preciso
- * - TempData para mensajes amigables al usuario final sin exponer detalles técnicos
- * - Validación de ownership implícita vía [Authorize(Roles=...)] para seguridad por capas
- * 
- * RUTAS PRINCIPALES:
- * - GET /gestion-de-citas/st-adm-01-dashboard → Dashboard Admin
- * - GET /gestion-de-citas/st-adm-08-agenda → Agenda General
- * - POST /api/citas/agenda → Crear cita desde agenda (API REST)
- * - GET /gestion-de-citas/st-adm-09-citas → Gestión Integral
- * - POST /gestion-de-citas/guardar-cita → Guardar/Actualizar cita
- * - POST /gestion-de-citas/eliminar-cita → Cancelar cita (soft delete)
- * 
- * NOTAS DE MANTENIMIENTO:
- * - Los comentarios explican el "por qué" de las decisiones, no el "qué" del código
- * - Las rutas usan atributos [Route] explícitos para resiliencia ante cambios de routing
- * - Los datos sensibles se loguean sin exponer información personal (PII)
+ * - Constructor injection
+ * - CancellationToken
+ * - Validación de ModelState
+ * - Try/catch estratificado
+ * - TempData para mensajes amigables
+ * - Auditoría de modificaciones
+ * - Soft delete para cancelación
  * ============================================
  */
 
@@ -34,7 +34,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SmileTrack_MVC.Data;
 using SmileTrack_MVC.Helpers;
 using SmileTrack_MVC.Models.Entities;
@@ -46,266 +45,452 @@ using System.Security.Claims;
 
 namespace SmileTrack_MVC.Controllers;
 
-/**
- * ============================================
- * Controller: Gestión de Citas
- * ============================================
- * Autor: Johan Santamaria
- * 
- * PROPÓSITO:
- * Centraliza la lógica de negocio para módulos de citas,
- * incluyendo dashboards, agenda y gestión integral.
- * 
- * PATRONES APLICADOS:
- * - Constructor injection para dependencias (ILogger, AppDbContext)
- * - CancellationToken para operaciones asíncronas cancelables
- * - Try-catch estratificado: logs específicos por tipo de excepción
- * - TempData para mensajes de error amigables al usuario final
- * ============================================
- */
-public class GestionCitasController(AppDbContext context, ILogger<GestionCitasController> logger, IEmailService emailService) : Controller
+public class GestionCitasController(
+    AppDbContext context,
+    ILogger<GestionCitasController> logger,
+    IEmailService emailService) : Controller
 {
     private readonly AppDbContext _context = context;
     private readonly ILogger<GestionCitasController> _logger = logger;
     private readonly IEmailService _emailService = emailService;
-    
-    // WHY: Array estático para evitar re-creación en cada llamada a Split, optimizando performance
-    private static readonly char[] _separadorEspacio = [' '];
 
-    // WHY: Mensaje genérico para errores no controlados: evita exponer detalles técnicos al usuario final por seguridad
+    /*
+     * REGLA DE NEGOCIO:
+     * Todas las citas del sistema duran exactamente 60 minutos.
+     *
+     * IMPORTANTE:
+     * Esta constante representa la fuente de verdad del backend.
+     * El cliente no puede decidir arbitrariamente la duración.
+     */
+    private const int DuracionCitaMinutos = 60;
+
     private const string MensajeErrorFallback =
-        "Ocurrió un error inesperado al cargar la página. Por favor intente nuevamente. Si el problema persiste, contacte al soporte.";
+        "Ocurrió un error inesperado al cargar la página. " +
+        "Por favor intente nuevamente. Si el problema persiste, contacte al soporte.";
 
     public sealed class CitaApiUpdateDto
     {
         public int IdCita { get; set; }
+
         public int IdPaciente { get; set; }
+
         public int? IdProfesional { get; set; }
+
         public int? IdServicio { get; set; }
+
         public int? IdConsultorio { get; set; }
+
+        public int? IdEstado { get; set; }
+
         public DateTime FechaHora { get; set; }
+
         public string? Estado { get; set; }
+
         public string? Notas { get; set; }
     }
+
+    // ================================================================
+    // DASHBOARD ADMINISTRADOR
+    // ================================================================
 
     [HttpGet]
     [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/st-adm-01-dashboard")]
-    public async Task<IActionResult> Stadm01Dashboard([FromQuery] int? editId, CancellationToken ct = default)
+    public async Task<IActionResult> Stadm01Dashboard(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
     {
-        // TRY/CATCH ESTRATIFICADO:
-        // - OperationCanceledException: se loguea como warning (no es error real, solo timeout/cancelación de usuario)
-        // - DbUpdateException: problema de integridad en BD, se loguea con detalle técnico para debugging
-        // - SqlException: caída de conexión o timeout de SQL Server, requiere atención de infraestructura
-        // - Exception genérica: catch-all para errores no anticipados, nunca expone stack trace al usuario
         try
         {
-            await CargarDatosCitas(editId, "/gestion-de-citas/st-adm-01-dashboard", null, ct);
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-adm-01-dashboard",
+                null,
+                ct);
+
             await CargarDatosDashboard(ct);
-            return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
         }
-        catch (OperationCanceledException ocex)
+        catch (OperationCanceledException ex)
         {
-            // WHY: OperationCanceledException ocurre cuando el usuario cancela la request o hay timeout;
-            // no es un error de negocio, por eso se loguea como warning y se retorna vista normal para mejor UX
-            _logger.LogWarning(ocex, "Solicitud cancelada Stadm01Dashboard para usuario {Usuario}", 
+            _logger.LogWarning(
+                ex,
+                "Solicitud cancelada Stadm01Dashboard para usuario {Usuario}",
                 User.Identity?.Name ?? "anonimo");
+
             TempData["ErrorValidacion"] = MensajeErrorFallback;
-            return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
         }
-        catch (DbUpdateException dbEx)
+        catch (DbUpdateException ex)
         {
-            // WHY: DbUpdateException indica problema de integridad en BD (ej: constraint violado, FK rota);
-            // se loguea con detalle técnico para el equipo de desarrollo, pero al usuario se le muestra mensaje genérico
-            _logger.LogError(dbEx, "Error de base de datos en Stadm01Dashboard: {Message}", dbEx.Message);
-            TempData["ErrorValidacion"] = "Error al consultar datos. Intente nuevamente.";
-            return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
+            _logger.LogError(
+                ex,
+                "Error de base de datos en Stadm01Dashboard");
+
+            TempData["ErrorValidacion"] =
+                "Error al consultar datos. Intente nuevamente.";
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
         }
-        catch (SqlException sqlEx)
+        catch (SqlException ex)
         {
-            // WHY: SqlException puede indicar caída de conexión o timeout de SQL Server;
-            // se loguea el número de error para diagnóstico de infraestructura, pero se protege al usuario de detalles sensibles
-            _logger.LogError(sqlEx, "Error SQL {Number} en Stadm01Dashboard", sqlEx.Number);
-            TempData["ErrorValidacion"] = "Servicio temporalmente no disponible. Intente en unos minutos.";
-            return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
+            _logger.LogError(
+                ex,
+                "Error SQL {Number} en Stadm01Dashboard",
+                ex.Number);
+
+            TempData["ErrorValidacion"] =
+                "Servicio temporalmente no disponible. Intente en unos minutos.";
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
         }
         catch (Exception ex)
         {
-            // WHY: Catch-all para excepciones no anticipadas; se loguea stack trace completo para debugging posterior,
-            // pero nunca se expone al usuario final por seguridad (previene información disclosure)
-            _logger.LogError(ex, "Error crítico cargando Stadm01Dashboard para usuario {Usuario} en {Path}",
-                User.Identity?.Name ?? "anonimo", HttpContext.Request.Path);
+            _logger.LogError(
+                ex,
+                "Error crítico cargando Stadm01Dashboard para usuario {Usuario}",
+                User.Identity?.Name ?? "anonimo");
+
             TempData["ErrorValidacion"] = MensajeErrorFallback;
-            return View("~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-01-dashboard/index.cshtml");
         }
     }
+
+    // ================================================================
+    // AGENDA GENERAL
+    // ================================================================
 
     [HttpGet]
     [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/st-adm-08-agenda")]
-    public async Task<IActionResult> Stadm08Agenda([FromQuery] int? editId, [FromQuery] DateTime? weekStart, [FromQuery] int? professionalId, [FromQuery] int? officeId, CancellationToken ct = default)
+    public async Task<IActionResult> Stadm08Agenda(
+        [FromQuery] int? editId,
+        [FromQuery] DateTime? weekStart,
+        [FromQuery] int? professionalId,
+        [FromQuery] int? officeId,
+        CancellationToken ct = default)
     {
-        // TRY/CATCH ESTRATIFICADO: mismo patrón que Stadm01Dashboard para consistencia en manejo de errores
         try
         {
-            await CargarDatosCitas(editId, "/gestion-de-citas/st-adm-08-agenda", null, ct);
-            await CargarDatosAgenda(weekStart, professionalId, officeId, ct);
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-adm-08-agenda",
+                null,
+                ct);
 
-            // WHY: Cargar dropdowns con filtros de estado activo para evitar opciones inválidas en UI
+            await CargarDatosAgenda(
+                weekStart,
+                professionalId,
+                officeId,
+                ct);
+
             ViewBag.Pacientes = await _context.Pacientes
+                .AsNoTracking()
                 .Where(p => p.Estado == "activo")
-                .OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres)
-                .Select(p => new { p.IdPaciente, DisplayName = $"{p.Apellidos}, {p.Nombres}" })
+                .OrderBy(p => p.Apellidos)
+                .ThenBy(p => p.Nombres)
+                .Select(p => new
+                {
+                    p.IdPaciente,
+                    DisplayName = $"{p.Apellidos}, {p.Nombres}"
+                })
                 .ToListAsync(ct);
 
-            // WHY: Construir DisplayName con fallback para manejar profesionales sin usuario asociado
             ViewBag.Profesionales = await _context.Profesionales
+                .AsNoTracking()
                 .Include(p => p.Usuario)
                 .Where(p => p.Estado == "activo")
                 .Select(p => new
                 {
                     p.IdProfesional,
-                    DisplayName = (p.Nombres + " " + p.Apellidos).Trim() != string.Empty
-                        ? (p.Nombres + " " + p.Apellidos).Trim()
-                        : (p.Usuario != null ? (p.Usuario.Nombre + " " + p.Usuario.Apellidos).Trim() : "Sin Nombre")
+                    DisplayName =
+                        (p.Nombres + " " + p.Apellidos).Trim() != string.Empty
+                            ? (p.Nombres + " " + p.Apellidos).Trim()
+                            : (
+                                p.Usuario != null
+                                    ? (p.Usuario.Nombre + " " + p.Usuario.Apellidos).Trim()
+                                    : "Sin Nombre"
+                            )
                 })
                 .OrderBy(p => p.DisplayName)
                 .ToListAsync(ct);
 
             ViewBag.Consultorios = await _context.Consultorios
+                .AsNoTracking()
                 .Where(c => c.Estado == "disponible" || c.Estado == "activo")
-                .Select(c => new { c.IdConsultorio, c.Nombre })
+                .Select(c => new
+                {
+                    c.IdConsultorio,
+                    c.Nombre
+                })
                 .OrderBy(c => c.Nombre)
                 .ToListAsync(ct);
 
             ViewBag.Servicios = await _context.Servicios
+                .AsNoTracking()
                 .Where(s => s.Estado == "activo")
-                .Select(s => new { s.IdServicio, s.Nombre })
+                .Select(s => new
+                {
+                    s.IdServicio,
+                    s.Nombre
+                })
+                .OrderBy(s => s.Nombre)
                 .ToListAsync(ct);
 
-            // WHY: Fecha base controlada para demos/pruebas, inyectada vía ViewData para que JS la use
-            ViewData["WeekStart"] = new DateTime(2026, 7, 20).ToString("yyyy-MM-dd");
-            return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
+            ViewData["WeekStart"] =
+                (weekStart?.Date ?? DateTime.Today)
+                .ToString("yyyy-MM-dd");
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
         }
-        catch (OperationCanceledException ocex)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ocex, "Solicitud cancelada Stadm08Agenda para usuario {Usuario}", User.Identity?.Name ?? "anonimo");
+            _logger.LogWarning(
+                ex,
+                "Solicitud cancelada Stadm08Agenda");
+
             TempData["ErrorValidacion"] = MensajeErrorFallback;
-            return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
         }
-        catch (DbUpdateException dbEx)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(dbEx, "Error de base de datos en Stadm08Agenda: {Message}", dbEx.Message);
-            TempData["ErrorValidacion"] = "Error al consultar datos. Intente nuevamente.";
-            return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
+            _logger.LogError(
+                ex,
+                "Error de base de datos en Stadm08Agenda");
+
+            TempData["ErrorValidacion"] =
+                "Error al consultar datos. Intente nuevamente.";
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
         }
-        catch (SqlException sqlEx)
+        catch (SqlException ex)
         {
-            _logger.LogError(sqlEx, "Error SQL {Number} en Stadm08Agenda", sqlEx.Number);
-            TempData["ErrorValidacion"] = "Servicio temporalmente no disponible. Intente en unos minutos.";
-            return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
+            _logger.LogError(
+                ex,
+                "Error SQL {Number} en Stadm08Agenda",
+                ex.Number);
+
+            TempData["ErrorValidacion"] =
+                "Servicio temporalmente no disponible. Intente en unos minutos.";
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error crítico cargando Stadm08Agenda para usuario {Usuario} en {Path}",
-                User.Identity?.Name ?? "anonimo", HttpContext.Request.Path);
+            _logger.LogError(
+                ex,
+                "Error crítico cargando Stadm08Agenda");
+
             TempData["ErrorValidacion"] = MensajeErrorFallback;
-            return View("~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-08-agenda/index.cshtml");
         }
     }
 
+    // ================================================================
+    // CREAR CITA DESDE AGENDA
+    // ================================================================
+
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "ApiOrCookie")]
+    [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("api/appointments")]
-    public async Task<IActionResult> CrearCitaDesdeAppointments([FromBody] CitaAgendaDto dto, CancellationToken ct = default)
+    public async Task<IActionResult> CrearCitaDesdeAppointments(
+        [FromBody] CitaAgendaDto dto,
+        CancellationToken ct = default)
     {
         return await CrearCitaDesdeAgendaInterna(dto, ct);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "ApiOrCookie")]
+    [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("api/citas/agenda")]
-    public async Task<IActionResult> CrearCitaDesdeAgenda([FromBody] CitaAgendaDto dto, CancellationToken ct = default)
+    public async Task<IActionResult> CrearCitaDesdeAgenda(
+        [FromBody] CitaAgendaDto dto,
+        CancellationToken ct = default)
     {
         return await CrearCitaDesdeAgendaInterna(dto, ct);
     }
 
-    private async Task<IActionResult> CrearCitaDesdeAgendaInterna(CitaAgendaDto dto, CancellationToken ct)
+    private async Task<IActionResult> CrearCitaDesdeAgendaInterna(
+        CitaAgendaDto dto,
+        CancellationToken ct)
     {
-        // WHY: Validar ModelState primero para evitar procesamiento de datos inválidos
+        if (dto == null)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Los datos de la cita son obligatorios."
+            });
+        }
+
         if (!ModelState.IsValid)
         {
-            var errores = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
-            _logger.LogWarning("CrearCitaDesdeAgenda: ModelState invalido. Errores: {Errores}", string.Join("|", errores));
-            return BadRequest(new { message = "Datos inválidos para agendar la cita.", errors = errores });
+            var errores = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .ToList();
+
+            _logger.LogWarning(
+                "CrearCitaDesdeAgenda: ModelState inválido. Errores={Errores}",
+                string.Join("|", errores));
+
+            return BadRequest(new
+            {
+                success = false,
+                message = "Datos inválidos para agendar la cita.",
+                errors = errores
+            });
         }
 
         try
         {
-            // VALIDACIONES DE NEGOCIO PREVIAS:
-            // 1. Profesional y paciente deben existir y estar activos
-            // 2. Hora fin debe ser posterior a hora inicio
-            // 3. No debe haber conflicto de horarios para el profesional
-            // WHY: Validar en capa de aplicación antes de intentar guardar en BD previene errores costosos
+            // La hora final siempre se deriva de la hora inicial.
+            var inicio = dto.Fecha.Date.Add(dto.HoraInicio);
+            var fin = inicio.AddMinutes(DuracionCitaMinutos);
 
-            bool profesionalExiste = await _context.Profesionales
-                .AnyAsync(p => p.IdProfesional == dto.IdProfesional && p.Estado == "activo", ct);
-            if (!profesionalExiste)
+            if (inicio < DateTime.Now.AddMinutes(-5))
             {
-                // WHY: Loguear con Warning porque es validación de negocio esperada, no error de sistema
-                _logger.LogWarning("CrearCitaDesdeAgenda: Profesional {IdProfesional} no existe o inactivo", dto.IdProfesional);
-                return BadRequest(new { message = "El profesional seleccionado no está disponible." });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "No se puede agendar una cita en un horario pasado."
+                });
             }
 
-            bool pacienteExiste = await _context.Pacientes
-                .AnyAsync(p => p.IdPaciente == dto.IdPaciente && p.Estado == "activo", ct);
-            if (!pacienteExiste)
+            if (!await _context.Pacientes.AnyAsync(
+                    p => p.IdPaciente == dto.IdPaciente &&
+                         p.Estado == "activo",
+                    ct))
             {
-                _logger.LogWarning("CrearCitaDesdeAgenda: Paciente {IdPaciente} no existe o inactivo", dto.IdPaciente);
-                return BadRequest(new { message = "El paciente seleccionado no es válido." });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El paciente seleccionado no es válido."
+                });
             }
 
-            if (dto.HoraFin <= dto.HoraInicio)
+            if (!await _context.Profesionales.AnyAsync(
+                    p => p.IdProfesional == dto.IdProfesional &&
+                         p.Estado == "activo",
+                    ct))
             {
-                return BadRequest(new { message = "La hora de fin debe ser posterior a la hora de inicio." });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El profesional seleccionado no está disponible."
+                });
             }
 
-            // WHY: Calcular rangos de tiempo para detectar conflictos de agenda (ventana de 30 min de buffer)
-            var inicioDto = dto.Fecha.Date.Add(dto.HoraInicio);
-            var finDto = dto.Fecha.Date.Add(dto.HoraFin);
+            if (!await _context.Servicios.AnyAsync(
+                    s => s.IdServicio == dto.IdServicio &&
+                         s.Estado == "activo",
+                    ct))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El servicio seleccionado no está disponible."
+                });
+            }
 
-            bool hayConflicto = await _context.Citas
-                .AnyAsync(c => c.IdProfesional == dto.IdProfesional
-                    && c.Estado != "Cancelada"
-                    && c.FechaHora < finDto
-                    && c.FechaHora.AddMinutes(30) > inicioDto
-                    && (!dto.IdCita.HasValue || c.IdCita != dto.IdCita.Value), ct);
+            if (!await _context.Consultorios.AnyAsync(
+                    c => c.IdConsultorio == dto.IdConsultorio &&
+                         (c.Estado == "disponible" ||
+                          c.Estado == "activo"),
+                    ct))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El consultorio seleccionado no está disponible."
+                });
+            }
+
+            string estadoSolicitud =
+                string.IsNullOrWhiteSpace(dto.Estado)
+                    ? "Programada"
+                    : dto.Estado.Trim();
+
+            var estadoEntidad = await _context.EstadosCita
+                .FirstOrDefaultAsync(
+                    e => e.NombreEstado.ToLower() == estadoSolicitud.ToLower() ||
+                         (estadoSolicitud.ToLower() == "agendada" &&
+                          e.NombreEstado.ToLower() == "programada"),
+                    ct);
+
+            if (estadoEntidad == null)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El estado de la cita no es válido."
+                });
+            }
+
+            bool hayConflicto = await _context.Citas.AnyAsync(
+                c =>
+                    c.IdProfesional == dto.IdProfesional &&
+                    c.IdCita != (dto.IdCita ?? 0) &&
+                    c.Estado != "cancelada" &&
+                    c.Estado != "Cancelada" &&
+                    c.Estado != "cancelado" &&
+                    c.FechaHora < fin &&
+                    c.FechaHora.AddMinutes(DuracionCitaMinutos) > inicio,
+                ct);
 
             if (hayConflicto)
             {
-                // WHY: Loguear con Info porque es flujo esperado (usuario eligió horario ocupado)
-                _logger.LogInformation("Conflicto de agenda detectado para Profesional {IdProfesional} en {Fecha}", dto.IdProfesional, inicioDto);
-                return Conflict(new { message = "El profesional ya tiene una cita programada en este horario. Por favor seleccione otro horario." });
+                _logger.LogInformation(
+                    "Conflicto de agenda. Profesional={IdProfesional}, Fecha={Fecha}",
+                    dto.IdProfesional,
+                    inicio);
+
+                return Conflict(new
+                {
+                    success = false,
+                    message =
+                        "El profesional ya tiene una cita asignada en ese horario. Seleccione otro horario."
+                });
             }
 
             Cita citaEntidad;
+
             if (dto.IdCita.HasValue && dto.IdCita.Value > 0)
             {
-                citaEntidad = await _context.Citas.FirstOrDefaultAsync(c => c.IdCita == dto.IdCita.Value, ct)
-                    ?? throw new InvalidOperationException("Cita no encontrada");
+                citaEntidad = await _context.Citas
+                    .FirstOrDefaultAsync(
+                        c => c.IdCita == dto.IdCita.Value,
+                        ct)
+                    ?? throw new InvalidOperationException(
+                        "La cita no existe.");
 
                 citaEntidad.IdPaciente = dto.IdPaciente;
                 citaEntidad.IdProfesional = dto.IdProfesional;
                 citaEntidad.IdConsultorio = dto.IdConsultorio;
                 citaEntidad.IdServicio = dto.IdServicio;
-                citaEntidad.FechaHora = inicioDto;
-                citaEntidad.HoraInicio = dto.HoraInicio;
-                citaEntidad.HoraFin = dto.HoraFin;
-                citaEntidad.Estado = dto.Estado;
-                citaEntidad.Notas = dto.Notas;
-                citaEntidad.MotivoConsulta = "Consulta actualizada desde Agenda";
+                citaEntidad.FechaHora = inicio;
+                citaEntidad.IdEstado = estadoEntidad.IdEstado;
+                citaEntidad.Estado = estadoEntidad.NombreEstado;
+                citaEntidad.Notas = dto.Notas?.Trim();
+
                 _context.Citas.Update(citaEntidad);
             }
             else
@@ -316,12 +501,10 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
                     IdProfesional = dto.IdProfesional,
                     IdConsultorio = dto.IdConsultorio,
                     IdServicio = dto.IdServicio,
-                    FechaHora = inicioDto,
-                    HoraInicio = dto.HoraInicio,
-                    HoraFin = dto.HoraFin,
-                    Estado = dto.Estado,
-                    Notas = dto.Notas,
-                    MotivoConsulta = "Consulta generada desde Agenda"
+                    FechaHora = inicio,
+                    IdEstado = estadoEntidad.IdEstado,
+                    Estado = estadoEntidad.NombreEstado,
+                    Notas = dto.Notas?.Trim()
                 };
 
                 _context.Citas.Add(citaEntidad);
@@ -331,1092 +514,3120 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
 
             if (guardados <= 0)
             {
-                // WHY: SaveChanges devolviendo 0 indica posible problema de concurrencia o trigger
-                _logger.LogError("CrearCitaDesdeAgenda: SaveChanges devolvió 0 filas afectadas.");
-                return StatusCode((int)HttpStatusCode.InternalServerError, new { message = "No se pudo guardar la cita. Intente nuevamente." });
+                _logger.LogError(
+                    "CrearCitaDesdeAgenda: SaveChanges no modificó registros.");
+
+                return StatusCode(
+                    (int)HttpStatusCode.InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message =
+                            "No se pudo guardar la cita. Intente nuevamente."
+                    });
             }
 
-            // ── Auditoría de cita creada/actualizada desde Agenda ────────────
-            bool esActualizacionAgenda = dto.IdCita.HasValue && dto.IdCita.Value > 0;
+            bool esActualizacion =
+                dto.IdCita.HasValue && dto.IdCita.Value > 0;
+
             await RegistrarAuditoriaAsync(
-                accion: esActualizacionAgenda ? "UPDATE" : "INSERT",
+                accion: esActualizacion ? "UPDATE" : "INSERT",
                 tablaAfectada: "Cita",
                 idRegistro: citaEntidad.IdCita,
-                descripcion: esActualizacionAgenda
-                    ? $"Cita actualizada desde Agenda. IdPaciente={citaEntidad.IdPaciente}, FechaHora={citaEntidad.FechaHora:yyyy-MM-dd HH:mm}"
-                    : $"Cita creada desde Agenda. IdPaciente={citaEntidad.IdPaciente}, IdProfesional={citaEntidad.IdProfesional}, FechaHora={citaEntidad.FechaHora:yyyy-MM-dd HH:mm}",
-                datosNuevos: $"{{\"Estado\":\"{citaEntidad.Estado}\",\"FechaHora\":\"{citaEntidad.FechaHora:O}\",\"IdPaciente\":{citaEntidad.IdPaciente},\"IdProfesional\":{citaEntidad.IdProfesional}}}",
+                descripcion:
+                    $"{(esActualizacion ? "Cita actualizada" : "Cita creada")} desde Agenda. " +
+                    $"IdPaciente={citaEntidad.IdPaciente}, " +
+                    $"IdProfesional={citaEntidad.IdProfesional}, " +
+                    $"FechaHora={citaEntidad.FechaHora:yyyy-MM-dd HH:mm}",
+                datosNuevos:
+                    $"{{\"Estado\":\"{citaEntidad.Estado}\"," +
+                    $"\"FechaHora\":\"{citaEntidad.FechaHora:O}\"," +
+                    $"\"IdPaciente\":{citaEntidad.IdPaciente}," +
+                    $"\"IdProfesional\":{citaEntidad.IdProfesional}}}",
                 ct: ct);
 
-            // WHY: Loguear éxito con datos mínimos necesarios para auditoría, sin exponer PII completa
             _logger.LogInformation(
-                "Cita agendada correctamente desde Agenda: IdCita={IdCita}, IdPaciente={IdPaciente}, IdProfesional={IdProfesional}, FechaHora={FechaHora}, UsuarioSolicitante={Usuario}",
+                "Cita guardada desde Agenda. IdCita={IdCita}, Usuario={Usuario}",
                 citaEntidad.IdCita,
-                citaEntidad.IdPaciente,
-                citaEntidad.IdProfesional,
-                citaEntidad.FechaHora,
                 User.Identity?.Name ?? "anonimo");
 
-            return Ok(new { success = true, message = dto.IdCita.HasValue && dto.IdCita.Value > 0 ? "Cita actualizada exitosamente" : "Cita agendada exitosamente", id = citaEntidad.IdCita, updated = dto.IdCita.HasValue && dto.IdCita.Value > 0 });
+            return Ok(new
+            {
+                success = true,
+                message = esActualizacion
+                    ? "Cita actualizada exitosamente."
+                    : "Cita agendada exitosamente.",
+                id = citaEntidad.IdCita,
+                idEstado = citaEntidad.IdEstado,
+                estado = citaEntidad.Estado,
+                updated = esActualizacion,
+                duracionMinutos = DuracionCitaMinutos
+            });
         }
-        catch (OperationCanceledException ocex)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ocex, "Operacion cancelada en CrearCitaDesdeAgenda (IdPaciente={IdPaciente}, IdProfesional={IdProfesional})",
-                dto?.IdPaciente, dto?.IdProfesional);
-            return StatusCode((int)HttpStatusCode.BadRequest, new { message = "La operación fue cancelada por el usuario." });
+            _logger.LogWarning(
+                ex,
+                "Operación cancelada al crear cita desde Agenda.");
+
+            return StatusCode(
+                (int)HttpStatusCode.BadRequest,
+                new
+                {
+                    success = false,
+                    message = "La operación fue cancelada."
+                });
         }
-        catch (DbUpdateConcurrencyException cex)
+        catch (DbUpdateConcurrencyException ex)
         {
-            // WHY: ConcurrencyException indica que otro usuario modificó los datos durante la operación
-            _logger.LogError(cex, "Conflicto de concurrencia al crear cita en agenda.");
-            return StatusCode((int)HttpStatusCode.Conflict, new { message = "Conflicto al guardar: los datos cambiaron durante la operación. Actualice y vuelva a intentar." });
+            _logger.LogError(
+                ex,
+                "Conflicto de concurrencia al guardar cita desde Agenda.");
+
+            return Conflict(new
+            {
+                success = false,
+                message =
+                    "Los datos cambiaron durante la operación. Actualice la página e inténtelo nuevamente."
+            });
         }
-        catch (DbUpdateException dbex) when (EsViolacionIndiceUnico(dbex, out _))
+        catch (DbUpdateException ex) when (
+            EsViolacionIndiceUnico(ex, out _))
         {
-            // WHY: Violación de índice único indica cita duplicada; se maneja con mensaje amigable
-            _logger.LogError(dbex, "Violacion UNIQUE/FK al crear cita desde Agenda. IdPaciente={IdPaciente}, IdProfesional={IdProfesional}",
-                dto?.IdPaciente, dto?.IdProfesional);
-            return StatusCode((int)HttpStatusCode.Conflict, new { message = "Ya existe una cita registrada con estas características." });
+            _logger.LogError(
+                ex,
+                "Violación UNIQUE al guardar cita desde Agenda.");
+
+            return Conflict(new
+            {
+                success = false,
+                message =
+                    "Ya existe una cita registrada con estas características."
+            });
         }
-        catch (DbUpdateException dbex)
+        catch (DbUpdateException ex)
         {
-            // WHY: DbUpdateException genérica puede indicar problemas de schema o triggers
-            _logger.LogError(dbex, "Error BD al crear cita desde Agenda. IdPaciente={IdPaciente}, IdProfesional={IdProfesional}",
-                dto?.IdPaciente, dto?.IdProfesional);
-            return StatusCode((int)HttpStatusCode.InternalServerError, new { message = "Error de base de datos. Vuelva a intentar en unos segundos." });
+            _logger.LogError(
+                ex,
+                "Error de base de datos al guardar cita desde Agenda.");
+
+            return StatusCode(
+                (int)HttpStatusCode.InternalServerError,
+                new
+                {
+                    success = false,
+                    message = "Error de base de datos al guardar la cita."
+                });
         }
-        catch (SqlException sqlex)
+        catch (SqlException ex)
         {
-            // WHY: SqlException crítica requiere atención inmediata de infraestructura
-            _logger.LogCritical(sqlex, "SqlException fatal creando cita desde Agenda. Number={Number}, Class={Class}", sqlex.Number, sqlex.Class);
-            return StatusCode((int)HttpStatusCode.InternalServerError, new { message = "Error de conectividad con la base de datos." });
+            _logger.LogCritical(
+                ex,
+                "SqlException al guardar cita desde Agenda. Number={Number}",
+                ex.Number);
+
+            return StatusCode(
+                (int)HttpStatusCode.InternalServerError,
+                new
+                {
+                    success = false,
+                    message =
+                        "Error de conectividad con la base de datos."
+                });
         }
         catch (Exception ex)
         {
-            // WHY: Catch-all para errores no anticipados; nunca exponer detalles al usuario
-            _logger.LogCritical(ex, "Error inesperado al crear cita desde Agenda. IdPaciente={IdPaciente}, IdProfesional={IdProfesional}",
-                dto?.IdPaciente, dto?.IdProfesional);
-            return StatusCode((int)HttpStatusCode.InternalServerError, new { message = "Error interno del servidor. El incidente fue registrado." });
+            _logger.LogCritical(
+                ex,
+                "Error inesperado al crear cita desde Agenda.");
+
+            return StatusCode(
+                (int)HttpStatusCode.InternalServerError,
+                new
+                {
+                    success = false,
+                    message =
+                        "Error interno del servidor. El incidente fue registrado."
+                });
         }
     }
 
-        // API REST para listar citas con filtro por rol / ownership
-        [HttpGet]
-        [Authorize(Policy = "ApiOrCookie")]
-        [Route("api/citas")]
-        public async Task<IActionResult> ApiListarCitas([FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    // ================================================================
+    // API: LISTAR CITAS
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Policy = "ApiOrCookie")]
+    [Route("api/citas")]
+    public async Task<IActionResult> ApiListarCitas(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
+    {
+        try
         {
-            try
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 500);
+
+            IQueryable<Cita> citasQuery = _context.Citas
+                .AsNoTracking()
+                .Include(c => c.Paciente)
+                .Include(c => c.Profesional)
+                .ThenInclude(p => p!.Usuario)
+                .Include(c => c.Servicio)
+                .Include(c => c.Consultorio)
+                .Include(c => c.EstadoCita);
+
+            if (User.IsInRole("Paciente"))
             {
-                page = Math.Max(1, page);
-                pageSize = Math.Clamp(pageSize, 1, 500);
+                string? claim = User.FindFirstValue("IdPaciente");
 
-                var citasQuery = _context.Citas
-                    .Include(c => c.Paciente)
-                    .Include(c => c.Profesional).ThenInclude(p => p!.Usuario)
-                    .Include(c => c.Servicio)
-                    .AsQueryable();
-
-                if (User.IsInRole("Paciente"))
-                {
-                    string? idPacienteClaim = User.FindFirstValue("IdPaciente");
-                    if (!int.TryParse(idPacienteClaim, out int idPaciente) || idPaciente <= 0)
-                    {
-                        return Forbid();
-                    }
-                    citasQuery = citasQuery.Where(c => c.IdPaciente == idPaciente);
-                }
-                else if (User.IsInRole("Profesional"))
-                {
-                    string? idProfesionalClaim = User.FindFirstValue("IdProfesional");
-                    if (!int.TryParse(idProfesionalClaim, out int idProfesional) || idProfesional <= 0)
-                    {
-                        return Forbid();
-                    }
-                    citasQuery = citasQuery.Where(c => c.IdProfesional == idProfesional);
-                }
-
-                int totalRecords = await citasQuery.CountAsync(ct);
-                var citas = await citasQuery
-                    .OrderByDescending(c => c.FechaHora)
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize)
-                    .Select(c => new
-                    {
-                        c.IdCita,
-                        c.IdPaciente,
-                        Paciente = c.Paciente == null ? null : new
-                        {
-                            NombreCompleto = string.Concat(c.Paciente.Nombres, " ", c.Paciente.Apellidos).Trim()
-                        },
-                        c.IdProfesional,
-                        Profesional = c.Profesional == null ? null : new
-                        {
-                            NombreCompleto = c.Profesional.Usuario != null
-                                ? string.Concat(c.Profesional.Usuario.Nombre, " ", c.Profesional.Usuario.Apellidos).Trim()
-                                : string.Concat(c.Profesional.Nombres, " ", c.Profesional.Apellidos).Trim()
-                        },
-                        c.IdServicio,
-                        Servicio = c.Servicio == null ? null : new { c.Servicio.Nombre },
-                        c.IdConsultorio,
-                        c.FechaHora,
-                        c.Estado,
-                        c.Notas
-                    })
-                    .ToListAsync(ct);
-
-                return Ok(new { success = true, data = citas, total = totalRecords, page, pageSize });
-            }
-            catch (OperationCanceledException ocex)
-            {
-                _logger.LogWarning(ocex, "Solicitud cancelada ApiListarCitas");
-                return StatusCode((int)HttpStatusCode.BadRequest, new { success = false, message = "La operación fue cancelada." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error en ApiListarCitas");
-                return StatusCode((int)HttpStatusCode.InternalServerError, new { success = false, message = "Error interno al listar citas." });
-            }
-        }
-
-        [HttpPut]
-        [Authorize(Policy = "ApiOrCookie")]
-        [Route("api/citas/{id:int}")]
-        public async Task<IActionResult> ApiActualizarCita(int id, [FromBody] CitaApiUpdateDto dto, CancellationToken ct = default)
-        {
-            if (dto == null || id != dto.IdCita || dto.IdPaciente <= 0)
-            {
-                return BadRequest(new { success = false, message = "Datos de cita inválidos." });
-            }
-
-            try
-            {
-                var cita = await _context.Citas.FindAsync(new object[] { id }, ct);
-                if (cita == null)
-                {
-                    return NotFound(new { success = false, message = "Cita no encontrada." });
-                }
-
-                if (User.IsInRole("Paciente"))
-                {
-                    string? idPacienteClaim = User.FindFirstValue("IdPaciente");
-                    if (!int.TryParse(idPacienteClaim, out int idPaciente) || idPaciente != cita.IdPaciente)
-                    {
-                        return Forbid();
-                    }
-                }
-                else if (User.IsInRole("Profesional"))
-                {
-                    string? idProfesionalClaim = User.FindFirstValue("IdProfesional");
-                    if (!int.TryParse(idProfesionalClaim, out int idProfesional) || cita.IdProfesional != idProfesional)
-                    {
-                        return Forbid();
-                    }
-                }
-
-                cita.IdPaciente = dto.IdPaciente;
-                cita.IdProfesional = dto.IdProfesional;
-                cita.IdServicio = dto.IdServicio;
-                cita.IdConsultorio = dto.IdConsultorio;
-                cita.FechaHora = dto.FechaHora;
-                if (!string.IsNullOrWhiteSpace(dto.Estado)) cita.Estado = dto.Estado.Trim();
-                cita.Notas = dto.Notas;
-
-                await _context.SaveChangesAsync(ct);
-                return Ok(new { success = true, message = "Cita actualizada exitosamente.", id = cita.IdCita });
-            }
-            catch (DbUpdateException dbex)
-            {
-                _logger.LogError(dbex, "DbUpdateException en ApiActualizarCita IdCita={IdCita}", id);
-                return StatusCode((int)HttpStatusCode.InternalServerError, new { success = false, message = "No se pudo actualizar la cita." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error en ApiActualizarCita IdCita={IdCita}", id);
-                return StatusCode((int)HttpStatusCode.InternalServerError, new { success = false, message = "Error interno al actualizar la cita." });
-            }
-        }
-
-        [HttpDelete]
-        [Authorize(Policy = "ApiOrCookie")]
-        [Route("api/citas/{id:int}")]
-        public async Task<IActionResult> ApiEliminarCita(int id, CancellationToken ct = default)
-        {
-            if (id <= 0)
-            {
-                return BadRequest(new { success = false, message = "Identificador de cita inválido." });
-            }
-
-            try
-            {
-                var cita = await _context.Citas.FindAsync(new object[] { id }, ct);
-                if (cita == null)
-                {
-                    return NotFound(new { success = false, message = "Cita no encontrada." });
-                }
-
-                if (User.IsInRole("Paciente"))
-                {
-                    string? idPacienteClaim = User.FindFirstValue("IdPaciente");
-                    if (!int.TryParse(idPacienteClaim, out int idPaciente) || idPaciente != cita.IdPaciente)
-                    {
-                        return Forbid();
-                    }
-                }
-                else if (User.IsInRole("Profesional"))
+                if (!int.TryParse(claim, out int idPaciente) ||
+                    idPaciente <= 0)
                 {
                     return Forbid();
                 }
 
-                if (string.Equals(cita.Estado, "cancelada", StringComparison.OrdinalIgnoreCase))
+                citasQuery = citasQuery.Where(
+                    c => c.IdPaciente == idPaciente);
+            }
+            else if (User.IsInRole("Profesional"))
+            {
+                string? claim =
+                    User.FindFirstValue("IdProfesional");
+
+                if (!int.TryParse(claim, out int idProfesional) ||
+                    idProfesional <= 0)
                 {
-                    return BadRequest(new { success = false, message = "La cita ya está cancelada." });
+                    return Forbid();
                 }
 
-                cita.Estado = "cancelada";
-                await _context.SaveChangesAsync(ct);
-                return Ok(new { success = true, message = "Cita cancelada exitosamente.", id = cita.IdCita });
+                citasQuery = citasQuery.Where(
+                    c => c.IdProfesional == idProfesional);
             }
-            catch (DbUpdateException dbex)
+
+            int totalRecords =
+                await citasQuery.CountAsync(ct);
+
+            var citas = await citasQuery
+                .OrderByDescending(c => c.FechaHora)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(c => new
+                {
+                    c.IdCita,
+                    c.IdPaciente,
+
+                    Paciente =
+                        c.Paciente == null
+                            ? null
+                            : new
+                            {
+                                NombreCompleto =
+                                    string.Concat(
+                                        c.Paciente.Nombres,
+                                        " ",
+                                        c.Paciente.Apellidos)
+                                    .Trim()
+                            },
+
+                    c.IdProfesional,
+
+                    Profesional =
+                        c.Profesional == null
+                            ? null
+                            : new
+                            {
+                                NombreCompleto =
+                                    c.Profesional.Usuario != null
+                                        ? string.Concat(
+                                            c.Profesional.Usuario.Nombre,
+                                            " ",
+                                            c.Profesional.Usuario.Apellidos)
+                                            .Trim()
+                                        : string.Concat(
+                                            c.Profesional.Nombres,
+                                            " ",
+                                            c.Profesional.Apellidos)
+                                            .Trim()
+                            },
+
+                    c.IdServicio,
+
+                    Servicio =
+                        c.Servicio == null
+                            ? null
+                            : new
+                            {
+                                c.Servicio.Nombre
+                            },
+
+                    c.IdConsultorio,
+                    c.IdEstado,
+                    EstadoCatalogo = c.EstadoCita == null ? null : c.EstadoCita.NombreEstado,
+
+                    c.FechaHora,
+
+                    HoraInicio = c.FechaHora.TimeOfDay,
+
+                    HoraFin =
+                        c.FechaHora
+                            .AddMinutes(DuracionCitaMinutos)
+                            .TimeOfDay,
+
+                    c.Estado,
+                    c.Notas
+                })
+                .ToListAsync(ct);
+
+            return Ok(new
             {
-                _logger.LogError(dbex, "DbUpdateException en ApiEliminarCita IdCita={IdCita}", id);
-                return StatusCode((int)HttpStatusCode.InternalServerError, new { success = false, message = "No se pudo cancelar la cita." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error en ApiEliminarCita IdCita={IdCita}", id);
-                return StatusCode((int)HttpStatusCode.InternalServerError, new { success = false, message = "Error interno al cancelar la cita." });
-            }
+                success = true,
+                data = citas,
+                total = totalRecords,
+                page,
+                pageSize,
+                duracionMinutos = DuracionCitaMinutos
+            });
         }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Solicitud cancelada ApiListarCitas.");
+
+            return BadRequest(new
+            {
+                success = false,
+                message = "La operación fue cancelada."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error en ApiListarCitas.");
+
+            return StatusCode(
+                (int)HttpStatusCode.InternalServerError,
+                new
+                {
+                    success = false,
+                    message = "Error interno al listar citas."
+                });
+        }
+    }
+
+    // ================================================================
+    // API: ACTUALIZAR CITA
+    // ================================================================
+
+    [HttpPut]
+    [Authorize(Policy = "ApiOrCookie")]
+    [Route("api/citas/{id:int}")]
+    public async Task<IActionResult> ApiActualizarCita(
+        int id,
+        [FromBody] CitaApiUpdateDto dto,
+        CancellationToken ct = default)
+    {
+        if (dto == null ||
+            id != dto.IdCita ||
+            dto.IdPaciente <= 0)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Datos de cita inválidos."
+            });
+        }
+
+        try
+        {
+            var cita = await _context.Citas
+                .FirstOrDefaultAsync(c => c.IdCita == id, ct);
+
+            if (cita == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Cita no encontrada."
+                });
+            }
+
+            if (User.IsInRole("Paciente"))
+            {
+                string? claim =
+                    User.FindFirstValue("IdPaciente");
+
+                if (!int.TryParse(claim, out int idPaciente) ||
+                    idPaciente != cita.IdPaciente)
+                {
+                    return Forbid();
+                }
+            }
+            else if (User.IsInRole("Profesional"))
+            {
+                string? claim =
+                    User.FindFirstValue("IdProfesional");
+
+                if (!int.TryParse(claim, out int idProfesional) ||
+                    cita.IdProfesional != idProfesional)
+                {
+                    return Forbid();
+                }
+            }
+            else if (!User.IsInRole("Administrador") &&
+                     !User.IsInRole("Recepcionista"))
+            {
+                return Forbid();
+            }
+
+            if (!await _context.Pacientes.AnyAsync(
+                    p => p.IdPaciente == dto.IdPaciente &&
+                         p.Estado == "activo",
+                    ct))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El paciente seleccionado no es válido."
+                });
+            }
+
+            if (dto.IdProfesional is <= 0 ||
+                !await _context.Profesionales.AnyAsync(
+                    p => p.IdProfesional == dto.IdProfesional &&
+                         p.Estado == "activo",
+                    ct))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El profesional seleccionado no es válido."
+                });
+            }
+
+            if (dto.IdServicio is <= 0 ||
+                !await _context.Servicios.AnyAsync(
+                    s => s.IdServicio == dto.IdServicio &&
+                         s.Estado == "activo",
+                    ct))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El servicio seleccionado no es válido."
+                });
+            }
+
+            if (dto.IdConsultorio is <= 0 ||
+                !await _context.Consultorios.AnyAsync(
+                    c => c.IdConsultorio == dto.IdConsultorio &&
+                         (c.Estado == "disponible" ||
+                          c.Estado == "activo"),
+                    ct))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "El consultorio seleccionado no está disponible."
+                });
+            }
+
+            DateTime inicio = dto.FechaHora;
+            DateTime fin = inicio.AddMinutes(DuracionCitaMinutos);
+
+            if (inicio < DateTime.Now.AddMinutes(-5))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "No se puede mover la cita a un horario pasado."
+                });
+            }
+
+            bool hayConflicto =
+                await _context.Citas.AnyAsync(
+                    c =>
+                        c.IdCita != id &&
+                        c.IdProfesional == dto.IdProfesional &&
+                        c.Estado != "cancelada" &&
+                        c.Estado != "Cancelada" &&
+                        c.Estado != "cancelado" &&
+                        c.FechaHora < fin &&
+                        c.FechaHora.AddMinutes(DuracionCitaMinutos) > inicio,
+                    ct);
+
+            if (hayConflicto)
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message =
+                        "El profesional ya tiene otra cita en ese horario."
+                });
+            }
+
+            cita.IdPaciente = dto.IdPaciente;
+            cita.IdProfesional = dto.IdProfesional;
+            cita.IdServicio = dto.IdServicio;
+            cita.IdConsultorio = dto.IdConsultorio;
+            cita.FechaHora = inicio;
+
+            if (dto.IdEstado is > 0)
+            {
+                var estadoApi = await _context.EstadosCita
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        e => e.IdEstado == dto.IdEstado.Value,
+                        ct);
+
+                if (estadoApi == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "El estado de la cita no es válido."
+                    });
+                }
+
+                cita.IdEstado = estadoApi.IdEstado;
+                cita.Estado = estadoApi.NombreEstado;
+            }
+            else if (!string.IsNullOrWhiteSpace(dto.Estado))
+            {
+                string estadoSolicitud = dto.Estado.Trim();
+
+                var estadoApi = await _context.EstadosCita
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        e => e.NombreEstado.ToLower() == estadoSolicitud.ToLower() ||
+                             (estadoSolicitud.ToLower() == "agendada" &&
+                              e.NombreEstado.ToLower() == "programada"),
+                        ct);
+
+                if (estadoApi == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "El estado de la cita no es válido."
+                    });
+                }
+
+                cita.IdEstado = estadoApi.IdEstado;
+                cita.Estado = estadoApi.NombreEstado;
+            }
+
+            cita.Notas = dto.Notas?.Trim();
+
+            await _context.SaveChangesAsync(ct);
+
+            await RegistrarAuditoriaAsync(
+                accion: "UPDATE",
+                tablaAfectada: "Cita",
+                idRegistro: cita.IdCita,
+                descripcion:
+                    $"Cita actualizada mediante API. " +
+                    $"IdPaciente={cita.IdPaciente}, " +
+                    $"IdProfesional={cita.IdProfesional}, " +
+                    $"FechaHora={cita.FechaHora:yyyy-MM-dd HH:mm}",
+                datosNuevos:
+                    $"{{\"Estado\":\"{cita.Estado}\"," +
+                    $"\"FechaHora\":\"{cita.FechaHora:O}\"," +
+                    $"\"IdPaciente\":{cita.IdPaciente}," +
+                    $"\"IdProfesional\":{cita.IdProfesional}}}",
+                ct: ct);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Cita actualizada exitosamente.",
+                id = cita.IdCita,
+                idEstado = cita.IdEstado,
+                estado = cita.Estado,
+                duracionMinutos = DuracionCitaMinutos
+            });
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Concurrencia ApiActualizarCita IdCita={Id}",
+                id);
+
+            return Conflict(new
+            {
+                success = false,
+                message =
+                    "La cita fue modificada por otro usuario."
+            });
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(
+                ex,
+                "DbUpdateException ApiActualizarCita IdCita={Id}",
+                id);
+
+            return StatusCode(
+                (int)HttpStatusCode.InternalServerError,
+                new
+                {
+                    success = false,
+                    message = "No se pudo actualizar la cita."
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error ApiActualizarCita IdCita={Id}",
+                id);
+
+            return StatusCode(
+                (int)HttpStatusCode.InternalServerError,
+                new
+                {
+                    success = false,
+                    message = "Error interno al actualizar la cita."
+                });
+        }
+    }
+
+    // ================================================================
+    // API: CANCELAR CITA
+    // ================================================================
+
+    [HttpDelete]
+    [Authorize(Policy = "ApiOrCookie")]
+    [Route("api/citas/{id:int}")]
+    public async Task<IActionResult> ApiEliminarCita(
+        int id,
+        CancellationToken ct = default)
+    {
+        if (id <= 0)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Identificador de cita inválido."
+            });
+        }
+
+        try
+        {
+            var cita = await _context.Citas
+                .FirstOrDefaultAsync(c => c.IdCita == id, ct);
+
+            if (cita == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Cita no encontrada."
+                });
+            }
+
+            if (User.IsInRole("Paciente"))
+            {
+                string? claim =
+                    User.FindFirstValue("IdPaciente");
+
+                if (!int.TryParse(claim, out int idPaciente) ||
+                    idPaciente != cita.IdPaciente)
+                {
+                    return Forbid();
+                }
+            }
+            else if (User.IsInRole("Profesional"))
+            {
+                return Forbid();
+            }
+            else if (!User.IsInRole("Administrador") &&
+                     !User.IsInRole("Recepcionista"))
+            {
+                return Forbid();
+            }
+
+            if (EsEstadoCancelado(cita.Estado))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "La cita ya está cancelada."
+                });
+            }
+
+            var estadoCancelada = await _context.EstadosCita
+                .FirstOrDefaultAsync(
+                    e => e.NombreEstado.ToLower() == "cancelada",
+                    ct);
+
+            if (estadoCancelada != null)
+            {
+                cita.IdEstado = estadoCancelada.IdEstado;
+                cita.Estado = estadoCancelada.NombreEstado;
+            }
+            else
+            {
+                cita.Estado = "Cancelada";
+            }
+
+            await _context.SaveChangesAsync(ct);
+
+            await RegistrarAuditoriaAsync(
+                accion: "UPDATE",
+                tablaAfectada: "Cita",
+                idRegistro: cita.IdCita,
+                descripcion:
+                    $"Cita cancelada mediante API. " +
+                    $"IdPaciente={cita.IdPaciente}, " +
+                    $"FechaHora={cita.FechaHora:yyyy-MM-dd HH:mm}",
+                datosNuevos:
+                    $"{{\"Estado\":\"cancelada\"," +
+                    $"\"FechaHora\":\"{cita.FechaHora:O}\"}}",
+                ct: ct);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Cita cancelada exitosamente.",
+                id = cita.IdCita
+            });
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Concurrencia ApiEliminarCita IdCita={Id}",
+                id);
+
+            return Conflict(new
+            {
+                success = false,
+                message =
+                    "La cita fue modificada recientemente."
+            });
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(
+                ex,
+                "DbUpdateException ApiEliminarCita IdCita={Id}",
+                id);
+
+            return StatusCode(
+                (int)HttpStatusCode.InternalServerError,
+                new
+                {
+                    success = false,
+                    message = "No se pudo cancelar la cita."
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error ApiEliminarCita IdCita={Id}",
+                id);
+
+            return StatusCode(
+                (int)HttpStatusCode.InternalServerError,
+                new
+                {
+                    success = false,
+                    message = "Error interno al cancelar la cita."
+                });
+        }
+    }
+
+    // ================================================================
+    // GESTIÓN INTEGRAL DE CITAS
+    // ================================================================
+
     [HttpGet]
     [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/st-adm-09-citas")]
-    public async Task<IActionResult> Stadm09Citas([FromQuery] int? editId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? estado = null, [FromQuery] string? profesional = null, [FromQuery] string? fecha = null, CancellationToken ct = default)
+    public async Task<IActionResult> Stadm09Citas(
+        [FromQuery] int? editId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] string? estado = null,
+        [FromQuery] string? profesional = null,
+        [FromQuery] string? fecha = null,
+        CancellationToken ct = default)
     {
         try
         {
-            await CargarDatosCitas(editId, "/gestion-de-citas/st-adm-09-citas", new PaginationQuery
-            {
-                Page = page,
-                PageSize = pageSize,
-                Search = search,
-                Estado = estado,
-                Profesional = profesional,
-                Fecha = fecha
-            }, ct);
-            return View("~/Views/Gestion_De_Citas/st-adm-09-citas/index.cshtml");
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-adm-09-citas",
+                new PaginationQuery
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    Search = search,
+                    Estado = estado,
+                    Profesional = profesional,
+                    Fecha = fecha
+                },
+                ct);
+
+            await CargarKpisGestionCitas(ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-09-citas/index.cshtml");
         }
         catch (Exception ex)
         {
-            // WHY: Loguear contexto de filtros para debugging, pero retornar vista con mensaje genérico
-            _logger.LogError(ex, "Error cargando Stadm09Citas (pagina={Pagina}, search={Search})", page, search);
-            TempData["ErrorValidacion"] = MensajeErrorFallback;
-            return View("~/Views/Gestion_De_Citas/st-adm-09-citas/index.cshtml");
+            _logger.LogError(
+                ex,
+                "Error cargando Stadm09Citas.");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-adm-09-citas/index.cshtml");
         }
     }
 
-    [HttpGet]
-    [Authorize(Roles = "Auxiliar")]
-    [Route("gestion-de-citas/st-aux-01-panel-operativo/panel-operativo")]
-    public async Task<IActionResult> Staux01PanelOperativo([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try
-        {
-            await CargarDatosCitas(editId, "/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo", null, ct);
-            return View("~/Views/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.cshtml");
-        }
-        catch (Exception ex) { _logger.LogError(ex, "Error Staux01PanelOperativo"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Auxiliar")]
-    [Route("gestion-de-citas/st-aux-02-agenda-apoyo")]
-    public async Task<IActionResult> Staux02AgendaApoyo([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-aux-02-agenda-apoyo", null, ct); return View("~/Views/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Staux02AgendaApoyo"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Auxiliar")]
-    [Route("gestion-de-citas/st-aux-05-historial-parcial")]
-    public async Task<IActionResult> Staux05HistorialParcial([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-aux-05-historial-parcial", null, ct); return View("~/Views/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Staux05HistorialParcial"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Auxiliar")]
-    [Route("gestion-de-citas/st-aux-06-asistencia-procedi")]
-    public async Task<IActionResult> Staux06AsistenciaProcedi([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-aux-06-asistencia-procedi", null, ct); return View("~/Views/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Staux06AsistenciaProcedi"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Auxiliar")]
-    [Route("gestion-de-citas/st-aux-09-estado-consultorio")]
-    public async Task<IActionResult> Staux09EstadoConsultorio([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-aux-09-estado-consultorio", null, ct); return View("~/Views/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Staux09EstadoConsultorio"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Auxiliar,Recepcionista")]
-    [Route("gestion-de-citas/st-aux-10-citas-finalizadas")]
-    public async Task<IActionResult> Staux10CitasFinalizadas([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-aux-10-citas-finalizadas", null, ct); return View("~/Views/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Staux10CitasFinalizadas"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Profesional")]
-    [Route("gestion-de-citas/st-odo-02-agenda")]
-    public async Task<IActionResult> Stodo02Agenda([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-odo-02-agenda", null, ct); return View("~/Views/Gestion_De_Citas/st-odo-02-agenda/index.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Stodo02Agenda"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-odo-02-agenda/index.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Paciente")]
-    [Route("gestion-de-citas/st-pac-01-mis-citas")]
-    public async Task<IActionResult> Stpac01MisCitas([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-pac-01-mis-citas", null, ct); return View("~/Views/Gestion_De_Citas/st-pac-01-mis-citas/index.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Stpac01MisCitas"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-pac-01-mis-citas/index.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Paciente")]
-    [Route("gestion-de-citas/st-pac-03-notificaciones")]
-    public async Task<IActionResult> Stpac03Notificaciones([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-pac-03-notificaciones", null, ct); return View("~/Views/Gestion_De_Citas/st-pac-03-notificaciones/index.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Stpac03Notificaciones"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-pac-03-notificaciones/index.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Recepcionista")]
-    [Route("gestion-de-citas/st-rec-01-dashboard")]
-    public async Task<IActionResult> Strec01Dashboard([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-rec-01-dashboard", null, ct); return View("~/Views/Gestion_De_Citas/st-rec-01-dashboard/index.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Strec01Dashboard"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-rec-01-dashboard/index.cshtml"); }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Recepcionista")]
-    [Route("gestion-de-citas/st-rec-03-gestion-citas")]
-    public async Task<IActionResult> Strec03GestionCitas([FromQuery] int? editId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? estado = null, [FromQuery] string? profesional = null, [FromQuery] string? fecha = null, CancellationToken ct = default)
-    {
-        try
-        {
-            await CargarDatosCitas(editId, "/gestion-de-citas/st-rec-03-gestion-citas", new PaginationQuery
-            {
-                Page = page,
-                PageSize = pageSize,
-                Search = search,
-                Estado = estado,
-                Profesional = profesional,
-                Fecha = fecha
-            }, ct);
-            return View("~/Views/Gestion_De_Citas/st-rec-03-gestion-citas/index.cshtml");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error cargando Strec03GestionCitas (pagina={Pagina})", page);
-            TempData["ErrorValidacion"] = MensajeErrorFallback;
-            return View("~/Views/Gestion_De_Citas/st-rec-03-gestion-citas/index.cshtml");
-        }
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Recepcionista")]
-    [Route("gestion-de-citas/st-rec-05-recordatorios")]
-    public async Task<IActionResult> Strec05Recordatorios([FromQuery] int? editId, CancellationToken ct = default)
-    {
-        try { await CargarDatosCitas(editId, "/gestion-de-citas/st-rec-05-recordatorios", null, ct); return View("~/Views/Gestion_De_Citas/st-rec-05-recordatorios/index.cshtml"); }
-        catch (Exception ex) { _logger.LogError(ex, "Error Strec05Recordatorios"); TempData["ErrorValidacion"] = MensajeErrorFallback; return View("~/Views/Gestion_De_Citas/st-rec-05-recordatorios/index.cshtml"); }
-    }
+    // ================================================================
+    // GUARDAR / ACTUALIZAR CITA DESDE FORMULARIO MVC
+    // ================================================================
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/guardar-cita")]
-    public async Task<IActionResult> GuardarCita([FromForm] CitaViewModel model, CancellationToken ct = default)
+    public async Task<IActionResult> GuardarCita(
+        [FromForm] CitaViewModel model,
+        CancellationToken ct = default)
     {
-        string returnUrlSafe = !string.IsNullOrWhiteSpace(model?.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
-            ? model.ReturnUrl
-            : "/gestion-de-citas/st-adm-09-citas";
-        int idCitaOperacion = model?.IdCita ?? 0;
-        string operacion = (idCitaOperacion > 0) ? "Actualizacion" : "Creacion";
+        string returnUrlSafe =
+            !string.IsNullOrWhiteSpace(model?.ReturnUrl) &&
+            Url.IsLocalUrl(model.ReturnUrl)
+                ? model.ReturnUrl
+                : "/gestion-de-citas/st-adm-09-citas";
 
-        // WHY: Validar ModelState antes de cualquier lógica de negocio para feedback inmediato al usuario
-        if (!ModelState.IsValid || model == null)
+        int idCitaOperacion =
+            model?.IdCita ?? 0;
+
+        string operacion =
+            idCitaOperacion > 0
+                ? "Actualizacion"
+                : "Creacion";
+
+        if (model == null)
         {
-            string? firstError = ModelState.Values.SelectMany(v => v.Errors).FirstOrDefault()?.ErrorMessage;
-            string mensaje = firstError ?? "Datos inválidos en el formulario.";
-            _logger.LogWarning("GuardarCita: ModelState invalido ({Operacion}). Detalle: {Error}", operacion, mensaje);
-            TempData["ErrorValidacion"] = mensaje;
+            TempData["ErrorValidacion"] =
+                "Los datos de la cita son obligatorios.";
+
+            return Redirect(returnUrlSafe);
+        }
+
+        if (!ModelState.IsValid)
+        {
+            string mensaje =
+                ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .FirstOrDefault(e => !string.IsNullOrWhiteSpace(e))
+                ?? "Datos inválidos en el formulario.";
+
+            _logger.LogWarning(
+                "GuardarCita: ModelState inválido. Operacion={Operacion}, Error={Error}",
+                operacion,
+                mensaje);
+
+            TempData["ErrorValidacion"] =
+                mensaje;
+
             return Redirect(returnUrlSafe);
         }
 
         try
         {
-            if (model.FechaHora == default && model.Fecha != default && model.HoraInicio.HasValue)
+            if (!model.HoraInicio.HasValue)
             {
-                model.FechaHora = model.Fecha.Date.Add(model.HoraInicio.Value);
-            }
+                TempData["ErrorValidacion"] =
+                    "La hora de inicio es obligatoria.";
 
-            if (model.HoraFin.HasValue && model.HoraInicio.HasValue && model.HoraFin <= model.HoraInicio)
-            {
-                TempData["ErrorValidacion"] = "La hora de fin debe ser posterior a la hora de inicio.";
                 return Redirect(returnUrlSafe);
             }
 
-            // VALIDACIONES DE INTEGRIDAD:
-            // 1. Paciente y profesional deben existir y estar activos
-            // 2. FechaHora debe ser válida (no en pasado)
-            // 3. Para actualizaciones: verificar que la cita existe
-            // 4. Para ambas: validar que no hay conflicto de horarios
-            // WHY: Prevenir datos inconsistentes antes de intentar SaveChanges
+            /*
+             * FUENTE DE VERDAD:
+             * FechaHora siempre se calcula aquí.
+             */
+            model.FechaHora =
+                model.Fecha.Date.Add(
+                    model.HoraInicio.Value);
 
-            if (model!.IdPaciente <= 0 || !await _context.Pacientes.AnyAsync(p => p.IdPaciente == model.IdPaciente && p.Estado == "activo", ct))
+            if (model.FechaHora <
+                DateTime.Now.AddMinutes(-5))
             {
-                TempData["ErrorValidacion"] = "El paciente seleccionado no existe o se encuentra inactivo.";
-                _logger.LogWarning("GuardarCita: Paciente {IdPaciente} no valido en operacion {Operacion}", model.IdPaciente, operacion);
+                TempData["ErrorValidacion"] =
+                    "La fecha y hora de la cita no son válidas o corresponden a un horario pasado.";
+
+                return Redirect(returnUrlSafe);
+            }
+            // ------------------------------------------------------------
+            // PACIENTE
+            // ------------------------------------------------------------
+
+            bool pacienteExiste =
+                await _context.Pacientes.AnyAsync(
+                    p =>
+                        p.IdPaciente == model.IdPaciente &&
+                        p.Estado == "activo",
+                    ct);
+
+            if (!pacienteExiste)
+            {
+                TempData["ErrorValidacion"] =
+                    "El paciente seleccionado no existe o se encuentra inactivo.";
+
                 return Redirect(returnUrlSafe);
             }
 
-            if (model.IdProfesional <= 0 || !await _context.Profesionales.AnyAsync(p => p.IdProfesional == model.IdProfesional && p.Estado == "activo", ct))
+            // ------------------------------------------------------------
+            // PROFESIONAL
+            // ------------------------------------------------------------
+
+            if (model.IdProfesional <= 0 ||
+                !await _context.Profesionales.AnyAsync(
+                    p =>
+                        p.IdProfesional ==
+                        model.IdProfesional &&
+                        p.Estado == "activo",
+                    ct))
             {
-                TempData["ErrorValidacion"] = "El profesional seleccionado no existe o se encuentra inactivo.";
-                _logger.LogWarning("GuardarCita: Profesional {IdProfesional} no valido en operacion {Operacion}", model.IdProfesional, operacion);
+                TempData["ErrorValidacion"] =
+                    "El profesional seleccionado no existe o se encuentra inactivo.";
+
                 return Redirect(returnUrlSafe);
             }
 
-            if (model.FechaHora == default || model.FechaHora < DateTime.Now.AddMinutes(-5))
+            // ------------------------------------------------------------
+            // SERVICIO
+            // ------------------------------------------------------------
+
+            if (model.IdServicio <= 0 ||
+                !await _context.Servicios.AnyAsync(
+                    s =>
+                        s.IdServicio ==
+                        model.IdServicio &&
+                        s.Estado == "activo",
+                    ct))
             {
-                TempData["ErrorValidacion"] = "La fecha y hora de la cita no son válidas o corresponden a un horario pasado.";
+                TempData["ErrorValidacion"] =
+                    "El servicio seleccionado no existe o se encuentra inactivo.";
+
                 return Redirect(returnUrlSafe);
             }
 
-            if (model.IdCita is > 0)
+            // ------------------------------------------------------------
+            // CONSULTORIO
+            // ------------------------------------------------------------
+
+            if (model.IdConsultorio <= 0 ||
+                !await _context.Consultorios.AnyAsync(
+                    c =>
+                        c.IdConsultorio ==
+                        model.IdConsultorio &&
+                        (
+                            c.Estado == "disponible" ||
+                            c.Estado == "activo"
+                        ),
+                    ct))
             {
-                // WHY: Para actualización, verificar que la cita existe antes de modificar
-                var cita = await _context.Citas.FindAsync(model.IdCita.Value, ct);
+                TempData["ErrorValidacion"] =
+                    "El consultorio seleccionado no existe o no está disponible.";
+
+                return Redirect(returnUrlSafe);
+            }
+
+            // ------------------------------------------------------------
+            // ESTADO
+            // ------------------------------------------------------------
+
+            if (model.IdEstado <= 0 ||
+                !await _context.EstadosCita.AnyAsync(
+                    e =>
+                        e.IdEstado ==
+                        model.IdEstado,
+                    ct))
+            {
+                TempData["ErrorValidacion"] =
+                    "El estado de la cita seleccionado no es válido.";
+
+                return Redirect(returnUrlSafe);
+            }
+
+            // ------------------------------------------------------------
+            // BLOQUE DE 60 MINUTOS
+            // ------------------------------------------------------------
+
+            DateTime inicio = model.FechaHora;
+
+            DateTime fin =
+                inicio.AddMinutes(
+                    DuracionCitaMinutos);
+
+            // ------------------------------------------------------------
+            // CREACIÓN / ACTUALIZACIÓN
+            // ------------------------------------------------------------
+
+            Cita? cita;
+
+            if (model.IdCita > 0)
+            {
+                cita = await _context.Citas
+                    .FirstOrDefaultAsync(
+                        c => c.IdCita == model.IdCita.Value,
+                        ct);
+
                 if (cita == null)
                 {
-                    TempData["ErrorValidacion"] = "La cita que intenta actualizar no existe.";
-                    _logger.LogWarning("GuardarCita: Intento actualizar cita inexistente IdCita={IdCita}", model.IdCita.Value);
+                    TempData["ErrorValidacion"] =
+                        "La cita que intenta actualizar no existe.";
+
+                    _logger.LogWarning(
+                        "GuardarCita: Intento actualizar cita inexistente IdCita={IdCita}",
+                        model.IdCita.Value);
+
                     return Redirect(returnUrlSafe);
                 }
 
-                // WHY: Validar conflicto excluyendo la cita actual que se está editando
-                bool hayConflicto = await _context.Citas
-                    .AnyAsync(c => c.IdCita != model.IdCita.Value
-                        && c.IdProfesional == model.IdProfesional
-                        && !string.Equals(c.Estado, "Cancelada", StringComparison.OrdinalIgnoreCase)
-                        && c.FechaHora < model.FechaHora.AddMinutes(30)
-                        && c.FechaHora.AddMinutes(30) > model.FechaHora, ct);
+                bool hayConflicto =
+                    await _context.Citas.AnyAsync(
+                        c =>
+                            c.IdCita != model.IdCita.Value &&
+                            c.IdProfesional == model.IdProfesional &&
+                            c.Estado != "cancelada" &&
+                            c.Estado != "Cancelada" &&
+                            c.Estado != "cancelado" &&
+                            c.FechaHora < fin &&
+                            c.FechaHora.AddMinutes(DuracionCitaMinutos) > inicio,
+                        ct);
 
                 if (hayConflicto)
                 {
-                    TempData["ErrorValidacion"] = "El profesional ya tiene una cita asignada en este horario. Seleccione otro horario.";
-                    _logger.LogInformation("Conflicto de disponibilidad al actualizar IdCita={IdCita}, IdProfesional={IdProfesional}, Fecha={Fecha}",
-                        model.IdCita.Value, model.IdProfesional, model.FechaHora);
+                    TempData["ErrorValidacion"] =
+                        "El profesional ya tiene una cita asignada en ese horario.";
+
                     return Redirect(returnUrlSafe);
                 }
 
-                cita.IdPaciente = model.IdPaciente;
-                cita.IdProfesional = model.IdProfesional;
-                cita.IdServicio = model.IdServicio;
-                cita.IdConsultorio = model.IdConsultorio;
-                cita.IdEstado = model.IdEstado;
-                cita.FechaHora = model.FechaHora;
-                cita.Estado = await BuildEstadoNombreAsync(model.IdEstado, model.Estado, cita.Estado, ct);
-                cita.Estado = EstadoCitaHelper.ResolveEstadoNombre(cita.Estado, cita.Estado);
-                cita.Notas = BuildNotasCita(model);
+                cita.IdPaciente =
+                    model.IdPaciente;
+
+                cita.IdProfesional =
+                    model.IdProfesional;
+
+                cita.IdServicio =
+                    model.IdServicio;
+
+                cita.IdConsultorio =
+                    model.IdConsultorio;
+
+                cita.IdEstado =
+                    model.IdEstado;
+
+                cita.FechaHora =
+                    model.FechaHora;
+
+                cita.Estado =
+                    await BuildEstadoNombreAsync(
+                        model.IdEstado,
+                        model.Estado,
+                        cita.Estado,
+                        ct);
+
+                cita.Estado =
+                    EstadoCitaHelper.ResolveEstadoNombre(
+                        cita.Estado,
+                        "programada");
+
+                cita.Notas =
+                    BuildNotasCita(model);
 
                 _context.Citas.Update(cita);
             }
             else
             {
-                // WHY: Para creación, validar conflicto con todas las citas activas del profesional
-                bool hayConflicto = await _context.Citas
-                    .AnyAsync(c => c.IdProfesional == model.IdProfesional
-                        && !string.Equals(c.Estado, "Cancelada", StringComparison.OrdinalIgnoreCase)
-                        && c.FechaHora < model.FechaHora.AddMinutes(30)
-                        && c.FechaHora.AddMinutes(30) > model.FechaHora, ct);
+                bool hayConflicto =
+                    await _context.Citas.AnyAsync(
+                        c =>
+                            c.IdProfesional ==
+                            model.IdProfesional &&
+                            c.Estado != "cancelada" &&
+                            c.Estado != "Cancelada" &&
+                            c.Estado != "cancelado" &&
+                            c.FechaHora < fin &&
+                            c.FechaHora.AddMinutes(
+                                DuracionCitaMinutos) > inicio,
+                        ct);
 
                 if (hayConflicto)
                 {
-                    TempData["ErrorValidacion"] = "El profesional ya tiene una cita asignada en este horario. Seleccione otro horario.";
+                    TempData["ErrorValidacion"] =
+                        "El profesional ya tiene una cita asignada en ese horario.";
+
                     return Redirect(returnUrlSafe);
                 }
 
-                var nuevaCita = new Cita
+                cita = new Cita
                 {
-                    IdPaciente = model.IdPaciente,
-                    IdProfesional = model.IdProfesional,
-                    IdServicio = model.IdServicio,
-                    IdConsultorio = model.IdConsultorio,
-                    IdEstado = model.IdEstado,
-                    FechaHora = model.FechaHora,
-                    Estado = EstadoCitaHelper.ResolveEstadoNombre(await BuildEstadoNombreAsync(model.IdEstado, model.Estado, "programada", ct), "programada"),
-                    Notas = BuildNotasCita(model),
-                    MotivoConsulta = "Consulta programada desde gestion"
+                    IdPaciente =
+                        model.IdPaciente,
+
+                    IdProfesional =
+                        model.IdProfesional,
+
+                    IdServicio =
+                        model.IdServicio,
+
+                    IdConsultorio =
+                        model.IdConsultorio,
+
+                    IdEstado =
+                        model.IdEstado,
+
+                    FechaHora =
+                        model.FechaHora,
+
+                    Estado =
+                        EstadoCitaHelper.ResolveEstadoNombre(
+                            await BuildEstadoNombreAsync(
+                                model.IdEstado,
+                                model.Estado,
+                                "programada",
+                                ct),
+                            "programada"),
+
+                    Notas =
+                        BuildNotasCita(model)
                 };
 
-                _context.Citas.Add(nuevaCita);
+                _context.Citas.Add(cita);
             }
 
-            await _context.SaveChangesAsync(ct);
+            // ------------------------------------------------------------
+            // GUARDAR EN BD
+            // ------------------------------------------------------------
 
-            // ── Auditoría de cambio en cita ───────────────────────────────────
-            int idCitaGuardada = model.IdCita is > 0 ? model.IdCita.Value : 0;
-            string descAuditoria = operacion == "Creacion"
-                ? $"Cita creada. IdPaciente={model.IdPaciente}, IdProfesional={model.IdProfesional}, Fecha={model.FechaHora:yyyy-MM-dd HH:mm}"
-                : $"Cita actualizada. IdCita={idCitaOperacion}, EstadoNuevo={model.Estado ?? "sin cambio"}, Fecha={model.FechaHora:yyyy-MM-dd HH:mm}";
+            int guardados = await _context.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "GuardarCita ejecutado correctamente. Operacion={Operacion}, IdCita={IdCita}, FechaHora={FechaHora}, IdPaciente={IdPaciente}, IdProfesional={IdProfesional}, IdServicio={IdServicio}, IdConsultorio={IdConsultorio}, IdEstado={IdEstado}, Estado={Estado}, RegistrosAfectados={RegistrosAfectados}",
+                operacion,
+                cita.IdCita,
+                cita.FechaHora,
+                cita.IdPaciente,
+                cita.IdProfesional,
+                cita.IdServicio,
+                cita.IdConsultorio,
+                cita.IdEstado,
+                cita.Estado,
+                guardados);
+
+            if (guardados <= 0)
+            {
+                TempData["ErrorValidacion"] =
+                    "No se pudieron guardar los cambios.";
+
+                return Redirect(returnUrlSafe);
+            }
+
+
+            // ------------------------------------------------------------
+            // AUDITORÍA
+            // ------------------------------------------------------------
 
             await RegistrarAuditoriaAsync(
-                accion: operacion == "Creacion" ? "INSERT" : "UPDATE",
-                tablaAfectada: "Cita",
-                idRegistro: idCitaOperacion > 0 ? idCitaOperacion : null,
-                descripcion: descAuditoria,
-                datosNuevos: $"{{\"Estado\":\"{model.Estado}\",\"FechaHora\":\"{model.FechaHora:O}\",\"IdPaciente\":{model.IdPaciente},\"IdProfesional\":{model.IdProfesional}}}",
+                accion:
+                    operacion == "Creacion"
+                        ? "INSERT"
+                        : "UPDATE",
+
+                tablaAfectada:
+                    "Cita",
+
+                idRegistro:
+                    cita.IdCita,
+
+                descripcion:
+                    operacion == "Creacion"
+                        ? $"Cita creada. IdPaciente={cita.IdPaciente}, " +
+                          $"IdProfesional={cita.IdProfesional}, " +
+                          $"Fecha={cita.FechaHora:yyyy-MM-dd HH:mm}"
+                        : $"Cita actualizada. IdCita={cita.IdCita}, " +
+                          $"IdPaciente={cita.IdPaciente}, " +
+                          $"IdProfesional={cita.IdProfesional}, " +
+                          $"Fecha={cita.FechaHora:yyyy-MM-dd HH:mm}",
+
+                datosNuevos:
+                    $"{{\"IdPaciente\":{cita.IdPaciente}," +
+                    $"\"IdProfesional\":{cita.IdProfesional}," +
+                    $"\"IdServicio\":{cita.IdServicio}," +
+                    $"\"IdConsultorio\":{cita.IdConsultorio}," +
+                    $"\"IdEstado\":{cita.IdEstado}," +
+                    $"\"Estado\":\"{cita.Estado}\"," +
+                    $"\"FechaHora\":\"{cita.FechaHora:O}\"}}",
+
                 ct: ct);
 
-            // ── Email al paciente si el estado cambia a Confirmada o Cancelada ──
-            string estadoNormalizado = (model.Estado ?? string.Empty).Trim().ToLowerInvariant();
-            if (operacion == "Actualizacion" && (estadoNormalizado == "confirmada" || estadoNormalizado == "cancelada"))
+            // ------------------------------------------------------------
+            // NOTIFICACIÓN POR EMAIL
+            // ------------------------------------------------------------
+
+            string estadoNormalizado =
+                NormalizarEstado(cita.Estado);
+
+            if (estadoNormalizado == "confirmada" ||
+                estadoNormalizado == "cancelada")
             {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        using var scope = HttpContext.RequestServices.CreateScope();
-                        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                        var emailSvc = scope.ServiceProvider.GetRequiredService<IEmailService>();
-
-                        var citaCompleta = await db.Citas
-                            .Include(c => c.Paciente)
-                            .Include(c => c.Profesional)
-                            .Include(c => c.Servicio)
-                            .AsNoTracking()
-                            .FirstOrDefaultAsync(c => c.IdCita == idCitaOperacion);
-
-                        string? correo = citaCompleta?.Paciente?.Correo;
-                        if (string.IsNullOrWhiteSpace(correo)) return;
-
-                        await emailSvc.SendCitaNotificacionAsync(
-                            recipientEmail: correo,
-                            nombrePaciente: citaCompleta!.Paciente!.NombresCompleto,
-                            fechaCita: citaCompleta.FechaHora,
-                            profesional: citaCompleta.Profesional?.NombreProfesional ?? "Tu profesional",
-                            servicio: citaCompleta.Servicio?.Nombre ?? citaCompleta.Notas ?? "Consulta",
-                            nuevoEstado: estadoNormalizado);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Error fire-and-forget enviando email de cita IdCita={Id}", idCitaOperacion);
-                    }
-                }, CancellationToken.None);
+                await EnviarNotificacionCitaAsync(
+                    cita.IdCita,
+                    estadoNormalizado,
+                    ct);
             }
 
-            // WHY: Loguear éxito con datos mínimos para auditoría, sin exponer PII completa
             _logger.LogInformation(
-                "{Operacion} de cita correcta: IdCita={IdCita}, IdPaciente={IdPaciente}, IdProfesional={IdProfesional}, FechaHora={FechaHora}, Estado={Estado}, Usuario={Usuario}",
+                "{Operacion} de cita correcta: IdCita={IdCita}, Usuario={Usuario}",
                 operacion,
-                idCitaOperacion > 0 ? idCitaOperacion : "nuevo",
-                model.IdPaciente,
-                model.IdProfesional,
-                model.FechaHora,
-                model.Estado ?? "programada",
+                cita.IdCita,
                 User.Identity?.Name ?? "anonimo");
 
-            TempData["MensajeExito"] = operacion == "Creacion"
-                ? "La cita se ha agendado correctamente."
-                : "La cita se ha actualizado correctamente.";
+            TempData["MensajeExito"] =
+                operacion == "Creacion"
+                    ? "La cita se ha agendado correctamente."
+                    : "La cita se ha actualizado correctamente.";
         }
-        catch (OperationCanceledException ocex)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ocex, "Operacion cancelada al guardar cita (Id={Id})", idCitaOperacion);
-            TempData["ErrorValidacion"] = "La operación fue cancelada antes de finalizar.";
+            _logger.LogWarning(
+                ex,
+                "Operación cancelada al guardar cita Id={Id}",
+                idCitaOperacion);
+
+            TempData["ErrorValidacion"] =
+                "La operación fue cancelada antes de finalizar.";
         }
-        catch (DbUpdateConcurrencyException cex)
+        catch (DbUpdateConcurrencyException ex)
         {
-            // WHY: ConcurrencyException indica que otro usuario modificó la cita durante la edición
-            _logger.LogError(cex, "Conflicto de concurrencia al guardar cita Id={Id}", idCitaOperacion);
-            TempData["ErrorValidacion"] = "Conflicto de datos: otro usuario modificó esta cita. Actualice la página y vuelva a intentar.";
+            _logger.LogError(
+                ex,
+                "Conflicto de concurrencia al guardar cita Id={Id}",
+                idCitaOperacion);
+
+            TempData["ErrorValidacion"] =
+                "Conflicto de datos: otro usuario modificó esta cita.";
         }
-        catch (DbUpdateException dbex) when (EsViolacionIndiceUnico(dbex, out string? indice))
+        catch (DbUpdateException ex) when (
+            EsViolacionIndiceUnico(
+                ex,
+                out string? indice))
         {
-            // WHY: Violación de índice único indica cita duplicada; se maneja con mensaje amigable
-            _logger.LogError(dbex, "Violacion de restriccion UNIQUE ({Indice}) al guardar cita Id={Id}.", indice, idCitaOperacion);
-            TempData["ErrorValidacion"] = "No se pudo guardar: ya existe una cita con estas características (restricción única de base de datos).";
+            _logger.LogError(
+                ex,
+                "Violación UNIQUE {Indice} al guardar cita Id={Id}",
+                indice,
+                idCitaOperacion);
+
+            TempData["ErrorValidacion"] =
+                "No se pudo guardar: ya existe una cita con estas características.";
         }
-        catch (DbUpdateException dbex) when (EsViolacionIntegridadReferencial(dbex))
+        catch (DbUpdateException ex) when (
+            EsViolacionIntegridadReferencial(ex))
         {
-            // WHY: Violación de FK indica referencia a entidad inexistente; se maneja con mensaje claro
-            _logger.LogError(dbex, "Violacion FK integridad referencial al guardar cita Id={Id}.", idCitaOperacion);
-            TempData["ErrorValidacion"] = "No se pudo guardar: el paciente, profesional, servicio o consultorio seleccionado no es válido.";
+            _logger.LogError(
+                ex,
+                "Violación de integridad referencial al guardar cita Id={Id}",
+                idCitaOperacion);
+
+            TempData["ErrorValidacion"] =
+                "No se pudo guardar porque uno de los datos relacionados no es válido.";
         }
-        catch (DbUpdateException dbex)
+        catch (DbUpdateException ex)
         {
-            // WHY: DbUpdateException genérica puede indicar problemas de schema o triggers
-            _logger.LogError(dbex, "DbUpdateException al guardar cita Id={Id}.", idCitaOperacion);
-            TempData["ErrorValidacion"] = "Ocurrió un error al guardar los cambios en la base de datos.";
+            _logger.LogError(
+                ex,
+                "DbUpdateException al guardar cita Id={Id}",
+                idCitaOperacion);
+
+            TempData["ErrorValidacion"] =
+                "Ocurrió un error al guardar la cita en la base de datos.";
         }
-        catch (SqlException sqlex)
+        catch (SqlException ex)
         {
-            // WHY: SqlException crítica requiere atención inmediata de infraestructura
-            _logger.LogCritical(sqlex, "SqlException al guardar cita Id={Id}. Number={Number}.", idCitaOperacion, sqlex.Number);
-            TempData["ErrorValidacion"] = "Error de conectividad con la base de datos. Intente nuevamente en unos segundos.";
+            _logger.LogCritical(
+                ex,
+                "SqlException al guardar cita Id={Id}. Number={Number}",
+                idCitaOperacion,
+                ex.Number);
+
+            TempData["ErrorValidacion"] =
+                "Error de conectividad con la base de datos.";
         }
         catch (Exception ex)
         {
-            // WHY: Catch-all para errores no anticipados; nunca exponer detalles al usuario
-            _logger.LogCritical(ex, "Excepcion inesperada al guardar cita Id={Id}.", idCitaOperacion);
-            TempData["ErrorValidacion"] = "Ocurrió un error inesperado. El incidente fue registrado y reportado.";
+            _logger.LogCritical(
+                ex,
+                "Excepción inesperada al guardar cita Id={Id}",
+                idCitaOperacion);
+
+            TempData["ErrorValidacion"] =
+                "Ocurrió un error inesperado. El incidente fue registrado.";
         }
 
         return Redirect(returnUrlSafe);
     }
 
-    private static string? BuildNotasCita(CitaViewModel model)
-    {
-        if (!string.IsNullOrWhiteSpace(model.MotivoConsulta)) return model.MotivoConsulta.Trim();
-        if (!string.IsNullOrWhiteSpace(model.Notas)) return model.Notas.Trim();
-        if (!string.IsNullOrWhiteSpace(model.NotasPrevias)) return model.NotasPrevias.Trim();
-        return null;
-    }
-
-    private async Task<string> BuildEstadoNombreAsync(int? idEstado, string? estadoFallback, string estadoActual, CancellationToken ct)
-    {
-        if (idEstado.HasValue && idEstado.Value > 0)
-        {
-                var estado = await _context.EstadosCita.FindAsync(idEstado.Value, ct);
-                if (estado != null)
-                {
-                    return EstadoCitaHelper.ResolveEstadoNombre(estado.NombreEstado, estadoFallback);
-                }
-        }
-
-        if (!string.IsNullOrWhiteSpace(estadoFallback))
-        {
-            return EstadoCitaHelper.ResolveEstadoNombre(estadoFallback.Trim(), estadoFallback.Trim());
-        }
-
-        return EstadoCitaHelper.ResolveEstadoNombre(estadoActual, "programada");
-    }
+    // ================================================================
+    // CANCELAR CITA MVC
+    // ================================================================
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Administrador,Recepcionista")]
     [Route("gestion-de-citas/eliminar-cita")]
-    public async Task<IActionResult> EliminarCita([FromForm] int IdCita, [FromForm] string? ReturnUrl, CancellationToken ct = default)
+    public async Task<IActionResult> EliminarCita(
+        [FromForm] int IdCita,
+        [FromForm] string? ReturnUrl,
+        CancellationToken ct = default)
     {
-        string returnUrlSafe = !string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)
-            ? ReturnUrl
-            : "/gestion-de-citas/st-adm-09-citas";
+        string returnUrlSafe =
+            !string.IsNullOrWhiteSpace(ReturnUrl) &&
+            Url.IsLocalUrl(ReturnUrl)
+                ? ReturnUrl
+                : "/gestion-de-citas/st-adm-09-citas";
 
         try
         {
-            // WHY: Validar ID antes de consultar BD para evitar queries innecesarias
             if (IdCita <= 0)
             {
-                TempData["ErrorValidacion"] = "Identificador de cita inválido.";
-                _logger.LogWarning("EliminarCita: IdCita invalido ({IdCita})", IdCita);
+                TempData["ErrorValidacion"] =
+                    "Identificador de cita inválido.";
+
                 return Redirect(returnUrlSafe);
             }
 
-            var cita = await _context.Citas.FindAsync(IdCita, ct);
+            var cita = await _context.Citas
+                .FirstOrDefaultAsync(
+                    c => c.IdCita == IdCita,
+                    ct);
+
             if (cita == null)
             {
-                // WHY: Loguear con Warning porque es flujo esperado (cita ya eliminada o ID inválido)
-                TempData["ErrorValidacion"] = "La cita que intenta cancelar no existe.";
-                _logger.LogWarning("EliminarCita: Cita no encontrada IdCita={IdCita}", IdCita);
+                TempData["ErrorValidacion"] =
+                    "La cita que intenta cancelar no existe.";
+
                 return Redirect(returnUrlSafe);
             }
 
-            // WHY: Verificar permisos explícitos además del atributo [Authorize] para defensa en profundidad
-            bool esAdmin = User.IsInRole("Administrador");
-            bool esRecepcionista = User.IsInRole("Recepcionista");
-            if (!esAdmin && !esRecepcionista)
+            if (EsEstadoCancelado(cita.Estado))
             {
-                TempData["ErrorValidacion"] = "No tiene permisos suficientes para cancelar esta cita.";
-                _logger.LogWarning("EliminarCita: Permisos insuficientes para usuario {Usuario} al cancelar IdCita={IdCita}",
-                    User.Identity?.Name ?? "anonimo", IdCita);
+                TempData["ErrorValidacion"] =
+                    "La cita ya se encuentra cancelada.";
+
                 return Redirect(returnUrlSafe);
             }
 
-            // WHY: Soft delete vía cambio de estado en lugar de DELETE físico para preservar historial
-            cita.Estado = "cancelada";
+            /*
+             * SOFT DELETE:
+             * No eliminamos físicamente el registro.
+             */
+            var estadoCancelada = await _context.EstadosCita
+                .FirstOrDefaultAsync(
+                    e => e.NombreEstado.ToLower() == "cancelada",
+                    ct);
+
+            if (estadoCancelada != null)
+            {
+                cita.IdEstado = estadoCancelada.IdEstado;
+                cita.Estado = estadoCancelada.NombreEstado;
+            }
+            else
+            {
+                cita.Estado = "Cancelada";
+            }
+
             _context.Citas.Update(cita);
+
             await _context.SaveChangesAsync(ct);
 
-            // ── Auditoría de cancelación ──────────────────────────────────────
             await RegistrarAuditoriaAsync(
                 accion: "UPDATE",
                 tablaAfectada: "Cita",
-                idRegistro: IdCita,
-                descripcion: $"Cita cancelada (soft-delete). IdPaciente={cita.IdPaciente}, FechaHora={cita.FechaHora:yyyy-MM-dd HH:mm}",
-                datosNuevos: $"{{\"Estado\":\"cancelada\",\"FechaHora\":\"{cita.FechaHora:O}\"}}",
+                idRegistro: cita.IdCita,
+                descripcion:
+                    $"Cita cancelada. IdPaciente={cita.IdPaciente}, " +
+                    $"FechaHora={cita.FechaHora:yyyy-MM-dd HH:mm}",
+                datosNuevos:
+                    $"{{\"Estado\":\"cancelada\"," +
+                    $"\"FechaHora\":\"{cita.FechaHora:O}\"}}",
                 ct: ct);
 
-            // ── Email al paciente notificando la cancelación ──────────────────
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    using var scope = HttpContext.RequestServices.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                    var emailSvc = scope.ServiceProvider.GetRequiredService<IEmailService>();
-
-                    var citaCompleta = await db.Citas
-                        .Include(c => c.Paciente)
-                        .Include(c => c.Profesional)
-                        .Include(c => c.Servicio)
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(c => c.IdCita == IdCita);
-
-                    string? correo = citaCompleta?.Paciente?.Correo;
-                    if (string.IsNullOrWhiteSpace(correo)) return;
-
-                    await emailSvc.SendCitaNotificacionAsync(
-                        recipientEmail: correo,
-                        nombrePaciente: citaCompleta!.Paciente!.NombresCompleto,
-                        fechaCita: citaCompleta.FechaHora,
-                        profesional: citaCompleta.Profesional?.NombreProfesional ?? "Tu profesional",
-                        servicio: citaCompleta.Servicio?.Nombre ?? citaCompleta.Notas ?? "Consulta",
-                        nuevoEstado: "cancelada");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Error fire-and-forget enviando email cancelación IdCita={Id}", IdCita);
-                }
-            }, CancellationToken.None);
-
-            // WHY: Loguear éxito con datos mínimos para auditoría, sin exponer PII completa
-            _logger.LogInformation(
-                "Cita cancelada correctamente: IdCita={IdCita}, IdPaciente={IdPaciente}, IdProfesional={IdProfesional}, FechaHora={FechaHora}, UsuarioCancelador={Usuario}",
+            await EnviarNotificacionCitaAsync(
                 cita.IdCita,
-                cita.IdPaciente,
-                cita.IdProfesional,
-                cita.FechaHora,
-                User.Identity?.Name ?? "anonimo");
+                "cancelada",
+                ct);
 
-            TempData["MensajeExito"] = "La cita fue cancelada exitosamente.";
+            TempData["MensajeExito"] =
+                "La cita fue cancelada exitosamente.";
         }
-        catch (OperationCanceledException ocex)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ocex, "Operacion cancelada en EliminarCita Id={Id}", IdCita);
-            TempData["ErrorValidacion"] = "La operación fue cancelada.";
+            _logger.LogWarning(
+                ex,
+                "Operación cancelada EliminarCita Id={Id}",
+                IdCita);
+
+            TempData["ErrorValidacion"] =
+                "La operación fue cancelada.";
         }
-        catch (DbUpdateConcurrencyException cex)
+        catch (DbUpdateConcurrencyException ex)
         {
-            // WHY: ConcurrencyException indica que otro usuario modificó la cita durante la operación
-            _logger.LogError(cex, "Concurrencia al cancelar cita Id={Id}", IdCita);
-            TempData["ErrorValidacion"] = "Conflicto: esta cita fue modificada recientemente. Actualice y vuelva a intentar.";
+            _logger.LogError(
+                ex,
+                "Concurrencia al cancelar cita Id={Id}",
+                IdCita);
+
+            TempData["ErrorValidacion"] =
+                "La cita fue modificada recientemente.";
         }
-        catch (DbUpdateException dbex) when (EsViolacionIntegridadReferencial(dbex))
+        catch (DbUpdateException ex)
         {
-            // WHY: Violación de FK indica que hay registros dependientes (atención, factura, etc.)
-            _logger.LogError(dbex, "Violacion integridad referencial al cancelar cita Id={Id}", IdCita);
-            TempData["ErrorValidacion"] = "No se puede cancelar esta cita porque tiene registros asociados (atención, factura, etc.).";
+            _logger.LogError(
+                ex,
+                "DbUpdateException al cancelar cita Id={Id}",
+                IdCita);
+
+            TempData["ErrorValidacion"] =
+                "Ocurrió un error al intentar cancelar la cita.";
         }
-        catch (DbUpdateException dbex)
+        catch (SqlException ex)
         {
-            // WHY: DbUpdateException genérica puede indicar problemas de schema o triggers
-            _logger.LogError(dbex, "DbUpdateException al cancelar cita Id={Id}", IdCita);
-            TempData["ErrorValidacion"] = "Ocurrió un error al intentar cancelar la cita.";
-        }
-        catch (SqlException sqlex)
-        {
-            // WHY: SqlException crítica requiere atención inmediata de infraestructura
-            _logger.LogCritical(sqlex, "SqlException al cancelar cita Id={Id}. Number={Number}", IdCita, sqlex.Number);
-            TempData["ErrorValidacion"] = "Error de conectividad con la base de datos. Intente nuevamente.";
+            _logger.LogCritical(
+                ex,
+                "SqlException al cancelar cita Id={Id}. Number={Number}",
+                IdCita,
+                ex.Number);
+
+            TempData["ErrorValidacion"] =
+                "Error de conectividad con la base de datos.";
         }
         catch (Exception ex)
         {
-            // WHY: Catch-all para errores no anticipados; nunca exponer detalles al usuario
-            _logger.LogCritical(ex, "Error inesperado al cancelar cita Id={Id}", IdCita);
-            TempData["ErrorValidacion"] = "Ocurrió un error inesperado. El incidente fue registrado.";
+            _logger.LogCritical(
+                ex,
+                "Error inesperado al cancelar cita Id={Id}",
+                IdCita);
+
+            TempData["ErrorValidacion"] =
+                "Ocurrió un error inesperado. El incidente fue registrado.";
         }
 
         return Redirect(returnUrlSafe);
     }
 
-    /**
-     * CargarDatosAgenda: Construye ViewModel para vista de agenda semanal.
-     * WHY: Separa lógica de carga de datos para mantener el action limpio y testeable.
-     * MANEJO DE ERRORES: Catch por día para que un error en un día no rompa toda la semana.
-     */
-    private async Task CargarDatosAgenda(DateTime? weekStart = null, int? professionalId = null, int? officeId = null, CancellationToken ct = default)
+    // ================================================================
+    // PANEL AUXILIAR
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Auxiliar")]
+    [Route("gestion-de-citas/st-aux-01-panel-operativo/panel-operativo")]
+    public async Task<IActionResult> Staux01PanelOperativo(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
     {
         try
         {
-            // WHY: Calcular inicio de semana (lunes) para iterar 7 días consecutivos
-            var hoy = DateTime.Today;
-            var inicioSemana = weekStart?.Date ?? hoy;
-            if (inicioSemana.DayOfWeek != DayOfWeek.Monday)
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-aux-01-panel-operativo/panel-operativo",
+                null,
+                ct);
+
+            ViewData["PanelOperativoData"] =
+                await ConstruirPanelOperativoAsync(ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Staux01PanelOperativo");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-01-panel-operativo/panel-operativo.cshtml");
+        }
+    }
+
+    private async Task<object> ConstruirPanelOperativoAsync(
+        CancellationToken ct)
+    {
+        var hoy = DateTime.Now.Date;
+
+        var citasHoy = await _context.Citas
+            .AsNoTracking()
+            .Include(c => c.Paciente)
+            .Include(c => c.Profesional)
+            .ThenInclude(p => p!.Usuario)
+            .Include(c => c.Servicio)
+            .Include(c => c.Consultorio)
+            .Where(c => c.FechaHora.Date == hoy)
+            .OrderBy(c => c.FechaHora)
+            .ToListAsync(ct);
+
+        string MapEstadoLabel(string estado) =>
+            NormalizarEstado(estado) switch
             {
-                inicioSemana = inicioSemana.AddDays(-(int)inicioSemana.DayOfWeek + (int)DayOfWeek.Monday);
+                "atendida" or
+                "completada" or
+                "realizada"
+                    => "Atendida",
+
+                "cancelada" or
+                "no_asistida" or
+                "no-show"
+                    => "Cancelada",
+
+                _ => "Pendiente"
+            };
+
+        var pacientesHoy = citasHoy
+            .Select(c => new
+            {
+                id = c.IdCita,
+                hora = c.FechaHora.ToString("HH:mm"),
+                paciente = c.Paciente?.NombresCompleto ?? "Paciente sin datos",
+                profesional =
+                    c.Profesional is not null
+                        ? $"Dr(a). {c.Profesional.Nombres} {c.Profesional.Apellidos}"
+                        : "Sin asignar",
+
+                alergia =
+                    string.IsNullOrWhiteSpace(c.Paciente?.Alergias)
+                        ? null
+                        : c.Paciente!.Alergias,
+
+                consultorio =
+                    c.Consultorio?.Nombre ?? "Sin asignar",
+
+                estado = MapEstadoLabel(c.Estado),
+
+                highlight =
+                    !string.IsNullOrWhiteSpace(
+                        c.Paciente?.Alergias),
+
+                telefono = c.Paciente?.Telefono,
+                email = c.Paciente?.Correo,
+
+                sangre =
+                    string.IsNullOrWhiteSpace(
+                        c.Paciente?.GrupoSanguineo)
+                        ? "N/D"
+                        : c.Paciente!.GrupoSanguineo,
+
+                edad =
+                    c.Paciente?.FechaNacimiento is not null
+                        ? $"{CalcularEdad(c.Paciente.FechaNacimiento)} años"
+                        : "Edad no registrada",
+
+                medicamentos = Array.Empty<string>(),
+
+                antecedentes =
+                    string.IsNullOrWhiteSpace(
+                        c.Paciente?.AntecedentesMedicos)
+                        ? "Sin antecedentes registrados"
+                        : c.Paciente!.AntecedentesMedicos,
+
+                servicio =
+                    c.Servicio?.Nombre ??
+                    "Servicio no especificado"
+            })
+            .ToList();
+
+        int completadas =
+            citasHoy.Count(
+                c => MapEstadoLabel(c.Estado) ==
+                     "Atendida");
+
+        int canceladas =
+            citasHoy.Count(
+                c => MapEstadoLabel(c.Estado) ==
+                     "Cancelada");
+
+        int pendientes =
+            citasHoy.Count -
+            completadas -
+            canceladas;
+
+        int consultoriosDisponibles =
+            await _context.Consultorios.CountAsync(
+                c =>
+                    c.Estado == "disponible" ||
+                    c.Estado == "activo",
+                ct);
+
+        var proxima = citasHoy
+            .FirstOrDefault(
+                c =>
+                    c.FechaHora > DateTime.Now &&
+                    MapEstadoLabel(c.Estado) == "Pendiente");
+
+        object? proximaCita =
+            proxima == null
+                ? null
+                : new
+                {
+                    minutosRestantes =
+                        Math.Max(
+                            0,
+                            (int)(
+                                proxima.FechaHora -
+                                DateTime.Now)
+                                .TotalMinutes),
+
+                    hora =
+                        proxima.FechaHora.ToString(
+                            "hh:mm tt"),
+
+                    paciente =
+                        proxima.Paciente?.NombresCompleto ??
+                        "Paciente sin datos",
+
+                    tipo =
+                        proxima.Servicio?.Nombre ??
+                        "Consulta",
+
+                    profesional =
+                        proxima.Profesional is not null
+                            ? $"Dr(a). {proxima.Profesional.Nombres} {proxima.Profesional.Apellidos}"
+                            : "Sin asignar",
+
+                    consultorio =
+                        proxima.Consultorio?.Nombre ??
+                        "Sin asignar"
+                };
+
+        var alertas = new List<object>();
+
+        foreach (var c in citasHoy.Where(
+                     c =>
+                         !string.IsNullOrWhiteSpace(
+                             c.Paciente?.Alergias)))
+        {
+            alertas.Add(
+                new
+                {
+                    tipo = "warning",
+                    titulo = "Paciente con alergia",
+                    desc =
+                        $"{c.Paciente!.NombresCompleto} — " +
+                        $"Alérgico a {c.Paciente.Alergias}"
+                });
+        }
+
+        return new
+        {
+            fechaHoy =
+                hoy.ToString(
+                    "dddd d 'de' MMMM yyyy",
+                    new System.Globalization.CultureInfo("es-CO")),
+
+            kpis = new
+            {
+                citasHoy = citasHoy.Count,
+                completadas,
+                pendientes,
+                consultoriosDisponibles
+            },
+
+            proximaCita,
+            citas = pacientesHoy,
+            alertas
+        };
+    }
+
+    // ================================================================
+    // AGENDA APOYO
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Auxiliar")]
+    [Route("gestion-de-citas/st-aux-02-agenda-apoyo")]
+    public async Task<IActionResult> Staux02AgendaApoyo(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-aux-02-agenda-apoyo",
+                null,
+                ct);
+
+            ViewData["AgendaApoyoData"] =
+                await ConstruirAgendaApoyoAsync(ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Staux02AgendaApoyo");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.cshtml");
+        }
+    }
+
+    private async Task<object> ConstruirAgendaApoyoAsync(
+        CancellationToken ct)
+    {
+        var hoy = DateTime.Now.Date;
+
+        var citasHoy = await _context.Citas
+            .AsNoTracking()
+            .Include(c => c.Paciente)
+            .Include(c => c.Profesional)
+            .Include(c => c.Servicio)
+            .Where(c => c.FechaHora.Date == hoy)
+            .OrderBy(c => c.FechaHora)
+            .ToListAsync(ct);
+
+        static string InferirTipoCita(
+            string? nombreServicio)
+        {
+            var n =
+                (nombreServicio ?? string.Empty)
+                .ToLowerInvariant();
+
+            if (n.Contains("urgencia") ||
+                n.Contains("emergencia") ||
+                n.Contains("dolor"))
+            {
+                return "urgencia";
             }
-            var agendaDias = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
+
+            if (n.Contains("limpieza") ||
+                n.Contains("valoraci") ||
+                n.Contains("control") ||
+                n.Contains("revisi"))
+            {
+                return "consulta";
+            }
+
+            return "procedimiento";
+        }
+
+        string MapEstadoLabel(string estado) =>
+            NormalizarEstado(estado) switch
+            {
+                "atendida" or
+                "completada" or
+                "realizada"
+                    => "Atendida",
+
+                "cancelada" or
+                "no_asistida" or
+                "no-show"
+                    => "Cancelada",
+
+                _ => "Pendiente"
+            };
+
+        var citas = citasHoy.Select(
+            c => new
+            {
+                id = c.IdCita,
+                hora = c.FechaHora.ToString("HH:mm"),
+                paciente =
+                    c.Paciente?.NombresCompleto ??
+                    "Paciente sin datos",
+
+                profesional =
+                    c.Profesional is not null
+                        ? $"Dr(a). {c.Profesional.Nombres} {c.Profesional.Apellidos}"
+                        : "Sin asignar",
+
+                tipo =
+                    InferirTipoCita(
+                        c.Servicio?.Nombre),
+
+                alergia =
+                    string.IsNullOrWhiteSpace(
+                        c.Paciente?.Alergias)
+                        ? null
+                        : c.Paciente!.Alergias,
+
+                estado =
+                    MapEstadoLabel(c.Estado)
+            })
+            .ToList();
+
+        return new
+        {
+            fechaHoy =
+                hoy.ToString(
+                    "ddd d MMM yyyy",
+                    new System.Globalization.CultureInfo("es-CO")),
+
+            citas
+        };
+    }
+
+    // ================================================================
+    // HISTORIAL PARCIAL AUXILIAR
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Auxiliar")]
+    [Route("gestion-de-citas/st-aux-05-historial-parcial")]
+    public async Task<IActionResult> Staux05HistorialParcial(
+        [FromQuery] int? editId,
+        [FromQuery] int? pacienteId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-aux-05-historial-parcial",
+                null,
+                ct);
+
+            ViewData["HistorialParcialData"] =
+                await ConstruirHistorialParcialAsync(
+                    pacienteId,
+                    ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Staux05HistorialParcial");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.cshtml");
+        }
+    }
+
+    private async Task<object> ConstruirHistorialParcialAsync(
+        int? pacienteId,
+        CancellationToken ct)
+    {
+        const int limite = 3;
+
+        var paciente =
+            pacienteId is not null
+                ? await _context.Pacientes
+                    .FirstOrDefaultAsync(
+                        p => p.IdPaciente == pacienteId,
+                        ct)
+                : await _context.Citas
+                    .OrderByDescending(c => c.FechaHora)
+                    .Select(c => c.Paciente)
+                    .FirstOrDefaultAsync(ct);
+
+        if (paciente is null)
+        {
+            return new
+            {
+                paciente = new
+                {
+                    id = (int?)null,
+                    nombre = "Sin paciente asignado",
+                    tipoDoc = "",
+                    documento = "",
+                    alergias = Array.Empty<string>(),
+                    medicamentos = Array.Empty<string>(),
+                    grupoSanguineo = "N/D",
+                    ultimaActualizacion = ""
+                },
+
+                consultas = Array.Empty<object>(),
+                limite
+            };
+        }
+
+        var consultas = await _context.Citas
+            .AsNoTracking()
+            .Include(c => c.Profesional)
+            .Include(c => c.Servicio)
+            .Where(
+                c =>
+                    c.IdPaciente == paciente.IdPaciente &&
+                    c.FechaHora <= DateTime.Now)
+            .OrderByDescending(c => c.FechaHora)
+            .Take(limite)
+            .Select(
+                c => new
+                {
+                    id = c.IdCita,
+                    fecha = c.FechaHora,
+
+                    profesional =
+                        c.Profesional != null
+                            ? $"Dr(a). {c.Profesional.Nombres} {c.Profesional.Apellidos}"
+                            : "Sin asignar",
+
+                    diagnostico =
+                        c.Notas ?? "",
+
+                    procedimiento =
+                        c.Servicio != null
+                            ? c.Servicio.Nombre
+                            : "Consulta"
+                })
+            .ToListAsync(ct);
+
+        return new
+        {
+            paciente = new
+            {
+                id = paciente.IdPaciente,
+                nombre = paciente.NombresCompleto,
+                tipoDoc = paciente.TipoDocumento,
+                documento = paciente.Documento,
+
+                alergias =
+                    string.IsNullOrWhiteSpace(
+                        paciente.Alergias)
+                        ? Array.Empty<string>()
+                        : paciente.Alergias.Split(
+                            ',',
+                            StringSplitOptions.RemoveEmptyEntries |
+                            StringSplitOptions.TrimEntries),
+
+                medicamentos = Array.Empty<string>(),
+
+                grupoSanguineo =
+                    string.IsNullOrWhiteSpace(
+                        paciente.GrupoSanguineo)
+                        ? "N/D"
+                        : paciente.GrupoSanguineo,
+
+                ultimaActualizacion =
+                    consultas.Count > 0
+                        ? consultas[0].fecha.ToString(
+                            "dd MMM",
+                            new System.Globalization.CultureInfo("es-CO"))
+                        : ""
+            },
+
+            consultas,
+            limite
+        };
+    }
+
+    // ================================================================
+    // ASISTENCIA PROCEDIMIENTO
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Auxiliar")]
+    [Route("gestion-de-citas/st-aux-06-asistencia-procedi")]
+    public async Task<IActionResult> Staux06AsistenciaProcedi(
+        [FromQuery] int? editId,
+        [FromQuery] int? citaId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-aux-06-asistencia-procedi",
+                null,
+                ct);
+
+            ViewData["AsistenciaProcedData"] =
+                await ConstruirAsistenciaProcedimientoAsync(
+                    citaId,
+                    ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Staux06AsistenciaProcedi");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.cshtml");
+        }
+    }
+
+    private async Task<object> ConstruirAsistenciaProcedimientoAsync(
+        int? citaId,
+        CancellationToken ct)
+    {
+        var cita =
+            citaId is not null
+                ? await _context.Citas
+                    .AsNoTracking()
+                    .Include(c => c.Paciente)
+                    .Include(c => c.Servicio)
+                    .Include(c => c.Profesional)
+                    .Include(c => c.Consultorio)
+                    .FirstOrDefaultAsync(
+                        c => c.IdCita == citaId,
+                        ct)
+                : await _context.Citas
+                    .AsNoTracking()
+                    .Include(c => c.Paciente)
+                    .Include(c => c.Servicio)
+                    .Include(c => c.Profesional)
+                    .Include(c => c.Consultorio)
+                    .Where(
+                        c =>
+                            c.FechaHora.Date ==
+                            DateTime.Now.Date)
+                    .OrderBy(c => c.FechaHora)
+                    .FirstOrDefaultAsync(ct);
+
+        if (cita is null)
+        {
+            return new
+            {
+                citaId = (int?)null,
+                paciente = "Sin procedimiento asignado",
+                procedimiento = "",
+                profesional = "",
+                consultorio = "",
+                alergia = (string?)null,
+                antecedentes = (string?)null
+            };
+        }
+
+        return new
+        {
+            citaId = cita.IdCita,
+
+            paciente =
+                cita.Paciente?.NombresCompleto ??
+                "Paciente sin datos",
+
+            procedimiento =
+                cita.Servicio?.Nombre ??
+                "Procedimiento",
+
+            profesional =
+                cita.Profesional is not null
+                    ? $"Dr(a). {cita.Profesional.Nombres} {cita.Profesional.Apellidos}"
+                    : "Sin asignar",
+
+            consultorio =
+                cita.Consultorio?.Nombre ??
+                "Sin asignar",
+
+            alergia =
+                string.IsNullOrWhiteSpace(
+                    cita.Paciente?.Alergias)
+                    ? null
+                    : cita.Paciente!.Alergias,
+
+            antecedentes =
+                string.IsNullOrWhiteSpace(
+                    cita.Paciente?.AntecedentesMedicos)
+                    ? null
+                    : cita.Paciente!.AntecedentesMedicos
+        };
+    }
+
+    // ================================================================
+    // ESTADO CONSULTORIO
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Auxiliar")]
+    [Route("gestion-de-citas/st-aux-09-estado-consultorio")]
+    public async Task<IActionResult> Staux09EstadoConsultorio(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-aux-09-estado-consultorio",
+                null,
+                ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Staux09EstadoConsultorio");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-09-estado-consultorio/estado-consultorio.cshtml");
+        }
+    }
+
+    // ================================================================
+    // CITAS FINALIZADAS
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Auxiliar,Recepcionista")]
+    [Route("gestion-de-citas/st-aux-10-citas-finalizadas")]
+    public async Task<IActionResult> Staux10CitasFinalizadas(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-aux-10-citas-finalizadas",
+                null,
+                ct);
+
+            ViewData["CitasFinalizadasData"] =
+                await ConstruirCitasFinalizadasAsync(ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Staux10CitasFinalizadas");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-aux-10-citas-finalizadas/citas-finalizadas.cshtml");
+        }
+    }
+
+    private async Task<object> ConstruirCitasFinalizadasAsync(
+        CancellationToken ct)
+    {
+        var hoy = DateTime.Now.Date;
+
+        var citasHoy = await _context.Citas
+            .AsNoTracking()
+            .Include(c => c.Paciente)
+            .Include(c => c.Profesional)
+            .Include(c => c.Servicio)
+            .Where(c => c.FechaHora.Date == hoy)
+            .OrderBy(c => c.FechaHora)
+            .ToListAsync(ct);
+
+        static string MapEstadoLabel(string estado) =>
+            NormalizarEstado(estado) switch
+            {
+                "atendida" or
+                "completada" or
+                "realizada"
+                    => "Atendida",
+
+                "cancelada"
+                    => "Cancelada",
+
+                "no_asistida" or
+                "no-show"
+                    => "No asistió",
+
+                _ => "Pendiente"
+            };
+
+        var citas =
+            citasHoy
+                .Select(
+                    c => new
+                    {
+                        id = c.IdCita,
+                        hora =
+                            c.FechaHora.ToString("HH:mm"),
+
+                        paciente =
+                            c.Paciente?.NombresCompleto ??
+                            "Paciente sin datos",
+
+                        profesional =
+                            c.Profesional is not null
+                                ? $"Dr(a). {c.Profesional.Nombres} {c.Profesional.Apellidos}"
+                                : "Sin asignar",
+
+                        servicio =
+                            c.Servicio?.Nombre ??
+                            "Servicio no especificado",
+
+                        estado =
+                            MapEstadoLabel(c.Estado)
+                    })
+                .Where(c => c.estado != "Pendiente")
+                .ToList();
+
+        return new
+        {
+            citas
+        };
+    }
+
+    // ================================================================
+    // AGENDA PROFESIONAL
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Profesional")]
+    [Route("gestion-de-citas/st-odo-02-agenda")]
+    public async Task<IActionResult> Stodo02Agenda(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-odo-02-agenda",
+                null,
+                ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-odo-02-agenda/index.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Stodo02Agenda");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-odo-02-agenda/index.cshtml");
+        }
+    }
+
+    // ================================================================
+    // MIS CITAS PACIENTE
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Paciente")]
+    [Route("gestion-de-citas/st-pac-01-mis-citas")]
+    public async Task<IActionResult> Stpac01MisCitas(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-pac-01-mis-citas",
+                null,
+                ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-pac-01-mis-citas/index.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Stpac01MisCitas");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-pac-01-mis-citas/index.cshtml");
+        }
+    }
+
+    // ================================================================
+    // NOTIFICACIONES PACIENTE
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Paciente")]
+    [Route("gestion-de-citas/st-pac-03-notificaciones")]
+    public async Task<IActionResult> Stpac03Notificaciones(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-pac-03-notificaciones",
+                null,
+                ct);
+
+            ViewData["NotificacionesData"] =
+                await ConstruirNotificacionesPacienteAsync(ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-pac-03-notificaciones/index.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Stpac03Notificaciones");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-pac-03-notificaciones/index.cshtml");
+        }
+    }
+
+    private async Task<object> ConstruirNotificacionesPacienteAsync(
+        CancellationToken ct)
+    {
+        string? userIdStr =
+            User.FindFirst(
+                ClaimTypes.NameIdentifier)?.Value;
+
+        int? idUsuario =
+            int.TryParse(
+                userIdStr,
+                out int uid)
+                ? uid
+                : null;
+
+        var paciente =
+            idUsuario is not null
+                ? await _context.Pacientes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        p => p.IdUsuario == idUsuario,
+                        ct)
+                : null;
+
+        if (paciente == null)
+        {
+            return new
+            {
+                notificaciones =
+                    Array.Empty<object>()
+            };
+        }
+
+        var citas = await _context.Citas
+            .AsNoTracking()
+            .Include(c => c.Profesional)
+            .Include(c => c.Servicio)
+            .Include(c => c.Consultorio)
+            .Where(
+                c =>
+                    c.IdPaciente ==
+                    paciente.IdPaciente)
+            .OrderByDescending(c => c.FechaHora)
+            .Take(20)
+            .ToListAsync(ct);
+
+        var ahora = DateTime.Now;
+
+        var notificaciones =
+            new List<(object Notif, DateTime Time)>();
+
+        int idx = 1;
+
+        foreach (var c in citas)
+        {
+            string profesional =
+                c.Profesional is not null
+                    ? $"Dr(a). {c.Profesional.Nombres} {c.Profesional.Apellidos}"
+                    : "tu profesional asignado";
+
+            string estado =
+                NormalizarEstado(c.Estado);
+
+            if (c.FechaHora > ahora &&
+                (estado == "programada" ||
+                 estado == "confirmada"))
+            {
+                notificaciones.Add(
+                    (
+                        new
+                        {
+                            id = idx++,
+                            tipo = "reminder",
+                            titulo = "Recordatorio de cita",
+
+                            desc =
+                                $"Tu cita con {profesional} es el " +
+                                $"{c.FechaHora:dd 'de' MMMM} " +
+                                $"a las {c.FechaHora:hh:mm tt}" +
+                                $"{(
+                                    c.Consultorio != null
+                                        ? " - " + c.Consultorio.Nombre
+                                        : ""
+                                )}",
+
+                            time = c.FechaHora,
+                            leida = false,
+                            badge = "pending"
+                        },
+
+                        c.FechaHora
+                    ));
+            }
+            else if (estado == "confirmada")
+            {
+                notificaciones.Add(
+                    (
+                        new
+                        {
+                            id = idx++,
+                            tipo = "confirmed",
+                            titulo = "Cita confirmada",
+
+                            desc =
+                                $"Tu cita del {c.FechaHora:dd 'de' MMMM} " +
+                                "fue confirmada exitosamente.",
+
+                            time = c.FechaHora,
+                            leida = false,
+                            badge = "new"
+                        },
+
+                        c.FechaHora
+                    ));
+            }
+            else if (estado == "cancelada")
+            {
+                notificaciones.Add(
+                    (
+                        new
+                        {
+                            id = idx++,
+                            tipo = "cancelled",
+                            titulo = "Cita cancelada",
+
+                            desc =
+                                $"Tu cita del {c.FechaHora:dd 'de' MMMM} " +
+                                "fue cancelada.",
+
+                            time = c.FechaHora,
+                            leida = false,
+                            badge = "read"
+                        },
+
+                        c.FechaHora
+                    ));
+            }
+        }
+
+        return new
+        {
+            notificaciones =
+                notificaciones
+                    .OrderByDescending(n => n.Time)
+                    .Select(n => n.Notif)
+                    .ToList()
+        };
+    }
+
+    // ================================================================
+    // DASHBOARD RECEPCIÓN
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Recepcionista")]
+    [Route("gestion-de-citas/st-rec-01-dashboard")]
+    public async Task<IActionResult> Strec01Dashboard(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-rec-01-dashboard",
+                null,
+                ct);
+
+            ViewData["DashboardRecepcionData"] =
+                await ConstruirDashboardRecepcionAsync(ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-rec-01-dashboard/index.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Strec01Dashboard");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-rec-01-dashboard/index.cshtml");
+        }
+    }
+
+    private async Task<object> ConstruirDashboardRecepcionAsync(
+        CancellationToken ct)
+    {
+        var hoy = DateTime.Now.Date;
+
+        var citasHoy = await _context.Citas
+            .AsNoTracking()
+            .Include(c => c.Paciente)
+            .Include(c => c.Profesional)
+            .Include(c => c.Servicio)
+            .Include(c => c.Consultorio)
+            .Where(c => c.FechaHora.Date == hoy)
+            .OrderBy(c => c.FechaHora)
+            .ToListAsync(ct);
+
+        var appointments =
+            citasHoy.Select(
+                c =>
+                {
+                    string estado =
+                        NormalizarEstado(c.Estado);
+
+                    var result =
+                        estado switch
+                        {
+                            "atendida" or
+                            "completada" or
+                            "realizada"
+                                => (
+                                    status: "Atendida",
+                                    statusClass: "status-atendida",
+                                    actions: new[] { "eye" }
+                                ),
+
+                            "en_consulta" or
+                            "en_proceso"
+                                => (
+                                    status: "En consulta",
+                                    statusClass: "status-consulta",
+                                    actions: new[] { "pencil" }
+                                ),
+
+                            "cancelada"
+                                => (
+                                    status: "Cancelada",
+                                    statusClass: "status-pendiente",
+                                    actions: new[] { "eye" }
+                                ),
+
+                            _
+                                => (
+                                    status: "Pendiente",
+                                    statusClass: "status-pendiente",
+                                    actions: new[] { "pencil", "file-invoice" }
+                                )
+                        };
+
+                    return new
+                    {
+                        time =
+                            c.FechaHora.ToString("HH:mm"),
+
+                        patient =
+                            c.Paciente?.NombresCompleto ??
+                            "Paciente sin datos",
+
+                        doctor =
+                            c.Profesional is not null
+                                ? $"Dr(a). {c.Profesional.Nombres} {c.Profesional.Apellidos}"
+                                : "Sin asignar",
+
+                        service =
+                            c.Servicio?.Nombre ??
+                            "Servicio no especificado",
+
+                        status = result.status,
+                        statusClass = result.statusClass,
+                        highlight =
+                            result.status == "En consulta",
+                        actions = result.actions
+                    };
+                })
+                .ToList();
+
+        int confirmadas =
+            citasHoy.Count(
+                c =>
+                    NormalizarEstado(c.Estado) is
+                        "confirmada" or
+                        "atendida" or
+                        "completada" or
+                        "realizada");
+
+        int pendientes =
+            citasHoy.Count(
+                c =>
+                    NormalizarEstado(c.Estado) ==
+                    "programada");
+
+        decimal facturasPendientes =
+            await _context.Facturas
+                .Where(
+                    f =>
+                        f.Estado == "pendiente" ||
+                        f.Estado == "parcial")
+                .SumAsync(
+                    f => f.Total,
+                    ct);
+
+        var ahora = DateTime.Now;
+
+        var proximas =
+            citasHoy
+                .Where(
+                    c =>
+                        c.FechaHora > ahora &&
+                        c.FechaHora <= ahora.AddMinutes(30) &&
+                        !EsEstadoCancelado(c.Estado))
+                .Select(
+                    c => new
+                    {
+                        hora =
+                            c.FechaHora.ToString("hh:mm tt"),
+
+                        fechaIso =
+                            c.FechaHora.ToString(
+                                "yyyy-MM-ddTHH:mm"),
+
+                        texto =
+                            $"{c.Paciente?.NombresCompleto ?? "Paciente sin datos"} - " +
+                            $"{c.Servicio?.Nombre ?? "Consulta"} - " +
+                            $"{(
+                                c.Profesional is not null
+                                    ? $"Dr(a). {c.Profesional.Nombres} {c.Profesional.Apellidos}"
+                                    : "Sin asignar"
+                            )}" +
+                            $"{(
+                                c.Consultorio is not null
+                                    ? " - " + c.Consultorio.Nombre
+                                    : ""
+                            )}"
+                    })
+                .ToList();
+
+        return new
+        {
+            appointments,
+
+            fechaHoraTexto =
+                hoy.ToString(
+                    "dddd d 'de' MMMM yyyy",
+                    new System.Globalization.CultureInfo("es-CO")),
+
+            horaActualIso =
+                ahora.ToString(
+                    "yyyy-MM-ddTHH:mm"),
+
+            horaActualTexto =
+                ahora.ToString("hh:mm tt"),
+
+            stats = new
+            {
+                citasHoy = citasHoy.Count,
+                confirmadas,
+                pendientes,
+
+                facturasPendientes =
+                    facturasPendientes >= 1000
+                        ? $"${facturasPendientes / 1000:0.#}k"
+                        : $"${facturasPendientes:0}"
+            },
+
+            proximasCitas = proximas
+        };
+    }
+
+    // ================================================================
+    // GESTIÓN RECEPCIÓN
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Recepcionista")]
+    [Route("gestion-de-citas/st-rec-03-gestion-citas")]
+    public async Task<IActionResult> Strec03GestionCitas(
+        [FromQuery] int? editId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] string? estado = null,
+        [FromQuery] string? profesional = null,
+        [FromQuery] string? fecha = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-rec-03-gestion-citas",
+                new PaginationQuery
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    Search = search,
+                    Estado = estado,
+                    Profesional = profesional,
+                    Fecha = fecha
+                },
+                ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-rec-03-gestion-citas/index.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Strec03GestionCitas.");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-rec-03-gestion-citas/index.cshtml");
+        }
+    }
+
+    // ================================================================
+    // RECORDATORIOS
+    // ================================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Recepcionista")]
+    [Route("gestion-de-citas/st-rec-05-recordatorios")]
+    public async Task<IActionResult> Strec05Recordatorios(
+        [FromQuery] int? editId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            await CargarDatosCitas(
+                editId,
+                "/gestion-de-citas/st-rec-05-recordatorios",
+                null,
+                ct);
+
+            ViewData["RecordatoriosData"] =
+                await ConstruirRecordatoriosAsync(ct);
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-rec-05-recordatorios/index.cshtml");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error Strec05Recordatorios.");
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+
+            return View(
+                "~/Views/Gestion_De_Citas/st-rec-05-recordatorios/index.cshtml");
+        }
+    }
+
+    private async Task<object> ConstruirRecordatoriosAsync(
+        CancellationToken ct)
+    {
+        var hoy = DateTime.Now.Date;
+        var manana = hoy.AddDays(1);
+        var pasadoManana = hoy.AddDays(2);
+
+        var citasProximas =
+            await _context.Citas
+                .AsNoTracking()
+                .Include(c => c.Paciente)
+                .Where(
+                    c =>
+                        c.FechaHora.Date >= manana &&
+                        c.FechaHora.Date <= pasadoManana &&
+                        (
+                            c.Estado == "programada" ||
+                            c.Estado == "Programada" ||
+                            c.Estado == "agendada" ||
+                            c.Estado == "Agendada" ||
+                            c.Estado == "confirmada" ||
+                            c.Estado == "Confirmada"
+                        ))
+                .OrderBy(c => c.FechaHora)
+                .ToListAsync(ct);
+
+        static string Iniciales(string? nombre)
+        {
+            if (string.IsNullOrWhiteSpace(nombre))
+                return "??";
+
+            var partes =
+                nombre.Split(
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries);
+
+            return partes.Length >= 2
+                ? $"{partes[0][0]}{partes[1][0]}"
+                    .ToUpperInvariant()
+                : nombre[..Math.Min(2, nombre.Length)]
+                    .ToUpperInvariant();
+        }
+
+        var pendientes =
+            citasProximas.Select(
+                c => new
+                {
+                    id = c.IdCita,
+
+                    paciente =
+                        c.Paciente?.NombresCompleto ??
+                        "Paciente sin datos",
+
+                    iniciales =
+                        Iniciales(
+                            c.Paciente?.NombresCompleto),
+
+                    fechaHora = c.FechaHora,
+
+                    esManana =
+                        c.FechaHora.Date == manana,
+
+                    canal =
+                        !string.IsNullOrWhiteSpace(
+                            c.Paciente?.Correo)
+                            ? "email"
+                            : "sms",
+
+                    confirmada =
+                        NormalizarEstado(
+                            c.Estado) == "confirmada"
+                })
+                .ToList();
+
+        int sinConfirmar =
+            pendientes.Count(
+                p =>
+                    !p.confirmada &&
+                    p.esManana);
+
+        int facturasVencidas =
+            await _context.Facturas.CountAsync(
+                f =>
+                    f.Estado == "pendiente" &&
+                    f.FechaFactura <
+                        hoy.AddDays(-15),
+                ct);
+
+        return new
+        {
+            pendientes,
+            historialEnviados =
+                Array.Empty<object>(),
+            sinConfirmar,
+            facturasVencidas
+        };
+    }
+
+    // ================================================================
+    // CARGA DE DATOS DE AGENDA
+    // ================================================================
+
+    private async Task CargarDatosAgenda(
+        DateTime? weekStart = null,
+        int? professionalId = null,
+        int? officeId = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var hoy = DateTime.Today;
+
+            var inicioSemana =
+                weekStart?.Date ??
+                hoy;
+
+            if (inicioSemana.DayOfWeek !=
+                DayOfWeek.Monday)
+            {
+                inicioSemana =
+                    inicioSemana.AddDays(
+                        -(int)inicioSemana.DayOfWeek +
+                        (int)DayOfWeek.Monday);
+            }
+
+            var agendaDias =
+                new List<
+                    global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
 
             for (int i = 0; i < 7; i++)
             {
-                var fecha = inicioSemana.AddDays(i);
+                var fecha =
+                    inicioSemana.AddDays(i);
+
                 try
                 {
-                    // WHY: Incluir relaciones necesarias para mostrar datos completos en vista
-                    var citasDiaQuery = _context.Citas
-                        .Include(c => c.Paciente)
-                        .Include(c => c.Profesional).ThenInclude(p => p!.Usuario)
-                        .Include(c => c.Consultorio)
-                        .Include(c => c.EstadoCita)
-                        .Where(c => c.FechaHora.Date == fecha.Date);
+                    var citasDiaQuery =
+                        _context.Citas
+                            .AsNoTracking()
+                            .Include(c => c.Paciente)
+                            .Include(c => c.Profesional)
+                            .ThenInclude(p => p!.Usuario)
+                            .Include(c => c.Consultorio)
+                            .Include(c => c.Servicio)
+                            .Include(c => c.EstadoCita)
+                            .Where(
+                                c =>
+                                    c.FechaHora.Date ==
+                                    fecha.Date);
 
                     if (professionalId.HasValue)
                     {
-                        citasDiaQuery = citasDiaQuery.Where(c => c.IdProfesional == professionalId.Value);
+                        citasDiaQuery =
+                            citasDiaQuery.Where(
+                                c =>
+                                    c.IdProfesional ==
+                                    professionalId.Value);
                     }
 
                     if (officeId.HasValue)
                     {
-                        citasDiaQuery = citasDiaQuery.Where(c => c.IdConsultorio == officeId.Value);
+                        citasDiaQuery =
+                            citasDiaQuery.Where(
+                                c =>
+                                    c.IdConsultorio ==
+                                    officeId.Value);
                     }
 
-                    var citasDia = await citasDiaQuery
-                        .OrderBy(c => c.FechaHora).ThenBy(c => c.FechaHora.TimeOfDay)
-                        .ToListAsync(ct);
+                    var citasDia =
+                        await citasDiaQuery
+                            .OrderBy(c => c.FechaHora)
+                            .ToListAsync(ct);
 
-                    agendaDias.Add(new global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel
-                    {
-                        Fecha = fecha,
-                        NombreDia = fecha.ToString("ddd", new System.Globalization.CultureInfo("es-ES")),
-                        NumeroDia = fecha.Day.ToString(),
-                        EsHoy = fecha.Date == hoy.Date,
-                        Cerrado = fecha.DayOfWeek == DayOfWeek.Sunday,
-                        Citas = citasDia.Select(cita => new global::SmileTrack_MVC.Models.ViewModels.AgendaCitaViewModel
+                    agendaDias.Add(
+                        new global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel
                         {
-                            Id = cita.IdCita,
-                            IdPaciente = cita.IdPaciente,
-                            IdProfesional = cita.IdProfesional ?? 0,
-                            IdConsultorio = cita.IdConsultorio ?? 0,
-                            IdServicio = cita.IdServicio ?? 0,
-                            Fecha = cita.FechaHora.Date,
-                            Hora = cita.HoraInicio?.ToString("hh\\:mm") ?? "—",
-                            HoraInicio = cita.HoraInicio?.ToString("HH:mm") ?? "00:00",
-                            HoraFin = cita.HoraFin?.ToString("HH:mm") ?? "00:00",
-                            Paciente = $"{cita.Paciente?.Nombres} {cita.Paciente?.Apellidos}".Trim(),
-                            Servicio = cita.MotivoConsulta ?? "Consulta",
-                            Consultorio = cita.Consultorio?.Nombre ?? "Sin asignar",
-                            Estado = cita.EstadoCita?.NombreEstado ?? "Sin estado",
-                            ClaseEstado = (cita.EstadoCita?.NombreEstado ?? "").ToLowerInvariant() switch
-                            {
-                                "atendida" => "attended",
-                                "cancelada" => "cancelled",
-                                "agendada" => "confirmed",
-                                _ => "confirmed"
-                            },
-                            Notas = cita.Notas ?? string.Empty
-                        }).ToList()
-                    });
+                            Fecha = fecha,
+
+                            NombreDia =
+                                fecha.ToString(
+                                    "ddd",
+                                    new System.Globalization.CultureInfo("es-ES")),
+
+                            NumeroDia =
+                                fecha.Day.ToString(),
+
+                            EsHoy =
+                                fecha.Date ==
+                                hoy.Date,
+
+                            Cerrado =
+                                fecha.DayOfWeek ==
+                                DayOfWeek.Sunday,
+
+                            Citas =
+                                citasDia.Select(
+                                    cita =>
+                                        new global::SmileTrack_MVC.Models.ViewModels.AgendaCitaViewModel
+                                        {
+                                            Id =
+                                                cita.IdCita,
+
+                                            IdPaciente =
+                                                cita.IdPaciente,
+
+                                            IdProfesional =
+                                                cita.IdProfesional ??
+                                                0,
+
+                                            IdConsultorio =
+                                                cita.IdConsultorio ??
+                                                0,
+
+                                            IdServicio =
+                                                cita.IdServicio ??
+                                                0,
+
+                                            Fecha =
+                                                cita.FechaHora.Date,
+
+                                            Hora =
+                                                cita.FechaHora
+                                                    .ToString("HH:mm"),
+
+                                            HoraInicio =
+                                                cita.FechaHora
+                                                    .ToString("HH:mm"),
+
+                                            HoraFin =
+                                                cita.FechaHora
+                                                    .AddMinutes(
+                                                        DuracionCitaMinutos)
+                                                    .ToString("HH:mm"),
+
+                                            Paciente =
+                                                $"{cita.Paciente?.Nombres} " +
+                                                $"{cita.Paciente?.Apellidos}"
+                                                .Trim(),
+
+                                            Servicio =
+                                                cita.Servicio?.Nombre ??
+                                                "Consulta",
+
+                                            Consultorio =
+                                                cita.Consultorio?.Nombre ??
+                                                "Sin asignar",
+
+                                            Estado =
+                                                cita.EstadoCita?.NombreEstado ??
+                                                cita.Estado,
+
+                                            ClaseEstado =
+                                                NormalizarEstado(
+                                                    cita.EstadoCita?.NombreEstado ??
+                                                    cita.Estado) switch
+                                                {
+                                                    "atendida"
+                                                        => "attended",
+
+                                                    "cancelada"
+                                                        => "cancelled",
+
+                                                    "confirmada"
+                                                        => "confirmed",
+
+                                                    "agendada"
+                                                        => "confirmed",
+
+                                                    "programada"
+                                                        => "confirmed",
+
+                                                    _
+                                                        => "confirmed"
+                                                },
+
+                                            Notas =
+                                                cita.Notas ??
+                                                string.Empty
+                                        })
+                                    .ToList()
+                        });
                 }
                 catch (Exception ex)
                 {
-                    // WHY: Catch por día para que un error en un día no rompa toda la semana
-                    _logger.LogError(ex, "Error cargando citas para dia {Fecha} en CargarDatosAgenda. Se continua con dias restantes.", fecha);
-                    agendaDias.Add(new global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel
-                    {
-                        Fecha = fecha,
-                        NombreDia = fecha.ToString("ddd", new System.Globalization.CultureInfo("es-ES")),
-                        NumeroDia = fecha.Day.ToString(),
-                        EsHoy = fecha.Date == hoy.Date,
-                        Cerrado = fecha.DayOfWeek == DayOfWeek.Sunday,
-                        Citas = []
-                    });
+                    _logger.LogError(
+                        ex,
+                        "Error cargando agenda para {Fecha}",
+                        fecha);
+
+                    agendaDias.Add(
+                        new global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel
+                        {
+                            Fecha = fecha,
+                            NombreDia =
+                                fecha.ToString(
+                                    "ddd",
+                                    new System.Globalization.CultureInfo("es-ES")),
+                            NumeroDia =
+                                fecha.Day.ToString(),
+                            EsHoy =
+                                fecha.Date ==
+                                hoy.Date,
+                            Cerrado =
+                                fecha.DayOfWeek ==
+                                DayOfWeek.Sunday,
+                            Citas = []
+                        });
                 }
             }
 
-            ViewData["AgendaDias"] = agendaDias;
-            ViewData["SemanaLabel"] = $"{inicioSemana:dd/MM} - {inicioSemana.AddDays(6):dd/MM}";
+            ViewData["AgendaDias"] =
+                agendaDias;
+
+            ViewData["SemanaLabel"] =
+                $"{inicioSemana:dd/MM} - " +
+                $"{inicioSemana.AddDays(6):dd/MM}";
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("CargarDatosAgenda: operacion cancelada");
-            ViewData["AgendaDias"] = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
+            _logger.LogWarning(
+                ex,
+                "CargarDatosAgenda cancelado.");
+
+            ViewData["AgendaDias"] =
+                new List<
+                    global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
         }
-        catch (SqlException sqlex)
+        catch (SqlException ex)
         {
-            // WHY: SqlException crítica requiere atención inmediata de infraestructura
-            _logger.LogCritical(sqlex, "SqlException CargarDatosAgenda. Number={Number}", sqlex.Number);
-            ViewData["AgendaDias"] = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
+            _logger.LogCritical(
+                ex,
+                "SqlException CargarDatosAgenda.");
+
+            ViewData["AgendaDias"] =
+                new List<
+                    global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
         }
         catch (Exception ex)
         {
-            // WHY: Catch-all para errores no anticipados; retornar estado vacío para que la vista maneje gracefully
-            _logger.LogError(ex, "Error general en CargarDatosAgenda. Se devuelve agenda vacia.");
-            ViewData["AgendaDias"] = new List<global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
-            ViewData["SemanaLabel"] = "Agenda no disponible temporalmente";
+            _logger.LogError(
+                ex,
+                "Error general en CargarDatosAgenda.");
+
+            ViewData["AgendaDias"] =
+                new List<
+                    global::SmileTrack_MVC.Models.ViewModels.AgendaDiaViewModel>();
+
+            ViewData["SemanaLabel"] =
+                "Agenda no disponible temporalmente";
         }
     }
 
-    /**
-     * CargarDatosCitas: Prepara datos paginados y filtrados para vistas de gestión.
-     * WHY: Centraliza lógica de filtrado y paginación para evitar duplicación en múltiples actions.
-     * MANEJO DE ERRORES: Catch específico para InvalidOperationException en filtros mal formados.
-     */
-    private async Task CargarDatosCitas(int? editId, string returnUrl, PaginationQuery? query = null, CancellationToken ct = default)
-    {
-        try
-        {
-            var pagination = query ?? new PaginationQuery();
-            int page = pagination.Page < 1 ? 1 : pagination.Page;
-            int pageSize = pagination.PageSize < 1 ? 10 : pagination.PageSize;
+    // ================================================================
+    // KPI GESTIÓN INTEGRAL DE CITAS
+    // ================================================================
 
-            // WHY: Construir query base con includes necesarios para evitar N+1 queries
-            var citasQuery = _context.Citas
-                .Include(c => c.Paciente)
-                .Include(c => c.Profesional)
-                    .ThenInclude(p => p!.Usuario)
-                .Include(c => c.Profesional)
-                    .ThenInclude(p => p!.Especialidades)
-                        .ThenInclude(pe => pe.Especialidad)
-                .AsQueryable();
-
-            // WHY: Aplicar filtros de búsqueda con StringComparison.OrdinalIgnoreCase para consistencia
-            if (!string.IsNullOrWhiteSpace(pagination.Search))
-            {
-                string searchTerm = pagination.Search.Trim();
-                citasQuery = citasQuery.Where(c =>
-                    (c.Paciente != null && ((c.Paciente.Nombres != null && c.Paciente.Nombres.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) || (c.Paciente.Apellidos != null && c.Paciente.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))) ||
-                    (c.Profesional != null && c.Profesional.Usuario != null && ((c.Profesional.Usuario.Nombre != null && c.Profesional.Usuario.Nombre.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) || (c.Profesional.Usuario.Apellidos != null && c.Profesional.Usuario.Apellidos.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))) ||
-                    (c.Notas != null && c.Notas.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
-            }
-
-            // WHY: Filtro por estado con comparación case-insensitive para mejor UX
-            if (!string.IsNullOrWhiteSpace(pagination.Estado))
-            {
-                string estado = pagination.Estado.Trim();
-                citasQuery = citasQuery.Where(c => c.Estado != null && c.Estado.Equals(estado, StringComparison.OrdinalIgnoreCase));
-            }
-
-            // WHY: Parsear ID de profesional solo si es numérico válido para evitar errores de conversión
-            if (int.TryParse(pagination.Profesional, out int idProfesional) && idProfesional > 0)
-            {
-                citasQuery = citasQuery.Where(c => c.IdProfesional == idProfesional);
-            }
-
-            // WHY: Parsear fecha solo si es válida para evitar excepciones en filtro
-            if (!string.IsNullOrWhiteSpace(pagination.Fecha) && DateTime.TryParse(pagination.Fecha, out var fechaValida))
-            {
-                citasQuery = citasQuery.Where(c => c.FechaHora.Date == fechaValida.Date);
-            }
-
-            // WHY: Ordenar por fecha descendente para mostrar citas más recientes primero
-            citasQuery = citasQuery.OrderByDescending(c => c.FechaHora).ThenByDescending(c => c.FechaHora.TimeOfDay);
-
-            var paged = await citasQuery.ToPagedResultAsync(page, pageSize, ct);
-
-            // WHY: Poblar ViewData con datos paginados y filtros activos para preservar estado en UI
-            ViewData["Citas"] = paged.Items.ToList();
-            ViewData["CitasPage"] = paged;
-            ViewData["PaginationQuery"] = pagination;
-            ViewData["SearchFilter"] = pagination.Search ?? string.Empty;
-            ViewData["EstadoFilter"] = pagination.Estado ?? string.Empty;
-            ViewData["ProfesionalFilter"] = pagination.Profesional ?? string.Empty;
-            ViewData["FechaFilter"] = pagination.Fecha ?? string.Empty;
-            
-            // WHY: Cargar dropdowns con AsNoTracking para mejor performance en lecturas
-            ViewData["Pacientes"] = await _context.Pacientes.AsNoTracking().Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ThenBy(p => p.Nombres).ToListAsync(ct);
-            ViewData["Profesionales"] = await _context.Profesionales.AsNoTracking().Include(p => p.Usuario).Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ToListAsync(ct);
-            ViewData["ProfesionalesFilterOptions"] = await _context.Profesionales.AsNoTracking().Include(p => p.Usuario).Where(p => p.Estado == "activo").OrderBy(p => p.Apellidos).ToListAsync(ct);
-            ViewData["Consultorios"] = await _context.Consultorios.AsNoTracking().Where(c => c.Estado == "disponible" || c.Estado == "activo").OrderBy(c => c.Nombre).ToListAsync(ct);
-            ViewData["EstadosCita"] = await _context.EstadosCita.AsNoTracking().OrderBy(e => e.NombreEstado).ToListAsync(ct);
-            ViewData["Servicios"] = await _context.Servicios.AsNoTracking().Where(s => s.Estado == "activo").OrderBy(s => s.Nombre).ToListAsync(ct);
-            ViewData["ReturnUrl"] = returnUrl;
-
-            // WHY: Cargar cita para edición solo si editId es válido, con catch interno para no romper toda la vista
-            if (editId > 0)
-            {
-                try
-                {
-                    ViewData["EditingCita"] = await _context.Citas.AsNoTracking().FirstOrDefaultAsync(c => c.IdCita == editId.Value, ct);
-                }
-                catch (Exception exEditar)
-                {
-                    _logger.LogWarning(exEditar, "Error cargando cita para editar IdCita={IdCita}", editId.Value);
-                    ViewData["EditingCita"] = null;
-                }
-            }
-            else
-            {
-                ViewData["EditingCita"] = null;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogWarning("CargarDatosCitas: operacion cancelada");
-            InicializarViewDataCitasVacia(returnUrl);
-        }
-        catch (InvalidOperationException ioex)
-        {
-            // WHY: InvalidOperationException puede indicar filtros mal formados o LINQ inválido
-            _logger.LogError(ioex, "InvalidOperationException en CargarDatosCitas (filtros: Search={Search}, Estado={Estado}, Profesional={Profesional}, Fecha={Fecha})",
-                query?.Search, query?.Estado, query?.Profesional, query?.Fecha);
-            InicializarViewDataCitasVacia(returnUrl);
-            TempData["ErrorValidacion"] = "Error al aplicar los filtros de búsqueda. Se muestran resultados sin filtrar.";
-        }
-        catch (SqlException sqlex)
-        {
-            // WHY: SqlException crítica requiere atención inmediata de infraestructura
-            _logger.LogCritical(sqlex, "SqlException en CargarDatosCitas. Number={Number}", sqlex.Number);
-            InicializarViewDataCitasVacia(returnUrl);
-            TempData["ErrorValidacion"] = MensajeErrorFallback;
-        }
-        catch (Exception ex)
-        {
-            // WHY: Catch-all para errores no anticipados; retornar estado vacío para que la vista maneje gracefully
-            _logger.LogError(ex, "Error general en CargarDatosCitas. Se devuelven listas vacias.");
-            InicializarViewDataCitasVacia(returnUrl);
-        }
-    }
-
-    // WHY: Método helper para inicializar ViewData vacía y evitar NullReferenceException en vistas
-    private void InicializarViewDataCitasVacia(string returnUrl)
-    {
-        ViewData["Citas"] = new List<Cita>();
-        ViewData["CitasPage"] = PagedResult<Cita>.Empty(1, 10);
-        ViewData["PaginationQuery"] = new PaginationQuery();
-        ViewData["SearchFilter"] = string.Empty;
-        ViewData["EstadoFilter"] = string.Empty;
-        ViewData["ProfesionalFilter"] = string.Empty;
-        ViewData["FechaFilter"] = string.Empty;
-        ViewData["Pacientes"] = new List<Paciente>();
-        ViewData["Profesionales"] = new List<Profesional>();
-        ViewData["ProfesionalesFilterOptions"] = new List<Profesional>();
-        ViewData["Consultorios"] = new List<Consultorio>();
-        ViewData["EstadosCita"] = new List<EstadoCita>();
-        ViewData["Servicios"] = new List<Servicio>();
-        ViewData["ReturnUrl"] = returnUrl;
-        ViewData["EditingCita"] = null;
-    }
-
-    /**
-     * CargarDatosDashboard: Calcula KPIs y métricas para vista de dashboard.
-     * WHY: Separa cálculos complejos del action principal para mejor testabilidad y mantenimiento.
-     * OPTIMIZACIÓN: Usa AsNoTracking() y proyecciones para minimizar carga de memoria.
-     */
-    private async Task CargarDatosDashboard(CancellationToken ct = default)
+    private async Task CargarKpisGestionCitas(
+        CancellationToken ct = default)
     {
         try
         {
@@ -1424,99 +3635,774 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
             var inicioMes = new DateTime(hoy.Year, hoy.Month, 1);
             var finMes = inicioMes.AddMonths(1);
 
-            // WHY: Conteos simples con CountAsync para queries eficientes
-            ViewData["TotalPacientes"] = await _context.Pacientes.CountAsync(ct);
-            ViewData["CitasHoy"] = await _context.Citas.CountAsync(c => c.FechaHora.Date == hoy, ct);
-            ViewData["ProfesionalesActivos"] = await _context.Profesionales.CountAsync(p => p.Estado == "activo", ct);
+            var inicioSemanaActual =
+                hoy.AddDays(-(((int)hoy.DayOfWeek + 6) % 7));
+            var finSemanaActual = inicioSemanaActual.AddDays(7);
+            var inicioSemanaAnterior = inicioSemanaActual.AddDays(-7);
 
-            // WHY: Cargar citas del mes con Include mínimo necesario para cálculo de ingresos
-            var citasDelMes = await _context.Citas
-                .Include(c => c.Servicio)
-                .Where(c => c.FechaHora >= inicioMes && c.FechaHora < finMes)
+            var citasMes = await _context.Citas
                 .AsNoTracking()
+                .Where(c =>
+                    c.FechaHora >= inicioMes &&
+                    c.FechaHora < finMes)
                 .ToListAsync(ct);
 
-            // WHY: Calcular ingresos solo de citas atendidas con fallback a 0 si Servicio es null
-            decimal ingresos = citasDelMes
-                .Where(c => string.Equals(c.Estado, "Atendida", StringComparison.OrdinalIgnoreCase))
-                .Sum(c => c.Servicio?.Precio ?? 0m);
-            ViewData["IngresosDelMes"] = ingresos;
-            ViewData["FacturasPendientes"] = new List<(string Codigo, string Descripcion, decimal Monto)>();
+            int total = citasMes.Count;
 
-            // WHY: Calcular ocupación con capacidad estimada (40 citas/día) y limitar a 100%
-            int daysInMonth = DateTime.DaysInMonth(hoy.Year, hoy.Month);
-            int totalCapacity = daysInMonth * 40;
-            int totalCitas = citasDelMes.Count;
-            ViewData["PctOcupacion"] = totalCapacity > 0 ? (int)Math.Min(100, (double)totalCitas / totalCapacity * 100) : 0;
-
-            // WHY: Calcular distribución de estados y porcentajes relativos al estado más frecuente
-            int atendidas = citasDelMes.Count(c => string.Equals(c.Estado, "Atendida", StringComparison.OrdinalIgnoreCase));
-            int confirmadas = citasDelMes.Count(c => string.Equals(c.Estado, "Confirmada", StringComparison.OrdinalIgnoreCase));
-            int programadas = citasDelMes.Count(c => string.Equals(c.Estado, "Agendada", StringComparison.OrdinalIgnoreCase));
-            int canceladas = citasDelMes.Count(c => string.Equals(c.Estado, "Cancelada", StringComparison.OrdinalIgnoreCase));
-            int maxEstado = new[] { atendidas, confirmadas, programadas, canceladas }.DefaultIfEmpty(0).Max();
-
-            ViewData["CitasAtendidas"] = atendidas;
-            ViewData["CitasConfirmadas"] = confirmadas;
-            ViewData["CitasProgramadas"] = programadas;
-            ViewData["CitasCanceladas"] = canceladas;
-            ViewData["PctAtendidas"] = maxEstado > 0 ? (int)Math.Round(atendidas * 100.0 / maxEstado, 0) : 0;
-            ViewData["PctConfirmadas"] = maxEstado > 0 ? (int)Math.Round(confirmadas * 100.0 / maxEstado, 0) : 0;
-            ViewData["PctProgramadas"] = maxEstado > 0 ? (int)Math.Round(programadas * 100.0 / maxEstado, 0) : 0;
-            ViewData["PctCanceladas"] = maxEstado > 0 ? (int)Math.Round(canceladas * 100.0 / maxEstado, 0) : 0;
-
-            // WHY: Obtener top 3 profesionales por citas con proyección anónima para minimizar carga
-            var topIds = await _context.Citas
-                .Where(c => c.FechaHora >= inicioMes && c.FechaHora < finMes && c.IdProfesional != null && c.IdProfesional != 0)
-                .GroupBy(c => c.IdProfesional)
-                .Select(g => new { IdProfesional = g.Key, Total = g.Count() })
-                .OrderByDescending(g => g.Total)
-                .Take(3)
-                .ToListAsync(ct);
-
-            var idsList = topIds.Select(t => t.IdProfesional).ToList();
-            var profesionales = await _context.Profesionales
-                .Include(p => p.Usuario)
-                .Include(p => p.Especialidades).ThenInclude(pe => pe.Especialidad)
-                .Where(p => idsList.Contains(p.IdProfesional))
-                .AsNoTracking()
-                .ToListAsync(ct);
-
-            // WHY: Proyectar datos mínimos necesarios para la vista de top profesionales
-            var topProfesionales = topIds.Select(t => new
+            int programadas = citasMes.Count(c =>
             {
-                Nombre = profesionales.FirstOrDefault(p => p.IdProfesional == t.IdProfesional)?.Usuario?.Nombre ?? "Sin nombre",
-                Especialidad = profesionales.FirstOrDefault(p => p.IdProfesional == t.IdProfesional)?.Especialidades.FirstOrDefault(pe => pe.Principal)?.Especialidad?.Nombre ?? "General",
-                TotalCitas = t.Total
-            }).ToList();
+                var estado = NormalizarEstado(c.Estado);
+                return estado is "programada" or "agendada" or "confirmada";
+            });
 
-            ViewData["TopProfesionales"] = topProfesionales;
+            int canceladas = citasMes.Count(c =>
+                EsEstadoCancelado(c.Estado));
+
+            int atendidas = citasMes.Count(c =>
+                NormalizarEstado(c.Estado) == "atendida");
+
+            int programadasSemanaActual = citasMes.Count(c =>
+            {
+                if (c.FechaHora < inicioSemanaActual ||
+                    c.FechaHora >= finSemanaActual)
+                    return false;
+
+                return NormalizarEstado(c.Estado) is "programada" or "agendada" or "confirmada";
+            });
+
+            int programadasSemanaAnterior = citasMes.Count(c =>
+            {
+                if (c.FechaHora < inicioSemanaAnterior ||
+                    c.FechaHora >= inicioSemanaActual)
+                    return false;
+
+                return NormalizarEstado(c.Estado) is "programada" or "agendada" or "confirmada";
+            });
+
+            int diferenciaSemana =
+                programadasSemanaActual - programadasSemanaAnterior;
+
+            int tasaCancelacion = total > 0
+                ? (int)Math.Round(canceladas * 100.0 / total)
+                : 0;
+
+            int tasaAsistencia = total > 0
+                ? (int)Math.Round(atendidas * 100.0 / total)
+                : 0;
+
+            // Claves usadas por index.cshtml.
+            ViewData["StatKpiMesTotal"] = total;
+            ViewData["StatKpiMesProgramadas"] = programadas;
+            ViewData["StatKpiMesCanceladas"] = canceladas;
+            ViewData["StatKpiMesAtendidas"] = atendidas;
+            ViewData["StatKpiDifSemana"] = diferenciaSemana;
+            ViewData["StatKpiTasaCancelacion"] = tasaCancelacion;
+            ViewData["StatKpiTasaAsistencia"] = tasaAsistencia;
+
+            // Compatibilidad con otras vistas que puedan usar estas claves.
+            ViewData["KpiTotalCitas"] = total;
+            ViewData["KpiProgramadas"] = programadas;
+            ViewData["KpiCanceladas"] = canceladas;
+            ViewData["KpiAtendidas"] = atendidas;
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("CargarDatosDashboard cancelado");
-            InicializarViewDataDashboardVacio();
-        }
-        catch (SqlException sqlex)
-        {
-            // WHY: SqlException crítica requiere atención inmediata de infraestructura
-            _logger.LogCritical(sqlex, "SqlException en CargarDatosDashboard. Number={Number}", sqlex.Number);
-            InicializarViewDataDashboardVacio();
-            TempData["ErrorValidacion"] = MensajeErrorFallback;
+            throw;
         }
         catch (Exception ex)
         {
-            // WHY: Catch-all para errores no anticipados; retornar valores predeterminados para que la vista maneje gracefully
-            _logger.LogError(ex, "Error general en CargarDatosDashboard. Se devuelven valores predeterminados.");
+            _logger.LogError(
+                ex,
+                "Error cargando KPI de gestión integral de citas.");
+
+            ViewData["StatKpiMesTotal"] = 0;
+            ViewData["StatKpiMesProgramadas"] = 0;
+            ViewData["StatKpiMesCanceladas"] = 0;
+            ViewData["StatKpiMesAtendidas"] = 0;
+            ViewData["StatKpiDifSemana"] = 0;
+            ViewData["StatKpiTasaCancelacion"] = 0;
+            ViewData["StatKpiTasaAsistencia"] = 0;
+
+            ViewData["KpiTotalCitas"] = 0;
+            ViewData["KpiProgramadas"] = 0;
+            ViewData["KpiCanceladas"] = 0;
+            ViewData["KpiAtendidas"] = 0;
+        }
+    }
+
+    // ================================================================
+    // CARGA CENTRALIZADA DE CITAS
+    // ================================================================
+
+    private async Task CargarDatosCitas(
+        int? editId,
+        string returnUrl,
+        PaginationQuery? query = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var pagination =
+                query ??
+                new PaginationQuery();
+
+            int page =
+                pagination.Page < 1
+                    ? 1
+                    : pagination.Page;
+
+            int pageSize =
+                pagination.PageSize < 1
+                    ? 10
+                    : Math.Min(
+                        pagination.PageSize,
+                        100);
+
+            IQueryable<Cita> citasQuery =
+                _context.Citas
+                    .AsNoTracking()
+                    .Include(c => c.Paciente)
+                    .Include(c => c.Profesional)
+                    .ThenInclude(p => p!.Usuario)
+                    .Include(c => c.Profesional)
+                    .ThenInclude(p => p!.Especialidades)
+                    .ThenInclude(pe => pe.Especialidad)
+                    .Include(c => c.Servicio)
+                    .Include(c => c.Consultorio)
+                    .Include(c => c.EstadoCita);
+
+            if (!string.IsNullOrWhiteSpace(
+                    pagination.Search))
+            {
+                string searchTerm =
+                    pagination.Search.Trim();
+
+                string pattern =
+                    $"%{searchTerm}%";
+
+                citasQuery =
+                    citasQuery.Where(
+                        c =>
+                            (
+                                c.Paciente != null &&
+                                (
+                                    EF.Functions.Like(
+                                        c.Paciente.Nombres,
+                                        pattern) ||
+
+                                    EF.Functions.Like(
+                                        c.Paciente.Apellidos,
+                                        pattern)
+                                )
+                            )
+
+                            ||
+
+                            (
+                                c.Profesional != null &&
+                                c.Profesional.Usuario != null &&
+                                (
+                                    EF.Functions.Like(
+                                        c.Profesional.Usuario.Nombre,
+                                        pattern) ||
+
+                                    EF.Functions.Like(
+                                        c.Profesional.Usuario.Apellidos,
+                                        pattern)
+                                )
+                            )
+
+                            ||
+
+                            (
+                                c.Notas != null &&
+                                EF.Functions.Like(
+                                    c.Notas,
+                                    pattern)
+                            )
+
+                            ||
+
+                            (
+                                c.Servicio != null &&
+                                EF.Functions.Like(
+                                    c.Servicio.Nombre,
+                                    pattern)
+                            )
+                        );
+            }
+
+            if (!string.IsNullOrWhiteSpace(pagination.Estado))
+            {
+                string estado = NormalizarEstado(pagination.Estado);
+
+                string[] estadosPermitidos = estado switch
+                {
+                    "programada" => ["programada", "Programada", "agendada", "Agendada"],
+                    "confirmada" => ["confirmada", "Confirmada"],
+                    "atendida" => ["atendida", "Atendida", "completada", "Completada", "realizada", "Realizada"],
+                    "cancelada" => ["cancelada", "Cancelada", "cancelado", "Cancelado"],
+                    _ => [pagination.Estado.Trim()]
+                };
+
+                citasQuery = citasQuery.Where(c =>
+                    (c.Estado != null && estadosPermitidos.Contains(c.Estado)) ||
+                    (c.EstadoCita != null &&
+                     c.EstadoCita.NombreEstado != null &&
+                     estadosPermitidos.Contains(c.EstadoCita.NombreEstado)));
+            }
+
+            if (int.TryParse(
+                    pagination.Profesional,
+                    out int idProfesional) &&
+                idProfesional > 0)
+            {
+                citasQuery =
+                    citasQuery.Where(
+                        c =>
+                            c.IdProfesional ==
+                            idProfesional);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                    pagination.Fecha) &&
+                DateTime.TryParseExact(
+                    pagination.Fecha.Trim(),
+                    "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out var fechaValida))
+            {
+                var inicio =
+                    fechaValida.Date;
+
+                var fin =
+                    inicio.AddDays(1);
+
+                citasQuery =
+                    citasQuery.Where(
+                        c =>
+                            c.FechaHora >= inicio &&
+                            c.FechaHora < fin);
+            }
+
+            citasQuery =
+                citasQuery
+                    .OrderByDescending(
+                        c => c.FechaHora);
+
+            var paged =
+                await citasQuery.ToPagedResultAsync(
+                    page,
+                    pageSize,
+                    ct);
+
+            ViewData["Citas"] =
+                paged.Items.ToList();
+
+            ViewData["CitasPage"] =
+                paged;
+
+            ViewData["PaginationQuery"] =
+                pagination;
+
+            ViewData["SearchFilter"] =
+                pagination.Search ??
+                string.Empty;
+
+            ViewData["EstadoFilter"] =
+                pagination.Estado ??
+                string.Empty;
+
+            ViewData["ProfesionalFilter"] =
+                pagination.Profesional ??
+                string.Empty;
+
+            ViewData["FechaFilter"] =
+                pagination.Fecha ??
+                string.Empty;
+
+            ViewData["Pacientes"] =
+                await _context.Pacientes
+                    .AsNoTracking()
+                    .Where(
+                        p =>
+                            p.Estado ==
+                            "activo")
+                    .OrderBy(p => p.Apellidos)
+                    .ThenBy(p => p.Nombres)
+                    .ToListAsync(ct);
+
+            ViewData["Profesionales"] =
+                await _context.Profesionales
+                    .AsNoTracking()
+                    .Include(p => p.Usuario)
+                    .Where(
+                        p =>
+                            p.Estado ==
+                            "activo")
+                    .OrderBy(p => p.Apellidos)
+                    .ToListAsync(ct);
+
+            ViewData["ProfesionalesFilterOptions"] =
+                await _context.Profesionales
+                    .AsNoTracking()
+                    .Include(p => p.Usuario)
+                    .Where(
+                        p =>
+                            p.Estado ==
+                            "activo")
+                    .OrderBy(p => p.Apellidos)
+                    .ToListAsync(ct);
+
+            ViewData["Consultorios"] =
+                await _context.Consultorios
+                    .AsNoTracking()
+                    .Where(
+                        c =>
+                            c.Estado ==
+                                "disponible" ||
+                            c.Estado ==
+                                "activo")
+                    .OrderBy(c => c.Nombre)
+                    .ToListAsync(ct);
+
+            ViewData["EstadosCita"] =
+                await _context.EstadosCita
+                    .AsNoTracking()
+                    .OrderBy(
+                        e => e.NombreEstado)
+                    .ToListAsync(ct);
+
+            ViewData["Servicios"] =
+                await _context.Servicios
+                    .AsNoTracking()
+                    .Where(
+                        s =>
+                            s.Estado ==
+                            "activo")
+                    .OrderBy(s => s.Nombre)
+                    .ToListAsync(ct);
+
+            ViewData["ReturnUrl"] =
+                returnUrl;
+
+            if (editId is > 0)
+            {
+                ViewData["EditingCita"] =
+                    await _context.Citas
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(
+                            c =>
+                                c.IdCita ==
+                                editId.Value,
+                            ct);
+            }
+            else
+            {
+                ViewData["EditingCita"] =
+                    null;
+            }
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "CargarDatosCitas cancelado.");
+
+            InicializarViewDataCitasVacia(
+                returnUrl);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(
+                ex,
+                "InvalidOperationException en CargarDatosCitas.");
+
+            InicializarViewDataCitasVacia(
+                returnUrl);
+
+            TempData["ErrorValidacion"] =
+                "Error al aplicar los filtros de búsqueda.";
+        }
+        catch (SqlException ex)
+        {
+            _logger.LogCritical(
+                ex,
+                "SqlException en CargarDatosCitas.");
+
+            InicializarViewDataCitasVacia(
+                returnUrl);
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error general en CargarDatosCitas.");
+
+            InicializarViewDataCitasVacia(
+                returnUrl);
+        }
+    }
+
+    // ================================================================
+    // DASHBOARD PRINCIPAL
+    // ================================================================
+
+    private async Task CargarDatosDashboard(
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var hoy =
+                DateTime.Today;
+
+            var inicioMes =
+                new DateTime(
+                    hoy.Year,
+                    hoy.Month,
+                    1);
+
+            var finMes =
+                inicioMes.AddMonths(1);
+
+            ViewData["TotalPacientes"] =
+                await _context.Pacientes
+                    .CountAsync(ct);
+
+            ViewData["CitasHoy"] =
+                await _context.Citas
+                    .CountAsync(
+                        c =>
+                            c.FechaHora.Date ==
+                            hoy,
+                        ct);
+
+            ViewData["ProfesionalesActivos"] =
+                await _context.Profesionales
+                    .CountAsync(
+                        p =>
+                            p.Estado ==
+                            "activo",
+                        ct);
+
+            var citasDelMes =
+                await _context.Citas
+                    .AsNoTracking()
+                    .Include(c => c.Servicio)
+                    .Where(
+                        c =>
+                            c.FechaHora >=
+                                inicioMes &&
+                            c.FechaHora <
+                                finMes)
+                    .ToListAsync(ct);
+
+            decimal ingresos =
+                citasDelMes
+                    .Where(
+                        c =>
+                            NormalizarEstado(
+                                c.Estado) ==
+                            "atendida")
+                    .Sum(
+                        c =>
+                            c.Servicio?.Precio ??
+                            0m);
+
+            ViewData["IngresosDelMes"] =
+                ingresos;
+
+            ViewData["FacturasPendientes"] =
+                new List<(
+                    string Codigo,
+                    string Descripcion,
+                    decimal Monto)>();
+
+            int daysInMonth =
+                DateTime.DaysInMonth(
+                    hoy.Year,
+                    hoy.Month);
+
+            int totalCapacity =
+                daysInMonth * 40;
+
+            int totalCitas =
+                citasDelMes.Count;
+
+            ViewData["PctOcupacion"] =
+                totalCapacity > 0
+                    ? (int)Math.Min(
+                        100,
+                        (double)totalCitas /
+                        totalCapacity *
+                        100)
+                    : 0;
+
+            int atendidas =
+                citasDelMes.Count(
+                    c =>
+                        NormalizarEstado(
+                            c.Estado) ==
+                        "atendida");
+
+            int confirmadas =
+                citasDelMes.Count(
+                    c =>
+                        NormalizarEstado(
+                            c.Estado) ==
+                        "confirmada");
+
+            int programadas =
+                citasDelMes.Count(
+                    c =>
+                        NormalizarEstado(
+                            c.Estado) ==
+                        "programada");
+
+            int canceladas =
+                citasDelMes.Count(
+                    c =>
+                        EsEstadoCancelado(
+                            c.Estado));
+
+            int maxEstado =
+                new[]
+                {
+                    atendidas,
+                    confirmadas,
+                    programadas,
+                    canceladas
+                }.DefaultIfEmpty(0).Max();
+
+            ViewData["CitasAtendidas"] =
+                atendidas;
+
+            ViewData["CitasConfirmadas"] =
+                confirmadas;
+
+            ViewData["CitasProgramadas"] =
+                programadas;
+
+            ViewData["CitasCanceladas"] =
+                canceladas;
+
+            ViewData["PctAtendidas"] =
+                CalcularPorcentaje(
+                    atendidas,
+                    maxEstado);
+
+            ViewData["PctConfirmadas"] =
+                CalcularPorcentaje(
+                    confirmadas,
+                    maxEstado);
+
+            ViewData["PctProgramadas"] =
+                CalcularPorcentaje(
+                    programadas,
+                    maxEstado);
+
+            ViewData["PctCanceladas"] =
+                CalcularPorcentaje(
+                    canceladas,
+                    maxEstado);
+
+            var topIds =
+                await _context.Citas
+                    .Where(
+                        c =>
+                            c.FechaHora >=
+                                inicioMes &&
+                            c.FechaHora <
+                                finMes &&
+                            c.IdProfesional != null &&
+                            c.IdProfesional != 0)
+                    .GroupBy(
+                        c =>
+                            c.IdProfesional)
+                    .Select(
+                        g =>
+                            new
+                            {
+                                IdProfesional =
+                                    g.Key,
+
+                                Total =
+                                    g.Count()
+                            })
+                    .OrderByDescending(
+                        g => g.Total)
+                    .Take(3)
+                    .ToListAsync(ct);
+
+            var idsList =
+                topIds
+                    .Where(
+                        x =>
+                            x.IdProfesional != null)
+                    .Select(
+                        x =>
+                            x.IdProfesional!.Value)
+                    .ToList();
+
+            var profesionales =
+                await _context.Profesionales
+                    .AsNoTracking()
+                    .Include(p => p.Usuario)
+                    .Include(p => p.Especialidades)
+                    .ThenInclude(pe => pe.Especialidad)
+                    .Where(
+                        p =>
+                            idsList.Contains(
+                                p.IdProfesional))
+                    .ToListAsync(ct);
+
+            var topProfesionales =
+                topIds.Select(
+                    t =>
+                    {
+                        var profesional =
+                            profesionales.FirstOrDefault(
+                                p =>
+                                    p.IdProfesional ==
+                                    t.IdProfesional);
+
+                        return new
+                        {
+                            Nombre =
+                                profesional?.Usuario?.Nombre ??
+                                profesional?.Nombres ??
+                                "Sin nombre",
+
+                            Especialidad =
+                                profesional?
+                                    .Especialidades
+                                    .FirstOrDefault(
+                                        pe =>
+                                            pe.Principal)
+                                    ?.Especialidad
+                                    ?.Nombre ??
+                                "General",
+
+                            TotalCitas =
+                                t.Total
+                        };
+                    })
+                    .ToList();
+
+            ViewData["TopProfesionales"] =
+                topProfesionales;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "CargarDatosDashboard cancelado.");
+
+            InicializarViewDataDashboardVacio();
+        }
+        catch (SqlException ex)
+        {
+            _logger.LogCritical(
+                ex,
+                "SqlException CargarDatosDashboard.");
+
+            InicializarViewDataDashboardVacio();
+
+            TempData["ErrorValidacion"] =
+                MensajeErrorFallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error general CargarDatosDashboard.");
+
             InicializarViewDataDashboardVacio();
         }
     }
 
-    // ─── HELPER: Registrar auditoría ──────────────────────────────────────────
-    /// <summary>
-    /// Inserta un registro en la tabla Auditoria para trazabilidad de cambios en citas.
-    /// Se llama dentro de try/catch: un fallo en auditoría no debe interrumpir la operación principal.
-    /// </summary>
+    // ================================================================
+    // EMAIL DE CITA
+    // ================================================================
+
+    private async Task EnviarNotificacionCitaAsync(
+        int idCita,
+        string nuevoEstado,
+        CancellationToken ct)
+    {
+        try
+        {
+            var cita =
+                await _context.Citas
+                    .AsNoTracking()
+                    .Include(c => c.Paciente)
+                    .Include(c => c.Profesional)
+                    .Include(c => c.Servicio)
+                    .FirstOrDefaultAsync(
+                        c =>
+                            c.IdCita ==
+                            idCita,
+                        ct);
+
+            if (cita?.Paciente == null)
+            {
+                return;
+            }
+
+            string? correo =
+                cita.Paciente.Correo;
+
+            if (string.IsNullOrWhiteSpace(
+                    correo))
+            {
+                return;
+            }
+
+            await _emailService.SendCitaNotificacionAsync(
+                recipientEmail: correo,
+
+                nombrePaciente:
+                    cita.Paciente.NombresCompleto,
+
+                fechaCita:
+                    cita.FechaHora,
+
+                profesional:
+                    cita.Profesional?.NombreProfesional ??
+                    "Tu profesional",
+
+                servicio:
+                    cita.Servicio?.Nombre ??
+                    "Consulta",
+
+                nuevoEstado:
+                    nuevoEstado);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            /*
+             * El envío de correo no debe deshacer
+             * la operación principal de BD.
+             */
+            _logger.LogWarning(
+                ex,
+                "No se pudo enviar notificación de cita IdCita={IdCita}",
+                idCita);
+        }
+    }
+
+    // ================================================================
+    // AUDITORÍA
+    // ================================================================
+
     private async Task RegistrarAuditoriaAsync(
         string accion,
         string tablaAfectada,
@@ -1528,44 +4414,280 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
     {
         try
         {
-            string? userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            int? idUsuario = int.TryParse(userIdStr, out int uid) ? uid : null;
+            string? userIdStr =
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
 
-            string ipOrigen = HttpContext.Connection.RemoteIpAddress?.ToString()
-                ?? HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
-                ?? "desconocida";
+            int? idUsuario =
+                int.TryParse(
+                    userIdStr,
+                    out int uid)
+                    ? uid
+                    : null;
 
-            _context.Auditorias.Add(new Auditoria
-            {
-                Accion = accion,
-                TablaAfectada = tablaAfectada,
-                IdRegistro = idRegistro,
-                Descripcion = descripcion.Length > 255 ? descripcion[..255] : descripcion,
-                DatosAnteriores = datosAnteriores,
-                DatosNuevos = datosNuevos,
-                IpOrigen = ipOrigen,
-                IdUsuario = idUsuario,
-                Fecha = DateTime.Now
-            });
+            string ipOrigen =
+                HttpContext.Connection
+                    .RemoteIpAddress?
+                    .ToString()
+                ??
+                HttpContext.Request.Headers[
+                    "X-Forwarded-For"]
+                    .FirstOrDefault()
+                ??
+                "desconocida";
 
-            await _context.SaveChangesAsync(ct);
+            _context.Auditorias.Add(
+                new Auditoria
+                {
+                    Accion =
+                        accion,
+
+                    TablaAfectada =
+                        tablaAfectada,
+
+                    IdRegistro =
+                        idRegistro,
+
+                    Descripcion =
+                        descripcion.Length > 255
+                            ? descripcion[..255]
+                            : descripcion,
+
+                    DatosAnteriores =
+                        datosAnteriores,
+
+                    DatosNuevos =
+                        datosNuevos,
+
+                    IpOrigen =
+                        ipOrigen,
+
+                    IdUsuario =
+                        idUsuario,
+
+                    Fecha =
+                        DateTime.Now
+                });
+
+            await _context.SaveChangesAsync(
+                ct);
         }
         catch (Exception ex)
         {
-            // Auditoría es best-effort: loguear pero nunca interrumpir la operación principal
-            _logger.LogWarning(ex,
-                "No se pudo registrar auditoría. Accion={Accion} Tabla={Tabla} IdRegistro={Id}",
-                accion, tablaAfectada, idRegistro);
+            /*
+             * Best effort:
+             * la auditoría no debe romper la operación principal.
+             */
+            _logger.LogWarning(
+                ex,
+                "No se pudo registrar auditoría. " +
+                "Accion={Accion}, Tabla={Tabla}, IdRegistro={Id}",
+                accion,
+                tablaAfectada,
+                idRegistro);
         }
     }
 
-    // WHY: Método helper para inicializar ViewData de dashboard con valores predeterminados
+    // ================================================================
+    // HELPERS
+    // ================================================================
+
+    private static string NormalizarEstado(
+        string? estado)
+    {
+        var normalizado =
+            (estado ?? string.Empty)
+                .Trim()
+                .ToLowerInvariant();
+
+        return normalizado switch
+        {
+            "agendada" => "programada",
+            "programado" => "programada",
+            "confirmado" => "confirmada",
+            "cancelado" => "cancelada",
+            "no asistio" => "no_asistida",
+            "no asistió" => "no_asistida",
+            "no-show" => "no_asistida",
+            "completada" => "atendida",
+            "realizada" => "atendida",
+            _ => normalizado
+        };
+    }
+
+    private static bool EsEstadoCancelado(
+        string? estado)
+    {
+        return NormalizarEstado(estado) is
+            "cancelada" or
+            "cancelado";
+    }
+
+    private static int CalcularPorcentaje(
+        int valor,
+        int total)
+    {
+        if (total <= 0)
+            return 0;
+
+        return (int)Math.Round(
+            valor * 100.0 / total,
+            0);
+    }
+
+    private static int CalcularEdad(
+        DateTime fechaNacimiento)
+    {
+        var hoy =
+            DateTime.Today;
+
+        int edad =
+            hoy.Year -
+            fechaNacimiento.Year;
+
+        if (fechaNacimiento.Date >
+            hoy.AddYears(-edad))
+        {
+            edad--;
+        }
+
+        return edad;
+    }
+
+    private static string? BuildNotasCita(
+        CitaViewModel model)
+    {
+        if (!string.IsNullOrWhiteSpace(
+                model.MotivoConsulta))
+        {
+            return model.MotivoConsulta.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                model.Notas))
+        {
+            return model.Notas.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                model.NotasPrevias))
+        {
+            return model.NotasPrevias.Trim();
+        }
+
+        return null;
+    }
+
+    private async Task<string> BuildEstadoNombreAsync(
+        int? idEstado,
+        string? estadoFallback,
+        string estadoActual,
+        CancellationToken ct)
+    {
+        if (idEstado.HasValue &&
+            idEstado.Value > 0)
+        {
+            var estado = await _context.EstadosCita.FindAsync(
+    [idEstado.Value],
+    ct);
+
+            if (estado != null)
+            {
+                return EstadoCitaHelper.ResolveEstadoNombre(
+                    estado.NombreEstado,
+                    estadoFallback);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                estadoFallback))
+        {
+            return EstadoCitaHelper.ResolveEstadoNombre(
+                estadoFallback.Trim(),
+                estadoFallback.Trim());
+        }
+
+        return EstadoCitaHelper.ResolveEstadoNombre(
+            estadoActual,
+            "programada");
+    }
+
+    private void InicializarViewDataCitasVacia(
+        string returnUrl)
+    {
+        ViewData["Citas"] =
+            new List<Cita>();
+
+        ViewData["CitasPage"] =
+            PagedResult<Cita>.Empty(
+                1,
+                10);
+
+        ViewData["PaginationQuery"] =
+            new PaginationQuery();
+
+        ViewData["SearchFilter"] =
+            string.Empty;
+
+        ViewData["EstadoFilter"] =
+            string.Empty;
+
+        ViewData["ProfesionalFilter"] =
+            string.Empty;
+
+        ViewData["FechaFilter"] =
+            string.Empty;
+
+        ViewData["Pacientes"] =
+            new List<Paciente>();
+
+        ViewData["Profesionales"] =
+            new List<Profesional>();
+
+        ViewData["ProfesionalesFilterOptions"] =
+            new List<Profesional>();
+
+        ViewData["Consultorios"] =
+            new List<Consultorio>();
+
+        ViewData["EstadosCita"] =
+            new List<EstadoCita>();
+
+        ViewData["Servicios"] =
+            new List<Servicio>();
+
+        ViewData["ReturnUrl"] =
+            returnUrl;
+
+        ViewData["EditingCita"] =
+            null;
+
+        ViewData["StatKpiMesTotal"] = 0;
+        ViewData["StatKpiMesProgramadas"] = 0;
+        ViewData["StatKpiMesCanceladas"] = 0;
+        ViewData["StatKpiMesAtendidas"] = 0;
+        ViewData["StatKpiDifSemana"] = 0;
+        ViewData["StatKpiTasaCancelacion"] = 0;
+        ViewData["StatKpiTasaAsistencia"] = 0;
+        ViewData["KpiTotalCitas"] = 0;
+        ViewData["KpiProgramadas"] = 0;
+        ViewData["KpiCanceladas"] = 0;
+        ViewData["KpiAtendidas"] = 0;
+    }
+
     private void InicializarViewDataDashboardVacio()
-    {        ViewData["TotalPacientes"] = 0;
+    {
+        ViewData["TotalPacientes"] = 0;
         ViewData["CitasHoy"] = 0;
         ViewData["ProfesionalesActivos"] = 0;
         ViewData["IngresosDelMes"] = 0m;
-        ViewData["FacturasPendientes"] = new List<(string, string, decimal)>();
+
+        ViewData["FacturasPendientes"] =
+            new List<(
+                string,
+                string,
+                decimal)>();
+
         ViewData["PctOcupacion"] = 0;
         ViewData["CitasAtendidas"] = 0;
         ViewData["CitasConfirmadas"] = 0;
@@ -1575,40 +4697,53 @@ public class GestionCitasController(AppDbContext context, ILogger<GestionCitasCo
         ViewData["PctConfirmadas"] = 0;
         ViewData["PctProgramadas"] = 0;
         ViewData["PctCanceladas"] = 0;
-        ViewData["TopProfesionales"] = new List<object>();
+
+        ViewData["TopProfesionales"] =
+            new List<object>();
     }
 
-    /**
-     * Detecta si una DbUpdateException es por violación de índice único (SQL error 2601 o 2627).
-     * WHY: Permite mostrar mensaje amigable al usuario en lugar de error técnico crudo.
-     * @param dbex La excepción de actualización de base de datos
-     * @param indiceAfectado Output: mensaje de error SQL si aplica
-     * @return true si es violación de índice único
-     */
-    private static bool EsViolacionIndiceUnico(DbUpdateException dbex, out string? indiceAfectado)
+    private static bool EsViolacionIndiceUnico(
+        DbUpdateException dbex,
+        out string? indiceAfectado)
     {
         indiceAfectado = null;
-        var sqlEx = dbex.InnerException as SqlException ?? dbex.InnerException?.InnerException as SqlException;
-        if (sqlEx == null) return false;
-        if (sqlEx.Number == 2601 || sqlEx.Number == 2627)
+
+        var sqlEx =
+            dbex.InnerException as SqlException
+            ??
+            dbex.InnerException?.InnerException as SqlException;
+
+        if (sqlEx == null)
         {
-            indiceAfectado = sqlEx.Message;
+            return false;
+        }
+
+        if (sqlEx.Number == 2601 ||
+            sqlEx.Number == 2627)
+        {
+            indiceAfectado =
+                sqlEx.Message;
+
             return true;
         }
+
         return false;
     }
 
-    /**
-     * Detecta si una DbUpdateException es por violación de integridad referencial (SQL error 547 o 515).
-     * WHY: Permite manejar casos donde no se puede eliminar/actualizar por relaciones existentes.
-     * @param dbex La excepción de actualización de base de datos
-     * @return true si es violación de FK
-     */
-    private static bool EsViolacionIntegridadReferencial(DbUpdateException dbex)
+    private static bool EsViolacionIntegridadReferencial(
+        DbUpdateException dbex)
     {
-        var sqlEx = dbex.InnerException as SqlException ?? dbex.InnerException?.InnerException as SqlException;
-        if (sqlEx == null) return false;
-        return sqlEx.Number is 547 or 515;
-    }
+        var sqlEx =
+            dbex.InnerException as SqlException
+            ??
+            dbex.InnerException?.InnerException as SqlException;
 
+        if (sqlEx == null)
+        {
+            return false;
+        }
+
+        return sqlEx.Number is
+            547 or 515;
+    }
 }

@@ -31,73 +31,52 @@ const showToast = (message, type = 'success') => {
   toast._timeoutId = setTimeout(() => toast.classList.remove('show'), 3000);
 };
 
-// Gestiona persistencia del control postoperatorio con localStorage
-const postopStorage = {
-  key: 'smiletrack_postop_pedro_garcia_20260320',
-  
-  // Carga estado guardado o usa valores por defecto
-  load: () => {
-    const stored = localStorage.getItem(postopStorage.key);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.warn('Error al cargar control postoperatorio, usando valores por defecto');
-      }
-    }
-    return {
-      status: 'stable',
-      instructions: [
-        { text: 'No comer próximas 2h', checked: true },
-        { text: 'Medicamento cada 8h', checked: true },
-        { text: 'Evitar T° extremas', checked: false },
-        { text: 'Control en 7 días', checked: false }
-      ],
-      observations: ''
-    };
-  },
-  
-  // Guarda estado en localStorage
-  save: (state) => {
-    try {
-      localStorage.setItem(postopStorage.key, JSON.stringify(state));
-      return true;
-    } catch (e) {
-      console.error('Error al guardar control postoperatorio:', e);
-      return false;
-    }
-  },
-  
-  // Actualiza estado del paciente
-  updateStatus: (status) => {
-    const state = postopStorage.load();
-    state.status = status;
-    postopStorage.save(state);
-  },
-  
-  // Agrega nueva instrucción
-  addInstruction: (text) => {
-    const state = postopStorage.load();
-    state.instructions.push({ text, checked: false });
-    postopStorage.save(state);
-  },
-  
-  // Actualiza estado de una instrucción específica
-  updateInstruction: (index, checked) => {
-    const state = postopStorage.load();
-    if (state.instructions[index]) {
-      state.instructions[index].checked = checked;
-      postopStorage.save(state);
-    }
-  },
-  
-  // Actualiza observaciones
-  updateObservations: (text) => {
-    const state = postopStorage.load();
-    state.observations = text;
-    postopStorage.save(state);
-  }
+// Estado en memoria del control postoperatorio, cargado desde el servidor
+// (ver window.smiletrackPostopData, inyectado por control-post.cshtml). Se persiste
+// de verdad al hacer clic en "Guardar registro" (antes solo se guardaba en
+// localStorage y nunca llegaba a la base de datos).
+const postopState = {
+  citaId: window.smiletrackPostopData?.citaId ?? null,
+  status: window.smiletrackPostopData?.status || 'stable',
+  instructions: (window.smiletrackPostopData?.instructions || []).map(i => ({ text: i.text, checked: !!i.checked })),
+  observations: window.smiletrackPostopData?.observations || ''
 };
+
+function renderPostopSubtitle() {
+  const el = safeGetElement('postopSubtitle');
+  if (!el) return;
+  const d = window.smiletrackPostopData;
+  if (!d || !d.citaId) {
+    el.textContent = 'No hay una cita post-operatoria seleccionada';
+    return;
+  }
+  const fecha = d.fecha ? new Date(d.fecha) : null;
+  const fechaTexto = fecha && !Number.isNaN(fecha.getTime())
+    ? fecha.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '';
+  el.textContent = `${d.paciente} · ${d.procedimiento}${fechaTexto ? ' · Finalizado ' + fechaTexto : ''}`;
+}
+
+async function guardarControlPostoperatorio(silencioso = false) {
+  if (!postopState.citaId) return;
+  try {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    const resp = await fetch('/historia-clinica/st-aux-07-control-postoperato/guardar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'RequestVerificationToken': token } : {})
+      },
+      body: JSON.stringify(postopState)
+    });
+    const result = await resp.json();
+    if (!result.success) throw new Error(result.message || 'No se pudo guardar');
+    if (!silencioso) showToast('✅ Registro guardado en la base de datos', 'success');
+  } catch (e) {
+    console.error('Error al guardar el control postoperatorio:', e);
+    if (!silencioso) showToast('No se pudo guardar el registro', 'error');
+  }
+}
 
 // Inicializa menú móvil con gestión de foco y atributos ARIA
 const initMobileMenu = () => {
@@ -145,10 +124,9 @@ const initMobileMenu = () => {
 // Inicializa botones de estado con persistencia y accesibilidad
 const initStatusButtons = () => {
   const buttons = document.querySelectorAll('.status-btn');
-  
-  // Carga estado guardado
-  const savedStatus = postopStorage.load().status;
-  
+
+  const savedStatus = postopState.status;
+
   buttons.forEach(btn => {
     // Aplica estado guardado
     const statusId = btn.id.replace('status', '').toLowerCase();
@@ -174,9 +152,7 @@ const initStatusButtons = () => {
       btn.classList.add('active');
       btn.setAttribute('aria-checked', 'true');
       
-      // Guarda en localStorage
-      const newStatus = btn.id.replace('status', '').toLowerCase();
-      postopStorage.updateStatus(newStatus);
+      postopState.status = btn.id.replace('status', '').toLowerCase();
       
       // Feedback visual
       showToast(`Estado actualizado: ${btn.querySelector('strong')?.textContent}`, 'info');
@@ -199,9 +175,8 @@ const initInstructions = () => {
   const addBtn = safeGetElement('btnAddInstruction');
   
   if (!list || !input || !addBtn) return;
-  
-  // Carga instrucciones guardadas
-  const savedInstructions = postopStorage.load().instructions;
+
+  const savedInstructions = postopState.instructions;
   
   // Limpia lista actual y renderiza desde estado guardado
   list.innerHTML = '';
@@ -220,7 +195,7 @@ const initInstructions = () => {
     // Maneja cambio de checkbox
     const checkbox = li.querySelector('input');
     checkbox.addEventListener('change', () => {
-      postopStorage.updateInstruction(index, checkbox.checked);
+      postopState.instructions[index].checked = checkbox.checked;
       checkbox.setAttribute('aria-label', `${item.text}${checkbox.checked ? ' - completado' : ''}`);
     });
     
@@ -235,9 +210,9 @@ const initInstructions = () => {
       input.focus();
       return;
     }
-    
-    // Agrega a localStorage
-    postopStorage.addInstruction(text);
+
+    postopState.instructions.push({ text, checked: false });
+    const newIndex = postopState.instructions.length - 1;
     
     // Crea nuevo elemento en la lista
     const li = document.createElement('li');
@@ -267,8 +242,7 @@ const initInstructions = () => {
     // Maneja cambio del nuevo checkbox
     const checkbox = li.querySelector('input');
     checkbox.addEventListener('change', () => {
-      const newIndex = postopStorage.load().instructions.length - 1;
-      postopStorage.updateInstruction(newIndex, checkbox.checked);
+      postopState.instructions[newIndex].checked = checkbox.checked;
       checkbox.setAttribute('aria-label', `${text}${checkbox.checked ? ' - completado' : ''}`);
     });
     
@@ -291,12 +265,12 @@ const initInstructions = () => {
   // Auto-guarda de observaciones con debounce
   const obsTextarea = safeGetElement('obsTextarea');
   if (obsTextarea) {
-    // Carga observaciones guardadas
-    obsTextarea.value = postopStorage.load().observations;
+    obsTextarea.value = postopState.observations;
     
-    // Auto-guarda mientras el usuario escribe
+    // Guarda en memoria mientras el usuario escribe (se persiste en el servidor
+    // al presionar "Guardar registro")
     const debouncedSave = debounce(() => {
-      postopStorage.updateObservations(obsTextarea.value);
+      postopState.observations = obsTextarea.value;
     }, 500);
     
     obsTextarea.addEventListener('input', debouncedSave);
@@ -308,26 +282,14 @@ const initSaveButton = () => {
   const btnSave = safeGetElement('btnSaveRecord');
   if (!btnSave) return;
   
-  btnSave.addEventListener('click', () => {
-    // Recopila datos actuales
-    const state = postopStorage.load();
-    const record = {
-      status: state.status,
-      instructions: state.instructions.filter(i => i.checked).map(i => i.text),
-      observations: state.observations,
-      timestamp: new Date().toISOString()
-    };
-    
-    // En producción: enviar a API
-    console.log('Registro guardado:', record);
-    
-    // Feedback visual
-    showToast('✅ Registro guardado exitosamente', 'success');
-    
+  btnSave.addEventListener('click', async () => {
     const original = btnSave.innerHTML;
-    btnSave.innerHTML = '✓ Guardado';
+    btnSave.innerHTML = '⏳ Guardando...';
     btnSave.disabled = true;
-    
+
+    await guardarControlPostoperatorio();
+
+    btnSave.innerHTML = '✓ Guardado';
     setTimeout(() => {
       btnSave.innerHTML = original;
       btnSave.disabled = false;
@@ -337,6 +299,8 @@ const initSaveButton = () => {
 
 // Función principal de inicialización
 const init = () => {
+  renderPostopSubtitle();
+
   // Inicializar componentes de UI
   initMobileMenu();
   initStatusButtons();

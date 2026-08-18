@@ -24,6 +24,8 @@ NOTAS DE MANTENIMIENTO:
 - La alerta médica utiliza atributos role="alert" y aria-live="assertive" para notificaciones urgentes e inmediatas en tecnologías de asistencia.
 ============================================ *@
 @{ Layout = null; }
+@using System.Text.Json
+@{ var historialParcialDataJson = JsonSerializer.Serialize(ViewData["HistorialParcialData"]); }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -208,6 +210,9 @@ NOTAS DE MANTENIMIENTO:
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
+  <script>
+    window.smiletrackHistorialParcialData = @Html.Raw(historialParcialDataJson);
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-aux-05-historial-parcial/historial-parcial.js")"></script>
 
   <script src="@Url.Content("~/js/shared/sidebar.js")"></script>

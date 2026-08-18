@@ -41,49 +41,8 @@ const debounce = (fn, delay) => {
 
 // WHY: Muestra retroalimentación temporal autolimpiable para no interrumpir el flujo visual de la recepción
 
-// ═══ DATOS DE CITAS ═══
-const appointments = [
-  {
-    time: '08:00',
-    patient: 'María López',
-    doctor: 'Dr. Méndez',
-    service: 'Consulta',
-    status: 'Atendida',
-    statusClass: 'status-atendida',
-    highlight: false,
-    actions: ['eye']
-  },
-  {
-    time: '10:00',
-    patient: 'Pedro García',
-    doctor: 'Dr. Méndez',
-    service: 'Control',
-    status: 'En consulta',
-    statusClass: 'status-consulta',
-    highlight: true,
-    actions: ['pencil']
-  },
-  {
-    time: '11:30',
-    patient: 'Ana Ruiz',
-    doctor: 'Dra. Gómez',
-    service: 'Resina',
-    status: 'Pendiente',
-    statusClass: 'status-pendiente',
-    highlight: false,
-    actions: ['pencil', 'file-invoice']
-  },
-  {
-    time: '14:00',
-    patient: 'Luis Herrera',
-    doctor: 'Dr. Torres',
-    service: 'Consulta',
-    status: 'Atendida',
-    statusClass: 'status-atendida',
-    highlight: false,
-    actions: ['eye']
-  }
-];
+// ═══ DATOS REALES DE CITAS (ver ConstruirDashboardRecepcionAsync en GestionCitasController.cs) ═══
+const appointments = window.smiletrackDashboardRecData?.appointments || [];
 
 // ═══ UTILIDADES DE RENDERIZADO ═══
 
@@ -317,11 +276,39 @@ const initAlertButtons = () => {
 /**
  * Función principal de inicialización del dashboard
  */
+// Renderiza los datos reales inyectados por el servidor: fecha/hora del encabezado,
+// estadísticas del día y banner de próximas citas (ver ConstruirDashboardRecepcionAsync
+// en GestionCitasController.cs).
+const renderResumenServidor = () => {
+  const d = window.smiletrackDashboardRecData || {};
+
+  const subtitle = safeGetElement('pageSubtitleDate');
+  if (subtitle) {
+    subtitle.innerHTML = `${d.fechaHoraTexto || ''} - <time class="text-primary font-bold" datetime="${d.horaActualIso || ''}">${d.horaActualTexto || ''}</time>`;
+  }
+
+  const stats = d.stats || {};
+  const set = (id, val) => { const el = safeGetElement(id); if (el) el.textContent = val ?? '0'; };
+  set('statCitasHoy', stats.citasHoy);
+  set('statConfirmadas', stats.confirmadas);
+  set('statPendientes', stats.pendientes);
+  set('statFacturasPendientes', stats.facturasPendientes);
+
+  const banner = safeGetElement('alertBannerProximas');
+  const desc = safeGetElement('alertBannerDesc');
+  const proximas = d.proximasCitas || [];
+  if (banner && desc && proximas.length > 0) {
+    desc.innerHTML = proximas.map(p => `<p><time datetime="${p.fechaIso}"><strong>${p.hora}</strong></time> ${p.texto}</p>`).join('');
+    banner.style.display = '';
+  }
+};
+
 const init = () => {
   // Inicializar componentes de UI
   initMobileMenu();
   
   // Renderizado inicial de datos
+  renderResumenServidor();
   renderAppointments();
   
   // Inicializar interacciones

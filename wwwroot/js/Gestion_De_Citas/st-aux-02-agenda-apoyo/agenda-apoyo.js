@@ -47,22 +47,16 @@ const debounce = (fn, delay) => {
 // ═══════════════════════════════════════════════════════════════════
 class AgendaController {
   constructor() {
-    this._fechaHoy = 'Jue 20 Mar 2026';
-    this._citasBase = [
-      { id:1, hora:'08:00', paciente:'María López', profesional:'Dr. Méndez', tipo:'consulta', alergia:'Látex', estado:'Atendida' },
-      { id:2, hora:'11:00', paciente:'Ana Martínez', profesional:'Dr. Méndez', tipo:'procedimiento', alergia:null, estado:'Atendida' },
-      { id:3, hora:'08:00', paciente:'Luis Herrera', profesional:'Dra. Ramírez', tipo:'urgencia', alergia:null, estado:'Atendida' },
-      { id:4, hora:'14:00', paciente:'Carlos Ruiz', profesional:'Dra. Gómez', tipo:'consulta', alergia:'Penicilina', estado:'Pendiente' },
-      { id:5, hora:'16:00', paciente:'Sofía Díaz', profesional:'Dr. Méndez', tipo:'procedimiento', alergia:null, estado:'Pendiente' },
-    ];
+    const data = window.smiletrackAgendaApoyoData || {};
+    this._fechaHoy = data.fechaHoy || '';
+    this._citasBase = data.citas || [];
     this._filtroProfesional = 'todos';
     this._filtroTipo = 'todos';
   }
 
-  // WHY: Carga de LocalStorage para simular persistencia de datos en entorno de desarrollo o llamadas a API
+  // Datos reales inyectados por el servidor (ver ConstruirAgendaApoyoAsync en
+  // GestionCitasController.cs); el filtrado se hace en memoria sobre esos datos.
   async getCitas(profesional = 'todos', tipo = 'todos') {
-    // En producción: llamada real a API
-    // Aquí usamos datos mockeados con posible persistencia
     let resultado = [...this._citasBase];
     
     if (profesional !== 'todos') {

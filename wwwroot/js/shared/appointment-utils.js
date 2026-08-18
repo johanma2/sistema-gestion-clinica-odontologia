@@ -68,15 +68,45 @@ window.AppointmentUtils = (() => {
     // ════════════════════════════════════════════════════════════════════
     const validateAppointmentTime = (fecha, horaInicio, horaFin) => {
         const errors = [];
+
         if (!fecha || !horaInicio || !horaFin) {
-            errors.push({ field: 'general', message: 'La fecha y las horas de inicio y fin son obligatorias.' });
+            errors.push({
+                field: 'general',
+                message: 'La fecha y las horas de inicio y fin son obligatorias.'
+            });
+
             return errors;
         }
-        if (horaInicio >= horaFin) errors.push({ field: 'horaInicio', message: 'La hora de inicio debe ser anterior a la hora de fin.' });
-        const selectedDate = new Date(`${fecha}T${horaInicio}`);
+
+        const inicio = new Date(`${fecha}T${horaInicio}`);
+        const fin = new Date(`${fecha}T${horaFin}`);
+
+        if (horaInicio >= horaFin) {
+            errors.push({
+                field: 'horaInicio',
+                message: 'La hora de inicio debe ser anterior a la hora de fin.'
+            });
+        } else {
+            const duracionMinutos = (fin - inicio) / 60000;
+
+            if (duracionMinutos !== 60) {
+                errors.push({
+                    field: 'horaFin',
+                    message: 'La cita debe tener una duración de 60 minutos.'
+                });
+            }
+        }
+
         const minDate = new Date();
         minDate.setMinutes(minDate.getMinutes() - 5);
-        if (selectedDate < minDate) errors.push({ field: 'fecha', message: 'No puedes agendar una cita en un horario pasado.' });
+
+        if (inicio < minDate) {
+            errors.push({
+                field: 'fecha',
+                message: 'No puedes agendar una cita en un horario pasado.'
+            });
+        }
+
         return errors;
     };
 
@@ -98,7 +128,7 @@ window.AppointmentUtils = (() => {
      *   ctrl.restore();
      */
     const submitWithSpinner = (btn, loadingText = 'Guardando...') => {
-        if (!btn) return { restore: () => {} };
+        if (!btn) return { restore: () => { } };
 
         const originalHTML = btn.innerHTML;
         const originalDisabled = btn.disabled;

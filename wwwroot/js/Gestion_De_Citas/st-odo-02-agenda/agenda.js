@@ -157,21 +157,17 @@ const mapServerToClient = (srv) => {
 //  FALLBACK LOCAL
 // ═══════════════════════════════════════════════════════════════════
 
-const SAMPLE_FALLBACK = [
-  { id:1,  fecha:'Vie 20', fechaISO:'2026-03-20', hora:'08:00 AM', paciente:'María López',   servicio:'Consulta general', duracion:'30 min', estado:'Atendida',    active:false },
-  { id:2,  fecha:'Vie 20', fechaISO:'2026-03-20', hora:'09:00 AM', paciente:'Carlos Ruíz',   servicio:'Limpieza',         duracion:'45 min', estado:'Atendida',    active:false },
-  { id:3,  fecha:'Lun 24', fechaISO:'2026-03-24', hora:'10:00 AM', paciente:'Pedro García',  servicio:'Control',          duracion:'30 min', estado:'En consulta', active:true  },
-  { id:4,  fecha:'Mar 25', fechaISO:'2026-03-25', hora:'11:00 AM', paciente:'Ana Martínez',  servicio:'Resina',           duracion:'60 min', estado:'Agendada',    active:false },
-  { id:5,  fecha:'Mar 25', fechaISO:'2026-03-25', hora:'14:00 PM', paciente:'Luis Herrera',  servicio:'Consulta',         duracion:'30 min', estado:'No asistió',  active:false },
-  { id:6,  fecha:'Mar 25', fechaISO:'2026-03-25', hora:'15:00 PM', paciente:'Sandra Pérez',  servicio:'Control',          duracion:'20 min', estado:'Cancelada',   active:false }
-];
+// ═══════════════════════════════════════════════════════════════════
+//  CACHÉ LOCAL (respaldo de la última respuesta real del servidor)
+// ═══════════════════════════════════════════════════════════════════
 
 const loadLocal = () => {
   try {
     const s = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (s) return JSON.parse(s);
   } catch {}
-  return SAMPLE_FALLBACK;
+  // Sin caché ni conexión: estado vacío real (antes se mostraban 6 citas ficticias)
+  return [];
 };
 const saveLocal = (arr) => {
   try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(arr)); } catch {}
@@ -457,8 +453,9 @@ async function fetchAppointments() {
       throw new Error('payload inválido');
     }
   } catch (err) {
-    console.warn('[SmileTrack] Agenda odontólogo: fallback a LocalStorage:', err);
+    console.warn('[SmileTrack] Agenda odontólogo: no se pudo conectar con el servidor:', err);
     appointments = loadLocal();
+    if (window.ToastService) window.ToastService.error('No se pudo cargar la agenda desde el servidor');
   }
   renderTable(appointments);
   updateCounts();

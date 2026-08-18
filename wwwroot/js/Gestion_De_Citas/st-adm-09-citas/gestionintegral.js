@@ -151,58 +151,129 @@ window.closeModalCita = () => {
 
 const validateCitaForm = (form) => {
     let valid = true;
+
     const requiredFields = [
-        { field: document.getElementById('idPacienteCita'), message: 'Selecciona un paciente.' },
-        { field: document.getElementById('idProfesionalCita'), message: 'Selecciona un profesional.' },
-        { field: document.getElementById('fechaCita'), message: 'Selecciona una fecha válida.' },
-        { field: document.getElementById('horaInicioCita'), message: 'Selecciona una hora de inicio.' },
-        { field: document.getElementById('idEstadoCita'), message: 'Selecciona un estado.' }
+        {
+            field: form.querySelector('#idPacienteCita'),
+            message: 'Selecciona un paciente.'
+        },
+        {
+            field: form.querySelector('#idProfesionalCita'),
+            message: 'Selecciona un profesional.'
+        },
+        {
+            field: form.querySelector('#idConsultorioCita'),
+            message: 'Selecciona un consultorio.'
+        },
+        {
+            field: form.querySelector('#idServicioCita'),
+            message: 'Selecciona un servicio.'
+        },
+        {
+            field: form.querySelector('#fechaCita'),
+            message: 'Selecciona una fecha válida.'
+        },
+        {
+            field: form.querySelector('#horaInicioCita'),
+            message: 'Selecciona una hora de inicio.'
+        },
+        {
+            field: form.querySelector('#idEstadoCita'),
+            message: 'Selecciona un estado.'
+        }
     ];
 
     if (window.ValidationUtils) {
         requiredFields.forEach(({ field }) => {
-            if (field) window.ValidationUtils.clearError(field);
+            if (field) {
+                window.ValidationUtils.clearError(field);
+                field.setAttribute('aria-invalid', 'false');
+            }
         });
     }
 
     requiredFields.forEach(({ field, message }) => {
         const value = field?.value?.trim() || '';
         const isValid = Boolean(value);
+
         if (field) {
             field.setAttribute('aria-invalid', String(!isValid));
         }
+
         if (!isValid) {
-            if (window.ValidationUtils && field) {
-                window.ValidationUtils.showError(field, null, message);
-            }
             valid = false;
+
+            if (field && window.ValidationUtils) {
+                window.ValidationUtils.showError(
+                    field,
+                    null,
+                    message
+                );
+            }
         }
     });
 
-    const fecha = document.getElementById('fechaCita')?.value;
-    const horaInicio = document.getElementById('horaInicioCita')?.value;
-    const horaFin = document.getElementById('horaFinCita')?.value;
-    
+    const fecha = form.querySelector('#fechaCita')?.value || '';
+    const horaInicio = form.querySelector('#horaInicioCita')?.value || '';
+    const horaFin = form.querySelector('#horaFinCita')?.value || '';
+
+    // Validar rango de horario cuando existe hora fin
     if (window.AppointmentUtils && fecha && horaInicio && horaFin) {
-        const errors = window.AppointmentUtils.validateAppointmentTime(fecha, horaInicio, horaFin);
+        const errors = window.AppointmentUtils.validateAppointmentTime(
+            fecha,
+            horaInicio,
+            horaFin
+        );
+
         if (errors.length > 0) {
             errors.forEach(err => {
-                if (err.field !== 'general' && window.ValidationUtils) {
-                    let inputId = err.field === 'fecha' ? 'fechaCita' : 
-                                  err.field === 'horaInicio' ? 'horaInicioCita' : 'horaFinCita';
-                    const inputEl = document.getElementById(inputId);
-                    if (inputEl) window.ValidationUtils.showError(inputEl, null, err.message);
+                if (err.field === 'general') {
+                    if (window.ToastService) {
+                        window.ToastService.warning('Horario inválido', err.message);
+                    }
+                    return;
+                }
+
+                let inputId = '';
+
+                if (err.field === 'fecha') {
+                    inputId = 'fechaCita';
+                } else if (err.field === 'horaInicio') {
+                    inputId = 'horaInicioCita';
+                } else if (err.field === 'horaFin') {
+                    inputId = 'horaFinCita';
+                }
+
+                const inputEl = form.querySelector(`#${inputId}`);
+
+                if (inputEl && window.ValidationUtils) {
+                    window.ValidationUtils.showError(
+                        inputEl,
+                        null,
+                        err.message
+                    );
                 }
             });
+
             valid = false;
         }
-    } else if (fecha && horaInicio) {
+    }
+
+    // Evitar citas en el pasado
+    if (fecha && horaInicio) {
         const selectedDate = new Date(`${fecha}T${horaInicio}`);
+
         if (selectedDate < new Date()) {
-            const fField = document.getElementById('fechaCita');
-            if (fField && window.ValidationUtils) {
-                window.ValidationUtils.showError(fField, null, 'No puedes agendar en un horario pasado.');
+            const fechaField = form.querySelector('#fechaCita');
+
+            if (fechaField && window.ValidationUtils) {
+                window.ValidationUtils.showError(
+                    fechaField,
+                    null,
+                    'No puedes agendar una cita en un horario pasado.'
+                );
             }
+
             valid = false;
         }
     }
@@ -212,52 +283,45 @@ const validateCitaForm = (form) => {
 
 const submitCitaForm = (event) => {
     const form = event.currentTarget;
-    const submitButton = form.querySelector('#btnGuardarCita');
 
     if (!validateCitaForm(form)) {
         event.preventDefault();
-        window.ToastService.warning('⚠️ Completa los campos obligatorios del formulario.');
-        const firstInvalid = form.querySelector('[aria-invalid="true"]');
+
+        if (window.ToastService) {
+            window.ToastService.warning('Validación',
+                'Completa correctamente los campos obligatorios de la cita.'
+            );
+        }
+
+        const firstInvalid = form.querySelector(
+            '[aria-invalid="true"]'
+        );
+
         if (firstInvalid) {
             firstInvalid.focus();
-        } else {
-            const fallbackInvalid = form.querySelector('select:invalid, input:invalid, textarea:invalid');
-            if (fallbackInvalid) fallbackInvalid.focus();
         }
+
         return;
     }
 
+    const submitButton = form.querySelector('#btnGuardarCita');
+
     if (submitButton) {
         submitButton.disabled = true;
-        submitButton.dataset.originalText = submitButton.textContent;
         submitButton.textContent = 'Guardando...';
     }
+
+    /*
+     * No usamos fetch.
+     * No usamos localStorage para crear la cita.
+     *
+     * El formulario se enviará normalmente mediante POST a:
+     *
+     * /gestion-de-citas/guardar-cita
+     *
+     * El controlador recibe CitaViewModel y guarda en SQL Server.
+     */
 };
-
-// ════════════════════════════════════════════════════════════════════
-//  MAPEO ENTRE FORMATOS: Server (JSON) ↔ Cliente (fila renderizada)
-// ════════════════════════════════════════════════════════════════════
-
-// Funciones de formato de nombre y color removidas, usando AppointmentUtils
-
-/**
- * Genera un slug a partir de un nombre completo.
- * Útil para crear identificadores consistentes de profesionales.
- *
- * @param {string} fullName - Nombre completo
- * @returns {string} Slug en minúsculas sin caracteres especiales
- */
-const slugFromName = (fullName) => {
-    if (!fullName) return 'profesional';
-
-    return fullName
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
-        .replace(/[^a-z0-9]+/g, '')      // Eliminar caracteres especiales
-        .trim() || 'profesional';
-};
-
 /**
  * Mapea el formato del servidor al formato del cliente.
  *
@@ -341,10 +405,11 @@ const appointmentsStorage = {
     key: 'smiletrack_citas_admin',
 
     /**
-     * Carga las citas desde LocalStorage.
-     * Si no hay datos, retorna datos de ejemplo para desarrollo.
+     * Carga las citas desde LocalStorage (caché de la última respuesta real de la API).
+     * Esta ruta de código solo se activa cuando NO hay filas renderizadas por el servidor
+     * (ver shouldUseServerRenderedList) y fetchAppointments() no pudo contactar la API.
      *
-     * @returns {Array} Array de citas
+     * @returns {Array} Array de citas (vacío si no hay caché ni conexión)
      */
     load: () => {
         const stored = localStorage.getItem(appointmentsStorage.key);
@@ -353,18 +418,12 @@ const appointmentsStorage = {
             try {
                 return JSON.parse(stored);
             } catch (error) {
-                console.warn('Error al cargar citas locales, usando datos de ejemplo');
+                console.warn('Error al cargar citas locales');
             }
         }
 
-        // ═══ DATOS DE EJEMPLO ÚNICAMENTE CUANDO LA API ESTÁ INALCANZABLE ═══
-        return [
-            { id: 1, date: '2026-05-24', time: '09:30', patient: 'Julián Restrepo', doc: '10239485', professional: 'mendez', professionalName: 'Dr. Ricardo Méndez', service: 'Limpieza Dental', status: 'programada', avatar: 'JR', color: 'blue' },
-            { id: 2, date: '2026-05-24', time: '11:00', patient: 'Lucía Torres', doc: '52109432', professional: 'sotelo', professionalName: 'Dra. Elena Sotelo', service: 'Ortodoncia', status: 'confirmada', avatar: 'LT', color: 'green' },
-            { id: 3, date: '2026-05-24', time: '14:15', patient: 'Mariana Esparza', doc: '88764321', professional: 'ruiz', professionalName: 'Dr. Carlos Ruiz', service: 'Endodoncia', status: 'atendida', avatar: 'ME', color: 'purple' },
-            { id: 4, date: '2026-05-24', time: '16:00', patient: 'Sebastián Correa', doc: '11098452', professional: 'sotelo', professionalName: 'Dra. Elena Sotelo', service: 'Extracción', status: 'cancelada', avatar: 'SC', color: 'red' },
-            { id: 5, date: '2026-05-24', time: '17:30', patient: 'Mónica Giraldo', doc: '32109876', professional: 'mendez', professionalName: 'Dr. Ricardo Méndez', service: 'Valoración', status: 'no-show', avatar: 'MG', color: 'slate' }
-        ];
+        // Sin caché ni conexión: estado vacío real (antes había 5 citas ficticias)
+        return [];
     },
 
     /**
@@ -452,7 +511,7 @@ const shouldUseServerRenderedList = () => {
  * Usa AppointmentUtils si está disponible.
  */
 const statusLabels = new Proxy({}, {
-    get: function(target, prop) {
+    get: function (target, prop) {
         if (window.AppointmentUtils) {
             return window.AppointmentUtils.getStatusLabelAndClass(prop);
         }
@@ -777,7 +836,10 @@ const saveAppointmentEdit = (id) => {
     const rawData = appointment._raw || {};
     const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
     if (!tokenInput) {
-        window.ToastService.error('No se pudo guardar la cita: token antiforgery no encontrado.');
+        window.ToastService.error(
+            'Error',
+            'No se pudo guardar la cita: token antiforgery no encontrado.'
+        );
         return;
     }
 
@@ -1097,34 +1159,6 @@ const initNewAppointment = () => {
 };
 
 /**
- * Inicializa el modal de cita (cerrar con botón, overlay y Escape).
- */
-const initModal = () => {
-    const modalCloseButton = safeGetElement('modalAppointmentClose');
-    const modalCancelButton = safeGetElement('modalAppointmentCancel');
-    const modalElement = safeGetElement('modalAppointment');
-    const citaForm = safeGetElement('modalCita')?.querySelector('form');
-
-    modalCloseButton?.addEventListener('click', closeAppointmentModal);
-    modalCancelButton?.addEventListener('click', closeAppointmentModal);
-
-    // Cerrar al hacer clic fuera del modal
-    modalElement?.addEventListener('click', (event) => {
-        if (event.target === modalElement) closeAppointmentModal();
-    });
-
-    // Cerrar con tecla Escape
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && modalElement?.classList.contains('open')) {
-            event.preventDefault();
-            closeAppointmentModal();
-        }
-    });
-
-    citaForm?.addEventListener('submit', submitCitaForm);
-};
-
-/**
  * Inicializa el botón de optimización del banner.
  */
 const initBanner = () => {
@@ -1150,18 +1184,6 @@ async function fetchAppointments() {
     // Usamos los datos locales / cache como fallback estable.
     console.warn('[SmileTrack] No existe GET /api/citas para esta vista. Usando datos locales/cache.');
     return appointmentsStorage.load();
-}
-
-/**
- * Genera una nueva cita usando el almacenamiento local cuando la API no está disponible.
- * En la vista actual no existe un endpoint POST /api/citas en el backend.
- *
- * @param {Object} appointment - Datos de la cita a crear
- * @returns {Promise<Object>} Resultado de la operación
- */
-async function addAppointmentAPI(appointment) {
-    console.warn('[SmileTrack] Endpoint POST /api/citas no disponible. Guardando localmente.');
-    return appointmentsStorage.addAppointment(appointment);
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -1194,46 +1216,149 @@ function mostrarErrorUsuario(message) {
 // ════════════════════════════════════════════════════════════════════
 
 /**
- * Punto de entrada principal de la aplicación.
- * Inicializa todos los componentes y carga los datos.
+ * Inicializa el modal real de Crear/Editar Cita.
+ *
+ * La vista st-adm-09-citas utiliza:
+ *   #modalCita
+ *
+ * El formulario dentro del modal hace POST normal hacia:
+ *   /gestion-de-citas/guardar-cita
+ */
+const initModal = () => {
+    const modalElement = safeGetElement('modalCita');
+
+    if (!modalElement) {
+        console.warn('[SmileTrack] No se encontró el modal #modalCita.');
+        return;
+    }
+
+    const citaForm = modalElement.querySelector('form');
+
+    // Cerrar al hacer clic en el fondo del modal
+    modalElement.addEventListener('click', (event) => {
+        if (event.target === modalElement) {
+            window.closeModalCita();
+        }
+    });
+
+    // Cerrar con Escape
+    document.addEventListener('keydown', (event) => {
+        if (
+            event.key === 'Escape' &&
+            modalElement.classList.contains('open')
+        ) {
+            event.preventDefault();
+            window.closeModalCita();
+        }
+    });
+
+    // Validar antes del POST normal
+    citaForm?.addEventListener('submit', submitCitaForm);
+};
+
+/**
+ * Inicialización principal del módulo.
  */
 const init = async () => {
     try {
         const useSSR = shouldUseServerRenderedList();
 
-        // Inicializar componentes de UI
+        // Componentes generales
         initSidebar();
-        if (!useSSR) initTabs();
-        if (!useSSR) initSearch();
-        if (!useSSR) initFilters();
-        initPagination();
         initNewAppointment();
+        /**
+ * Calcula automáticamente la hora de fin de la cita.
+ * Todas las citas tienen una duración fija de 60 minutos.
+ */
+        /**
+         * Calcula automáticamente la hora de fin.
+         * Duración fija: 60 minutos.
+         */
+        const initHoraCita = () => {
+            const horaInicio = document.getElementById('horaInicioCita');
+            const horaFin = document.getElementById('horaFinCita');
+
+            if (!horaInicio || !horaFin) {
+                console.warn('[SmileTrack] No se encontraron los campos de hora.');
+                return;
+            }
+
+            const calcularHoraFin = () => {
+                const valor = horaInicio.value;
+
+                if (!valor) {
+                    horaFin.value = '';
+                    return;
+                }
+
+                const [hora, minuto] = valor.split(':').map(Number);
+
+                if (Number.isNaN(hora) || Number.isNaN(minuto)) {
+                    horaFin.value = '';
+                    return;
+                }
+
+                const totalMinutos = (hora * 60) + minuto + 60;
+                const minutosDia = 24 * 60;
+
+                const resultado = totalMinutos % minutosDia;
+
+                const horaFinal = Math.floor(resultado / 60);
+                const minutoFinal = resultado % 60;
+
+                horaFin.value =
+                    `${String(horaFinal).padStart(2, '0')}:${String(minutoFinal).padStart(2, '0')}`;
+            };
+
+            horaInicio.addEventListener('input', calcularHoraFin);
+            horaInicio.addEventListener('change', calcularHoraFin);
+
+            // Calcular al abrir/cargar
+            calcularHoraFin();
+        };
+
+        initHoraCita();
         initModal();
         initBanner();
 
+        // Componentes que solo se utilizan cuando
+        // la tabla no viene renderizada por Razor.
         if (!useSSR) {
-            // Cargar datos desde API o fallback local
+            initTabs();
+            initSearch();
+            initFilters();
+            initPagination();
+
             appointments = await fetchAppointments();
 
-            // Actualizar UI con datos cargados
             updateStats();
             renderAppointments();
         } else {
-            // Modo SSR: animar los KPI renderizados por Razor si tienen data-target
-            document.querySelectorAll('[data-target]').forEach(el => {
-                const target = parseInt(el.getAttribute('data-target'), 10);
-                if (!isNaN(target) && target >= 0) animateCounter(el, target);
+            // La tabla viene desde Razor/Servidor.
+            // No sobrescribimos la información con LocalStorage.
+
+            document.querySelectorAll('[data-target]').forEach((element) => {
+                const target = parseInt(
+                    element.getAttribute('data-target'),
+                    10
+                );
+
+                if (!Number.isNaN(target) && target >= 0) {
+                    animateCounter(element, target);
+                }
             });
         }
 
-        // Cleanup al cerrar la página (para SPA o navegación frecuente)
-        window.addEventListener('beforeunload', () => {
-            // Cleanup SPA real si es necesario
-        });
-
     } catch (error) {
-        console.error('[SmileTrack] Error inicializando modulo citas:', error);
-        mostrarErrorUsuario(error.message || 'Error cargando módulo de citas. Intente recargar.');
+        console.error(
+            '[SmileTrack] Error inicializando módulo citas:',
+            error
+        );
+
+        mostrarErrorUsuario(
+            error?.message ||
+            'Error cargando el módulo de citas. Intente recargar.'
+        );
     }
 };
 

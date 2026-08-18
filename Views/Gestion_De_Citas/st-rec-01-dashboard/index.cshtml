@@ -22,6 +22,8 @@ NOTAS DE MANTENIMIENTO:
 - Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
 ============================================ *@
 @{ Layout = null; }
+@using System.Text.Json
+@{ var dashboardRecDataJson = JsonSerializer.Serialize(ViewData["DashboardRecepcionData"]); }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -65,23 +67,18 @@ NOTAS DE MANTENIMIENTO:
         <div class="breadcrumb">Recepción ? Panel</div>
         <h1 class="page-title">Panel de Recepción</h1>
         <!-- [MEJORA]: time datetime para accesibilidad de fecha/hora -->
-        <p class="page-subtitle">Mi—rcoles 20 de marzo 2026 - <time class="text-primary font-bold"
-            datetime="2026-03-20T09:47">09:47 AM</time></p>
+        <p class="page-subtitle" id="pageSubtitleDate">Cargando…</p>
       </div>
     </header>
 
     <!-- Alert Banner (próximas citas) -->
     <!-- [MEJORA]: role="region" + aria-label para sección importante -->
-    <div class="alert-banner" role="region" aria-label="Próximas citas en los siguientes 30 minutos">
+    <div class="alert-banner" id="alertBannerProximas" role="region" aria-label="Próximas citas en los siguientes 30 minutos" style="display:none;">
       <div class="alert-banner-icon material-symbols-outlined" aria-hidden="true">notifications</div>
       <div class="alert-banner-content">
         <h3 class="alert-banner-title">Próximas citas — en los siguientes 30 minutos</h3>
-        <div class="alert-banner-desc">
-          <!-- [MEJORA]: time datetime para cada cita -->
-          <p><time datetime="2026-03-20T10:00"><strong>10:00 AM</strong></time> Pedro García - Control - Dr. Carlos
-            Méndez - Consultorio 1</p>
-          <p><time datetime="2026-03-20T10:30"><strong>10:30 AM</strong></time> María López - Dra. Laura Gómez -
-            Limpieza - Consultorio 2</p>
+        <div class="alert-banner-desc" id="alertBannerDesc">
+          <!-- Se llena dinámicamente desde datos reales (ver renderProximasCitas en app.js) -->
         </div>
       </div>
     </div>
@@ -90,19 +87,19 @@ NOTAS DE MANTENIMIENTO:
     <!-- [MEJORA]: aria-label para sección de estadÍdsticas -->
     <section class="stats-grid" aria-label="Resumen de actividad del día">
       <div class="stat-card" data-color="blue">
-        <span class="stat-number">24</span>
+        <span class="stat-number" id="statCitasHoy">—</span>
         <span class="stat-label">Citas hoy</span>
       </div>
       <div class="stat-card" data-color="green">
-        <span class="stat-number">18</span>
+        <span class="stat-number" id="statConfirmadas">—</span>
         <span class="stat-label">Confirmadas</span>
       </div>
       <div class="stat-card" data-color="orange">
-        <span class="stat-number">3</span>
+        <span class="stat-number" id="statPendientes">—</span>
         <span class="stat-label">Pendientes</span>
       </div>
       <div class="stat-card" data-color="purple">
-        <span class="stat-number">$645k</span>
+        <span class="stat-number" id="statFacturasPendientes">—</span>
         <span class="stat-label">Facturas pendientes</span>
       </div>
     </section>
@@ -191,6 +188,9 @@ NOTAS DE MANTENIMIENTO:
   <!-- Toast -->
   <!-- [MEJORA]: aria-atomic="true" para que lectores anuncien mensaje completo -->
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script>
+    window.smiletrackDashboardRecData = @Html.Raw(dashboardRecDataJson);
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-rec-01-dashboard/app.js")"></script>
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">

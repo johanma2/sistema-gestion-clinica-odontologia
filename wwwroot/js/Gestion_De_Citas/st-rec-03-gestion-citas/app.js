@@ -174,16 +174,13 @@ const mapServerToClient = (srv) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  FALLBACK LOCAL
+//  CACHÉ LOCAL (respaldo de la última respuesta real, solo si no hay SSR)
 // ═══════════════════════════════════════════════════════════════════
 
-const FALLBACK_DATA = [
-  { id:1, date:'20 mar', dateISO:'2026-03-20', time:'08:00 AM', timeISO:'08:00', patient:'María López',   doctor:'Dr. Méndez',    service:'Consulta',  office:'C1', status:'Atendida',    statusClass:'status-atendida',  highlight:false, noShow:false },
-  { id:2, date:'20 mar', dateISO:'2026-03-20', time:'10:00 AM', timeISO:'10:00', patient:'Pedro García',  doctor:'Dr. Méndez',    service:'Control',   office:'C1', status:'En consulta',statusClass:'status-consulta',  highlight:true,  noShow:false },
-  { id:3, date:'20 mar', dateISO:'2026-03-20', time:'11:00 AM', timeISO:'11:00', patient:'Ana Martínez',  doctor:'Dr. Méndez',    service:'Resina',    office:'C1', status:'Agendada',    statusClass:'status-agendada', highlight:false, noShow:false },
-  { id:4, date:'21 mar', dateISO:'2026-03-21', time:'09:00 AM', timeISO:'09:00', patient:'Sandra Pérez',  doctor:'Dr. Méndez',    service:'Control',   office:'C1', status:'Agendada',    statusClass:'status-agendada', highlight:false, noShow:false },
-  { id:5, date:'22 mar', dateISO:'2026-03-22', time:'08:00 AM', timeISO:'08:00', patient:'Roberto Silva', doctor:'Dra. Gómez',    service:'Extracción',office:'C3', status:'No asistió',  statusClass:'status-no-asistio',highlight:false, noShow:true  }
-];
+// Estado vacío real: esta ruta de código solo se usa si la tabla no viene
+// renderizada por el servidor (ver shouldUseServerRenderedList) y la API
+// tampoco responde. Antes había 5 citas ficticias aquí.
+const FALLBACK_DATA = [];
 
 // Almacén en memoria (cargado de LocalStorage / API al init)
 let _appointments = [];
@@ -675,8 +672,23 @@ const submitNewAppointment = (e) => {
 // ═══════════════════════════════════════════════════════════════════
 
 async function fetchAppointments() {
-  console.warn('[SmileTrack] No existe un endpoint GET /api/citas para esta vista. Usando fallback LocalStorage.');
-  return appointmentStorage.getAll();
+  try {
+    const res = await fetch('/api/citas?page=1&pageSize=100', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const payload = await res.json();
+    if (payload && payload.success && Array.isArray(payload.data)) {
+      const citas = payload.data.map(mapServerToClient);
+      appointmentStorage.replaceAll(citas);
+      return citas;
+    }
+    throw new Error('payload inválido');
+  } catch (err) {
+    console.warn('[SmileTrack] No se pudo cargar citas desde /api/citas:', err);
+    return appointmentStorage.getAll();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════

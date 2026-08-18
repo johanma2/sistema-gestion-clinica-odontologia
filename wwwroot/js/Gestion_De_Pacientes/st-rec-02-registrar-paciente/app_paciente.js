@@ -65,7 +65,7 @@ const showToast = (message, type = 'success') => {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 250);
   }, 4500);
-  
+
   // Guardar referencia para cleanup si se cierra manualmente antes
   toast._autoCloseTimeout = autoCloseTimeout;
 };
@@ -135,13 +135,13 @@ const FIELD_VALIDATORS = {
  */
 const validateField = (input) => {
   if (!input) return true;
-  
+
   const group = input.closest('.form-group');
   if (!group) return true;
 
   const validator = FIELD_VALIDATORS[input.id];
   const errorSpan = group.querySelector('.error-message');
-  
+
   // Si no hay validador registrado, considerar válido
   if (!validator) {
     input.classList.remove('error');
@@ -175,16 +175,16 @@ const validateField = (input) => {
  * @returns {boolean} true si todos los campos son válidos
  */
 const validateStep1 = () => {
-  const requiredFields = ['nombres','apellidos','tipoDoc','documento','fechaNacimiento','telefono','correo'];
+  const requiredFields = ['nombres', 'apellidos', 'tipoDoc', 'documento', 'fechaNacimiento', 'telefono', 'correo'];
   let allValid = true;
-  
+
   requiredFields.forEach(fieldId => {
     const field = safeGetElement(fieldId);
     if (field && !validateField(field)) {
       allValid = false;
     }
   });
-  
+
   return allValid;
 };
 
@@ -195,14 +195,14 @@ const validateStep1 = () => {
 const setupFieldValidation = (fieldId) => {
   const field = safeGetElement(fieldId);
   if (!field) return;
-  
+
   // [MEJORA]: Usar event delegation conceptual con debounce para mejor performance
   const debouncedValidate = debounce(() => validateField(field), 150);
-  
+
   ['input', 'change', 'blur'].forEach(eventType => {
     field.addEventListener(eventType, debouncedValidate);
   });
-  
+
   // Validar al recuperar foco para mostrar estado actual
   field.addEventListener('focus', () => {
     if (field.classList.contains('error')) {
@@ -239,23 +239,23 @@ const updateStepper = (step) => {
     stepLabel2?.classList.remove('active', 'completed');
     stepLabel2?.classList.add('inactive');
     stepConnector?.classList.remove('active');
-    
+
     stepContent1?.classList.add('active');
     stepContent2?.classList.remove('active');
     stepContent2?.setAttribute('aria-hidden', 'true');
     stepContent1?.removeAttribute('aria-hidden');
-    
+
     stepBtn1?.setAttribute('aria-selected', 'true');
     stepBtn1?.setAttribute('tabindex', '0');
     stepBtn2?.setAttribute('aria-selected', 'false');
     stepBtn2?.setAttribute('tabindex', '-1');
-    
+
     // [MEJORA]: Enfocar primer campo del paso al activarlo
     requestAnimationFrame(() => {
       const firstInput = stepContent1?.querySelector('.form-input, .form-select');
       if (firstInput) firstInput.focus();
     });
-    
+
   } else if (step === 2) {
     // Paso 2 activo, paso 1 completado
     stepNum1.className = 'step-num completed';
@@ -265,17 +265,17 @@ const updateStepper = (step) => {
     stepLabel2?.classList.remove('inactive', 'completed');
     stepLabel2?.classList.add('active');
     stepConnector?.classList.add('active');
-    
+
     stepContent1?.classList.remove('active');
     stepContent2?.classList.add('active');
     stepContent1?.setAttribute('aria-hidden', 'true');
     stepContent2?.removeAttribute('aria-hidden');
-    
+
     stepBtn1?.setAttribute('aria-selected', 'false');
     stepBtn1?.setAttribute('tabindex', '-1');
     stepBtn2?.setAttribute('aria-selected', 'true');
     stepBtn2?.setAttribute('tabindex', '0');
-    
+
     // [MEJORA]: Enfocar primer campo del paso 2 al activarlo
     requestAnimationFrame(() => {
       const firstInput = stepContent2?.querySelector('.form-input, .form-select');
@@ -294,16 +294,16 @@ const initMobileMenu = () => {
   const ham = safeGetElement('hamburger');
   const sb = safeGetElement('sidebar');
   const ov = safeGetElement('overlay');
-  
+
   if (!ham || !sb || !ov) return;
-  
+
   const toggleMenu = (show) => {
     if (show) {
       sb.classList.add('open');
       ov.classList.add('open');
       ham.setAttribute('aria-expanded', 'true');
       ov.setAttribute('aria-hidden', 'false');
-      
+
       // [MEJORA]: Manejo de foco para accesibilidad
       sb.dataset.previousFocus = document.activeElement?.id || '';
       const firstLink = sb.querySelector('.nav-item');
@@ -313,17 +313,17 @@ const initMobileMenu = () => {
       ov.classList.remove('open');
       ham.setAttribute('aria-expanded', 'false');
       ov.setAttribute('aria-hidden', 'true');
-      
+
       // Restaurar foco al elemento que abrió el menú
       const prevFocus = sb.dataset.previousFocus;
       if (prevFocus) safeGetElement(prevFocus)?.focus();
       else ham.focus();
     }
   };
-  
+
   ham.addEventListener('click', () => toggleMenu(true));
   ov.addEventListener('click', () => toggleMenu(false));
-  
+
   // Cerrar menú al navegar (móvil)
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
@@ -332,7 +332,7 @@ const initMobileMenu = () => {
       }
     });
   });
-  
+
   // [MEJORA]: Escape cierra menú con restauración de foco
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && sb.classList.contains('open')) {
@@ -360,9 +360,9 @@ const init = () => {
   const today = new Date().toISOString().split('T')[0];
   const fechaNac = safeGetElement('fechaNacimiento');
   const fechaCita = safeGetElement('fechaCita');
-  
-  if (fechaNac) { 
-    fechaNac.max = today; 
+
+  if (fechaNac) {
+    fechaNac.max = today;
     // [MEJORA]: Valor por defecto solo si está vacío
     if (!fechaNac.value) fechaNac.value = '1995-08-15';
   }
@@ -370,16 +370,16 @@ const init = () => {
 
   // Inicializar componentes de UI
   initMobileMenu();
-  
+
   // Configurar validación en tiempo real para campos del Paso 1
   Object.keys(FIELD_VALIDATORS).forEach(setupFieldValidation);
-  
+
   // ── Navegación entre pasos ──
   const nextBtn = safeGetElement('nextBtn');
   const prevBtn = safeGetElement('prevBtn');
   const stepBtn1 = safeGetElement('stepBtn1');
   const stepBtn2 = safeGetElement('stepBtn2');
-  
+
   if (nextBtn) {
     nextBtn.addEventListener('click', () => {
       if (validateStep1()) {
@@ -394,14 +394,14 @@ const init = () => {
       }
     });
   }
-  
+
   if (prevBtn) {
     prevBtn.addEventListener('click', () => {
       updateStepper(1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
-  
+
   // Navegación directa por botones del stepper (accesibilidad keyboard)
   if (stepBtn1) {
     stepBtn1.addEventListener('click', () => updateStepper(1));
@@ -412,7 +412,7 @@ const init = () => {
       }
     });
   }
-  
+
   if (stepBtn2) {
     stepBtn2.addEventListener('click', () => {
       if (validateStep1()) {
@@ -429,7 +429,7 @@ const init = () => {
       }
     });
   }
-  
+
   // Botones de cancelar
   const cancelBtn1 = safeGetElement('cancelBtn1');
   const cancelBtn2 = safeGetElement('cancelBtn2');
@@ -444,7 +444,7 @@ const init = () => {
   // ── Envío del formulario ──
   const patientForm = safeGetElement('patientForm');
   if (patientForm) {
-    patientForm.addEventListener('submit', (e) => {
+    patientForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       if (!validateStep1()) {
@@ -457,7 +457,7 @@ const init = () => {
 
       const saveBtn = safeGetElement('saveBtn');
       if (!saveBtn) return;
-      
+
       const originalContent = saveBtn.innerHTML;
 
       // Estado de carga con deshabilitación
@@ -465,24 +465,57 @@ const init = () => {
       saveBtn.setAttribute('aria-busy', 'true');
       saveBtn.innerHTML = '<span aria-hidden="true">⏳</span> Guardando...';
 
-      // Simular petición al servidor
-      setTimeout(() => {
-        const nombre = safeGetElement('nombres')?.value || 'el paciente';
-        showToast(`✓ Paciente ${nombre} registrado y cita agendada. Historia clínica creada.`, 'success');
+      try {
+        const formData = new FormData(patientForm);
 
-        // Restaurar botón
+        const token = document.querySelector(
+          'input[name="__RequestVerificationToken"]'
+        )?.value;
+
+        if (!token) {
+          throw new Error('No se encontró el token de seguridad del formulario.');
+        }
+
+        const response = await fetch('/gestion-de-pacientes/crear', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+          headers: {
+            'X-CSRF-TOKEN': token
+          }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || 'No fue posible registrar el paciente.');
+        }
+
+        showToast(`✓ ${result.message}`, 'success');
+
         saveBtn.disabled = false;
         saveBtn.removeAttribute('aria-busy');
         saveBtn.innerHTML = originalContent;
 
-        // [MEJORA]: Redirigir después de mostrar confirmación
         setTimeout(() => {
-          window.location.href = '../st-rec-01-dashboard/index.html';
-        }, 2500);
-      }, 1800);
+          window.location.href = '/gestion-de-pacientes/st-adm-05-gestion-pacientes';
+        }, 1500);
+
+      } catch (error) {
+        console.error('[SmileTrack][Paciente] Error al registrar:', error);
+
+        showToast(
+          error.message || 'Ocurrió un error al registrar el paciente.',
+          'error'
+        );
+
+        saveBtn.disabled = false;
+        saveBtn.removeAttribute('aria-busy');
+        saveBtn.innerHTML = originalContent;
+      }
     });
   }
-  
+
   // [MEJORA]: Limpieza de listeners al unload (buena práctica para SPAs)
   window.addEventListener('beforeunload', () => {
     // En una SPA real, aquí se removerían listeners para evitar memory leaks

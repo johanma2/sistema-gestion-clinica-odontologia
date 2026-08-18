@@ -24,6 +24,8 @@ NOTAS DE MANTENIMIENTO:
 - El banner de alerta médica usa role="alert" con aria-live="assertive" para lectura inmediata en tecnologías de asistencia.
 ============================================ *@
 @{ Layout = null; }
+@using System.Text.Json
+@{ var asistenciaProcedDataJson = JsonSerializer.Serialize(ViewData["AsistenciaProcedData"]); }
 
 ?<!DOCTYPE html>
 <html lang="es">
@@ -68,14 +70,14 @@ NOTAS DE MANTENIMIENTO:
           <span class="bc-active">Asistencia en procedimiento</span>
         </nav>
         <h1 class="page-title">Asistencia en Procedimiento</h1>
-        <p class="page-subtitle">Endodoncia pieza 23 — Dr. Andrés Torres — Consultorio 3</p>
+        <p class="page-subtitle" id="apSubtitle">Cargando…</p>
       </div>
     </header>
 
     <!-- Alerta médica con role alert para anuncio inmediato -->
-    <div class="alert-banner" role="alert" aria-live="assertive">
+    <div class="alert-banner" id="apAlertBanner" role="alert" aria-live="assertive" style="display:none;">
       <span class="material-symbols-outlined alert-banner-icon" aria-hidden="true">warning</span>
-      <p class="alert-banner-text"><strong>ALERTA</strong> — Pedro García — Alérgico a Penicilina — Enalapril 5mg</p>
+      <p class="alert-banner-text" id="apAlertBannerText"></p>
     </div>
 
     <!-- Layout de contenido -->
@@ -100,10 +102,10 @@ NOTAS DE MANTENIMIENTO:
         <!-- Datos de la cita -->
         <div class="data-card">
           <h3 class="data-card-title">Datos de la cita</h3>
-          <div class="data-row"><strong>Paciente:</strong> <span>Pedro García</span></div>
-          <div class="data-row"><strong>Profesional:</strong> <span>Dr. Andrés Torres</span></div>
-          <div class="data-row"><strong>Servicio:</strong> <span>Endodoncia pieza 23</span></div>
-          <div class="data-row"><strong>Consultorio:</strong> <span>Consultorio 3 - piso 2</span></div>
+          <div class="data-row"><strong>Paciente:</strong> <span id="apPaciente">—</span></div>
+          <div class="data-row"><strong>Profesional:</strong> <span id="apProfesional">—</span></div>
+          <div class="data-row"><strong>Servicio:</strong> <span id="apServicio">—</span></div>
+          <div class="data-row"><strong>Consultorio:</strong> <span id="apConsultorio">—</span></div>
         </div>
 
       </div>
@@ -114,21 +116,16 @@ NOTAS DE MANTENIMIENTO:
         <!-- Alertas del paciente con role list -->
         <div class="alert-card">
           <p class="alert-card-title"><span class="material-symbols-outlined" aria-hidden="true">warning_amber</span> Alertas del paciente</p>
-          <div class="alert-item" role="listitem">
+          <div class="alert-item" id="apAlergiaItem" role="listitem" style="display:none;">
             <span class="material-symbols-outlined alert-icon" aria-hidden="true">error</span>
-            <span><strong>Alergia:</strong> Penicilina</span>
+            <span><strong>Alergia:</strong> <span id="apAlergiaTexto"></span></span>
           </div>
-          <div class="alert-item" role="listitem">
+          <div class="alert-item" id="apAntecedentesItem" role="listitem" style="display:none;">
             <span class="material-symbols-outlined alert-icon" aria-hidden="true">error</span>
-            <span><strong>Medicamentos:</strong> Enalapril 5mg</span>
+            <span><strong>Antecedentes:</strong> <span id="apAntecedentesTexto"></span></span>
           </div>
-          <div class="alert-item" role="listitem">
-            <span class="material-symbols-outlined alert-icon" aria-hidden="true">error</span>
-            <span><strong>Antecedentes:</strong> Hipertensión leve</span>
-          </div>
-          <div class="alert-item" role="listitem">
-            <span class="material-symbols-outlined alert-icon" aria-hidden="true">error</span>
-            <span><strong>Grupo sanguíneo:</strong> O+</span>
+          <div class="alert-item" id="apSinAlertas" role="listitem">
+            <span><em>Sin alertas médicas registradas para este paciente.</em></span>
           </div>
         </div>
 
@@ -238,6 +235,9 @@ NOTAS DE MANTENIMIENTO:
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
 
+  <script>
+    window.smiletrackAsistenciaProcedData = @Html.Raw(asistenciaProcedDataJson);
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-aux-06-asistencia-procedi/asistencia-proc.js")"></script>
 
   <script src="@Url.Content("~/js/shared/sidebar.js")"></script>

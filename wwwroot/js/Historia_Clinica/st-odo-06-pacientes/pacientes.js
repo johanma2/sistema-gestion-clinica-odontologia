@@ -35,145 +35,9 @@ const showToast = (message, type = 'success') => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  DATOS DE EJEMPLO
+//  ESTADO INICIAL (se reemplaza con datos reales vía fetchPacientes())
 // ═══════════════════════════════════════════════════════════════════
-const SAMPLE_PACIENTES = [
-  {
-    id: 1, nombre: 'María López', cedula: '1.045.678.901',
-    ultima: '15/03/2026', ultimaISO: '2026-03-15',
-    servicio: 'Consulta General',
-    proxima: '20/04/2026', proximaISO: '2026-04-20',
-    estado: 'activo', alergias: ['Penicilina'],
-    telefono: '300 123 4567', email: 'maria@email.com',
-    historial: [
-      { fecha: '15 Mar 2026', fechaISO: '2026-03-15', procedimiento: 'Consulta general + revisión', doctor: 'Dr. Andrés Ruiz', notas: 'Paciente estable, sin hallazgos relevantes.' },
-      { fecha: '10 Ene 2026', fechaISO: '2026-01-10', procedimiento: 'Limpieza profunda', doctor: 'Dr. Andrés Ruiz', notas: 'Se recomienda control en 3 meses.' }
-    ]
-  },
-  {
-    id: 2, nombre: 'Carlos Ruiz', cedula: '1.098.765.432',
-    ultima: '18/03/2026', ultimaISO: '2026-03-18',
-    servicio: 'Limpieza Dental',
-    proxima: '18/06/2026', proximaISO: '2026-06-18',
-    estado: 'alta', alergias: [],
-    telefono: '310 987 6543', email: 'carlos@email.com',
-    historial: [
-      { fecha: '18 Mar 2026', fechaISO: '2026-03-18', procedimiento: 'Limpieza dental completa', doctor: 'Dr. Andrés Ruiz', notas: 'Alta médica. Sin necesidad de seguimiento inmediato.' }
-    ]
-  },
-  {
-    id: 3, nombre: 'Pedro García', cedula: '1.234.567.890',
-    ultima: '20/03/2026', ultimaISO: '2026-03-20',
-    servicio: 'Control',
-    proxima: '05/04/2026', proximaISO: '2026-04-05',
-    estado: 'seguimiento', alergias: [],
-    telefono: '315 555 1234', email: 'pedro@email.com',
-    historial: [
-      { fecha: '20 Mar 2026', fechaISO: '2026-03-20', procedimiento: 'Control periodontal', doctor: 'Dr. Andrés Ruiz', notas: 'Seguimiento necesario. Próxima cita en 2 semanas.' },
-      { fecha: '20 Feb 2026', fechaISO: '2026-02-20', procedimiento: 'Tratamiento periodontal fase 1', doctor: 'Dr. Andrés Ruiz', notas: 'Se inicia tratamiento. Buena respuesta.' }
-    ]
-  },
-  {
-    id: 4, nombre: 'Ana Martínez', cedula: '1.876.543.210',
-    ultima: '10/03/2026', ultimaISO: '2026-03-10',
-    servicio: 'Resina Dental',
-    proxima: '10/04/2026', proximaISO: '2026-04-10',
-    estado: 'activo', alergias: ['Látex'],
-    telefono: '320 444 5678', email: 'ana@email.com',
-    historial: [
-      { fecha: '10 Mar 2026', fechaISO: '2026-03-10', procedimiento: 'Resina compuesta pieza 14', doctor: 'Dr. Andrés Ruiz', notas: 'Colocación satisfactoria. Se indica no ingerir alimentos duros por 24h.' }
-    ]
-  },
-  {
-    id: 5, nombre: 'Luis Herrera', cedula: '1.345.678.902',
-    ultima: '12/02/2026', ultimaISO: '2026-02-12',
-    servicio: 'Extracción',
-    proxima: '—', proximaISO: null,
-    estado: 'alta', alergias: [],
-    telefono: '311 222 3344', email: 'luis@email.com',
-    historial: [
-      { fecha: '12 Feb 2026', fechaISO: '2026-02-12', procedimiento: 'Extracción pieza 28', doctor: 'Dr. Andrés Ruiz', notas: 'Sin complicaciones. Alta médica.' }
-    ]
-  },
-  {
-    id: 6, nombre: 'Sara Gómez', cedula: '1.456.789.013',
-    ultima: '05/03/2026', ultimaISO: '2026-03-05',
-    servicio: 'Blanqueamiento',
-    proxima: '05/06/2026', proximaISO: '2026-06-06',
-    estado: 'activo', alergias: [],
-    telefono: '318 777 8899', email: 'sara@email.com',
-    historial: [
-      { fecha: '05 Mar 2026', fechaISO: '2026-03-05', procedimiento: 'Blanqueamiento dental', doctor: 'Dr. Andrés Ruiz', notas: 'Resultado excelente. Recomendar mantenimiento semestral.' }
-    ]
-  },
-  {
-    id: 7, nombre: 'Valentina Ríos', cedula: '1.567.890.124',
-    ultima: '22/02/2026', ultimaISO: '2026-02-22',
-    servicio: 'Ortodoncia',
-    proxima: '22/03/2026', proximaISO: '2026-03-22',
-    estado: 'seguimiento', alergias: ['Penicilina', 'Ibuprofeno'],
-    telefono: '312 333 4455', email: 'valentina@email.com',
-    historial: [
-      { fecha: '22 Feb 2026', fechaISO: '2026-02-22', procedimiento: 'Ajuste de brackets', doctor: 'Dr. Andrés Ruiz', notas: 'Buen progreso. Seguimiento mensual.' },
-      { fecha: '22 Ene 2026', fechaISO: '2026-01-22', procedimiento: 'Colocación de aparato ortodoncia', doctor: 'Dr. Andrés Ruiz', notas: 'Inicio de tratamiento. Paciente con alergias documentadas.' }
-    ]
-  },
-  {
-    id: 8, nombre: 'Diego Vargas', cedula: '1.678.901.235',
-    ultima: '01/03/2026', ultimaISO: '2026-03-01',
-    servicio: 'Consulta General',
-    proxima: '—', proximaISO: null,
-    estado: 'activo', alergias: [],
-    telefono: '316 444 5566', email: 'diego@email.com',
-    historial: [
-      { fecha: '01 Mar 2026', fechaISO: '2026-03-01', procedimiento: 'Consulta de valoración', doctor: 'Dr. Andrés Ruiz', notas: 'Paciente asintomático. Sin tratamiento requerido por el momento.' }
-    ]
-  },
-  {
-    id: 9, nombre: 'Camila Torres', cedula: '1.789.012.346',
-    ultima: '08/03/2026', ultimaISO: '2026-03-08',
-    servicio: 'Limpieza Dental',
-    proxima: '08/09/2026', proximaISO: '2026-09-08',
-    estado: 'activo', alergias: [],
-    telefono: '317 555 6677', email: 'camila@email.com',
-    historial: [
-      { fecha: '08 Mar 2026', fechaISO: '2026-03-08', procedimiento: 'Limpieza dental + fluorización', doctor: 'Dr. Andrés Ruiz', notas: 'Excelente higiene oral. Próxima cita en 6 meses.' }
-    ]
-  },
-  {
-    id: 10, nombre: 'Sebastián Mora', cedula: '1.890.123.457',
-    ultima: '25/02/2026', ultimaISO: '2026-02-25',
-    servicio: 'Extracción',
-    proxima: '25/03/2026', proximaISO: '2026-03-25',
-    estado: 'seguimiento', alergias: ['Látex'],
-    telefono: '319 666 7788', email: 'sebastian@email.com',
-    historial: [
-      { fecha: '25 Feb 2026', fechaISO: '2026-02-25', procedimiento: 'Extracción pieza 38 (cordal)', doctor: 'Dr. Andrés Ruiz', notas: 'Cirugía compleja. Control post-operatorio en 7 días. Alergia al látex documentada.' }
-    ]
-  },
-  {
-    id: 11, nombre: 'Isabella Castillo', cedula: '1.901.234.568',
-    ultima: '14/02/2026', ultimaISO: '2026-02-14',
-    servicio: 'Resina Dental',
-    proxima: '14/05/2026', proximaISO: '2026-05-14',
-    estado: 'activo', alergias: [],
-    telefono: '321 777 8899', email: 'isabella@email.com',
-    historial: [
-      { fecha: '14 Feb 2026', fechaISO: '2026-02-14', procedimiento: 'Resinas piezas 21 y 22', doctor: 'Dr. Andrés Ruiz', notas: 'Restauración estética completa. Buen resultado.' }
-    ]
-  },
-  {
-    id: 12, nombre: 'Mateo Salcedo', cedula: '1.012.345.679',
-    ultima: '18/01/2026', ultimaISO: '2026-01-18',
-    servicio: 'Ortodoncia',
-    proxima: '18/04/2026', proximaISO: '2026-04-18',
-    estado: 'seguimiento', alergias: [],
-    telefono: '322 888 9900', email: 'mateo@email.com',
-    historial: [
-      { fecha: '18 Ene 2026', fechaISO: '2026-01-18', procedimiento: 'Control de ortodoncia', doctor: 'Dr. Andrés Ruiz', notas: 'Evolución favorable. Aproximadamente 8 meses más de tratamiento.' }
-    ]
-  },
-];
+const SAMPLE_PACIENTES = [];
 
 let pacientes = [...SAMPLE_PACIENTES];
 let filteredPacientes = [...SAMPLE_PACIENTES];
@@ -643,12 +507,65 @@ const initFilters = () => {
   });
 };
 
+const MESES_PAC = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const fmtFechaCorta = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+};
+const fmtFechaLarga = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return `${String(d.getDate()).padStart(2, '0')} ${MESES_PAC[d.getMonth()]} ${d.getFullYear()}`;
+};
+const toISODate = (iso) => (iso ? String(iso).slice(0, 10) : null);
+
+// Convierte el DTO de /historia-clinica/st-odo-06-pacientes/data (mismo formato que
+// st-adm-historial) al modelo que usa esta vista: separa la última cita ya pasada
+// de la próxima cita futura a partir del listado real de citas del paciente.
+function normalizarPacienteOdo(p) {
+  const ahora = new Date();
+  const consultas = [...(p.consultas || [])].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  const pasadas = consultas.filter(c => new Date(c.fecha) <= ahora);
+  const futuras = consultas.filter(c => new Date(c.fecha) > ahora).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  const ultimaConsulta = pasadas[0] || consultas[0] || null;
+  const proximaConsulta = futuras[0] || null;
+
+  return {
+    id: p.id,
+    nombre: p.nombre,
+    cedula: p.cedula,
+    ultima: fmtFechaCorta(ultimaConsulta?.fecha),
+    ultimaISO: toISODate(ultimaConsulta?.fecha),
+    servicio: ultimaConsulta?.proc || 'Sin servicio registrado',
+    proxima: proximaConsulta ? fmtFechaCorta(proximaConsulta.fecha) : '—',
+    proximaISO: toISODate(proximaConsulta?.fecha),
+    estado: p.estado === 'inactivo' ? 'alta' : 'activo',
+    alergias: p.alerta && p.alertaTexto ? p.alertaTexto.split(',').map(a => a.trim()).filter(Boolean) : [],
+    telefono: p.telefono || '',
+    email: p.email || '',
+    historial: consultas.map(c => ({
+      fecha: fmtFechaLarga(c.fecha),
+      fechaISO: toISODate(c.fecha),
+      procedimiento: c.proc,
+      doctor: c.odo,
+      notas: c.nota || ''
+    }))
+  };
+}
+
 async function fetchPacientes() {
   try {
-    return SAMPLE_PACIENTES;
+    const resp = await fetch('/historia-clinica/st-odo-06-pacientes/data', { headers: { 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    return data.map(normalizarPacienteOdo);
   } catch (error) {
-    console.warn('Fallback a datos locales:', error);
-    return SAMPLE_PACIENTES;
+    console.error('No se pudieron cargar los pacientes desde el servidor:', error);
+    showToast('No se pudieron cargar los pacientes', 'error');
+    return [];
   }
 }
 

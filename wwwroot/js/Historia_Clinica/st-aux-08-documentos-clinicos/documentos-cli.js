@@ -36,6 +36,31 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentDocFilename = '';
   let currentDocTitle = '';
 
+  // ── Cargar documentos reales del paciente ──
+  // NOTA: el esquema actual no tiene una tabla de "documentos clínicos" (adjuntos,
+  // radiografías, etc.), así que el endpoint devuelve un arreglo vacío real en vez
+  // de los 3 documentos inventados que antes estaban fijos en este HTML.
+  async function cargarDocumentos() {
+    const emptyState = document.getElementById('docsEmptyState');
+    try {
+      const resp = await fetch('/historia-clinica/st-aux-08-documentos-clinicos/data', { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const documentos = await resp.json();
+      if (!documentos.length) {
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+      }
+      documentos.forEach(d => addDocumentToList(d.tipo, d.fecha, d.nombreArchivo, d.subidoPor));
+    } catch (e) {
+      console.error('No se pudieron cargar los documentos clínicos:', e);
+      if (emptyState) {
+        emptyState.textContent = 'No se pudieron cargar los documentos clínicos.';
+        emptyState.style.display = 'block';
+      }
+    }
+  }
+  cargarDocumentos();
+
   // ── Sidebar móvil ──
   function toggleSidebar(show) {
     if (!sidebar || !overlay) return;
@@ -156,23 +181,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!valid) return;
 
-    // Simular upload
+    // NOTA: no existe todavía un endpoint de subida de archivos ni una tabla de
+    // documentos clínicos en el esquema (ver comentario en Staux08DocumentosClinicosData
+    // del controlador). Este botón agrega el documento a la lista visible como
+    // confirmación local, pero AÚN NO se persiste en la base de datos.
     uploadBtn.disabled = true;
     uploadBtn.textContent = '⏳ Subiendo...';
     
     setTimeout(() => {
-      // Agregar a la lista
+      // Agregar a la lista (solo en memoria; no hay persistencia real todavía)
+      document.getElementById('docsEmptyState')?.style.setProperty('display', 'none');
       addDocumentToList(docType, docDate, selectedFile.name);
       // Reset form
       uploadForm.reset();
       removeFile();
       uploadBtn.disabled = false;
       uploadBtn.textContent = 'Subir documento';
-      showToast('✅ Documento subido exitosamente', 'success');
-    }, 1500);
+      showToast('Documento agregado localmente (la subida a servidor aún no está implementada)', 'warning');
+    }, 600);
   });
 
-  function addDocumentToList(type, date, filename) {
+  function addDocumentToList(type, date, filename, subidoPor) {
     // Formatear fecha
     const d = new Date(date + 'T00:00:00');
     const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -192,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="doc-icon">${icon}</span>
       <div class="doc-info">
         <p class="doc-name">${type}</p>
-        <p class="doc-meta">${fmtDate} · Auxiliar: Sara Jiménez</p>
+        <p class="doc-meta">${fmtDate}${subidoPor ? ' · ' + subidoPor : ''}</p>
       </div>
       <button class="doc-eye" aria-label="Ver documento">👁️</button>
     `;
@@ -262,13 +291,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === modalBackdrop) closeModal();
   });
 
-  // ── Descargar documento (simulado) ──
+  // ── Descargar documento ──
+  // NOTA: no hay almacenamiento real de archivos todavía (ver comentario en
+  // Staux08DocumentosClinicosData del controlador), así que no hay un archivo real
+  // que descargar. Se deja el flujo visual pero informando la limitación real.
   modalDownloadBtn?.addEventListener('click', () => {
-    showToast('⬇ Descargando documento...', 'info');
-    setTimeout(() => {
-      closeModal();
-      showToast('✅ Descarga completada', 'success');
-    }, 1500);
+    showToast('La descarga de archivos aún no está disponible (no hay almacenamiento configurado)', 'warning');
   });
 
   // ── Keyboard: Escape cierra modal ──

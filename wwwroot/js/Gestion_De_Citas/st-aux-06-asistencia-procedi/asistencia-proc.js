@@ -44,7 +44,8 @@ const debounce = (fn, delay) => {
 
 // WHY: La clave incluye fecha y hora para evitar colisiones entre sesiones de diferentes procedimientos en el mismo dispositivo
 const procedureStorage = {
-  key: 'smiletrack_procedure_20260320_1003',
+  // La clave incluye el id real de la cita para no mezclar el estado entre procedimientos distintos
+  key: `smiletrack_procedure_${window.smiletrackAsistenciaProcedData?.citaId || 'sin_cita'}`,
   
   // WHY: Carga el estado desde LocalStorage para continuar el seguimiento tras refrescos de página o re-apertura del navegador
   load: () => {
@@ -56,9 +57,10 @@ const procedureStorage = {
         console.warn('Error al cargar estado del procedimiento, usando valores por defecto');
       }
     }
+    // Procedimiento recién iniciado (0 minutos, ahora mismo)
     return {
-      minutes: 24,
-      startTime: '2026-03-20T10:03',
+      minutes: 0,
+      startTime: new Date().toISOString(),
       pills: {
         limpieza: false,
         esterilizacion: false,
@@ -147,6 +149,14 @@ const initTimer = () => {
   
   // Actualiza display inicial
   timerValue.textContent = minutes;
+
+  // Refleja la hora real de inicio guardada (antes era un dato estático hardcodeado)
+  const statusTime = document.querySelector('.status-time time');
+  if (statusTime && state.startTime) {
+    const inicio = new Date(state.startTime);
+    statusTime.setAttribute('datetime', state.startTime);
+    statusTime.textContent = inicio.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  }
   
   // WHY: Incrementa el timer en tiempo real para reflejar la duración real del procedimiento
   const timerInterval = setInterval(() => {
@@ -210,8 +220,42 @@ const initProcedurePills = () => {
 };
 
 // Función principal de inicialización
+// Renderiza los datos reales de la cita/procedimiento inyectados por el servidor
+// (ver ConstruirAsistenciaProcedimientoAsync en GestionCitasController.cs).
+const renderDatosCita = () => {
+  const d = window.smiletrackAsistenciaProcedData || {};
+
+  const subtitle = safeGetElement('apSubtitle');
+  if (subtitle) subtitle.textContent = d.citaId ? `${d.procedimiento} — ${d.profesional} — ${d.consultorio}` : 'No hay un procedimiento en curso asignado';
+
+  const set = (id, val) => { const el = safeGetElement(id); if (el) el.textContent = val || '—'; };
+  set('apPaciente', d.paciente);
+  set('apProfesional', d.profesional);
+  set('apServicio', d.procedimiento);
+  set('apConsultorio', d.consultorio);
+
+  const banner = safeGetElement('apAlertBanner');
+  const bannerText = safeGetElement('apAlertBannerText');
+  if (d.alergia && banner && bannerText) {
+    bannerText.innerHTML = `<strong>ALERTA</strong> — ${d.paciente} — Alérgico a ${d.alergia}`;
+    banner.style.display = '';
+  }
+
+  const alergiaItem = safeGetElement('apAlergiaItem');
+  const alergiaTexto = safeGetElement('apAlergiaTexto');
+  const antecedentesItem = safeGetElement('apAntecedentesItem');
+  const antecedentesTexto = safeGetElement('apAntecedentesTexto');
+  const sinAlertas = safeGetElement('apSinAlertas');
+
+  let hayAlertas = false;
+  if (d.alergia && alergiaItem && alergiaTexto) { alergiaTexto.textContent = d.alergia; alergiaItem.style.display = ''; hayAlertas = true; }
+  if (d.antecedentes && antecedentesItem && antecedentesTexto) { antecedentesTexto.textContent = d.antecedentes; antecedentesItem.style.display = ''; hayAlertas = true; }
+  if (hayAlertas && sinAlertas) sinAlertas.style.display = 'none';
+};
+
 const init = () => {
     // Inicializar componentes de UI
+    renderDatosCita();
     initMobileMenu();
     initTimer();
     initProcedurePills();

@@ -24,6 +24,8 @@ NOTAS DE MANTENIMIENTO:
 - Se implementan controles ARIA con roles de radiogroup, toolbar y menuitem para una navegación accesible.
 ============================================ *@
 @{ Layout = null; }
+@using System.Text.Json
+@{ var agendaApoyoDataJson = JsonSerializer.Serialize(ViewData["AgendaApoyoData"]); }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -192,6 +194,9 @@ NOTAS DE MANTENIMIENTO:
     <script src="@Url.Content("~/js/footer.js")"></script>
     <link rel="stylesheet" href="@Url.Content("~/css/footer.css")">
   </footer>
+  <script>
+    window.smiletrackAgendaApoyoData = @Html.Raw(agendaApoyoDataJson);
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-aux-02-agenda-apoyo/agenda-apoyo.js")"></script>
 
   <script src="@Url.Content("~/js/shared/sidebar.js")"></script>

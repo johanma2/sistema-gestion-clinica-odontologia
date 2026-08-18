@@ -40,7 +40,7 @@
           <span class="bc-active">Carga de documentos</span>
         </nav>
         <h1 class="page-title">Carga de Documentos Clínicos</h1>
-        <p class="page-subtitle">Pedro García · HC-2026-001</p>
+        <p class="page-subtitle">@ViewData["PacienteNombre"] · @ViewData["PacienteCodigoHC"]</p>
       </div>
     </header>
 
@@ -114,35 +114,10 @@
         <div class="card">
           <h3 class="card-title">Documentos del paciente</h3>
           <div class="docs-list" id="docsList">
-            <!-- Documentos existentes -->
-            <div class="doc-item">
-              <span class="doc-icon">🦷</span>
-              <div class="doc-info">
-                <p class="doc-name">Radiografía panorámica</p>
-                <p class="doc-meta">15 Dic 2025 · Auxiliar: Sara Jiménez</p>
-              </div>
-              <button class="doc-eye" onclick="viewDocument('radiografia.jpg','Radiografía panorámica')"
-                aria-label="Ver documento">👁️</button>
-            </div>
-            <div class="doc-item">
-              <span class="doc-icon">📸</span>
-              <div class="doc-info">
-                <p class="doc-name">Fotografía inicial</p>
-                <p class="doc-meta">02 Nov 2025 · Auxiliar: Sara Jiménez</p>
-              </div>
-              <button class="doc-eye" onclick="viewDocument('foto.jpg','Fotografía inicial')"
-                aria-label="Ver documento">👁️</button>
-            </div>
-            <div class="doc-item">
-              <span class="doc-icon">🧪</span>
-              <div class="doc-info">
-                <p class="doc-name">Examen de coagulación</p>
-                <p class="doc-meta">02 Nov 2025 · Auxiliar: Sara Jiménez</p>
-              </div>
-              <button class="doc-eye" onclick="viewDocument('examen.pdf','Examen de coagulación')"
-                aria-label="Ver documento">👁️</button>
-            </div>
+            <!-- Los documentos reales del paciente se cargan desde el servidor
+                 (ver cargarDocumentos() en documentos-cli.js). -->
           </div>
+          <p id="docsEmptyState" class="doc-meta" style="display:none;padding:8px 0;">Este paciente no tiene documentos clínicos cargados todavía.</p>
         </div>
       </aside>
 

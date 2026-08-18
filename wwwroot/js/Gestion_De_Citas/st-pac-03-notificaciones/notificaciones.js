@@ -41,13 +41,31 @@ const debounce = (fn, delay) => {
 
 // WHY: Muestra retroalimentación temporal autolimpiable para no interrumpir el flujo visual de la lista de alertas
 
-// —— DATOS DE EJEMPLO ——
-const SAMPLE_NOTIFICACIONES = [
-  { id:1, tipo:'reminder', titulo:'Recordatorio de cita', desc:'Tu cita con Dr. Carlos Méndez es mañana a las 10:00 AM - Consultorio 1', time:'Hace 2 horas', leida:false, badge:'pending' },
-  { id:2, tipo:'confirmed', titulo:'Cita confirmada', desc:'Tu cita del 24 de marzo fue confirmada exitosamente.', time:'Ayer', leida:false, badge:'new' },
-  { id:3, tipo:'cancelled', titulo:'Cita cancelada', desc:'Tu cita del 15 de marzo fue cancelada.', time:'Hace 5 días', leida:true, badge:'read' },
-  { id:4, tipo:'message', titulo:'Mensaje de la clínica', desc:'Recuerda traer tu carnet de salud para tu próxima revisión.', time:'Hace 1 semana', leida:true, badge:'read' },
-];
+// —— DATOS REALES (derivados de las citas del paciente) ——
+// Ver ConstruirNotificacionesPacienteAsync en GestionCitasController.cs: no existe una
+// tabla de notificaciones en el esquema, así que se generan a partir de citas reales.
+const formatTiempoRelativo = (iso) => {
+  if (!iso) return '';
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return '';
+  const diffMs = Date.now() - fecha.getTime();
+  const diffHoras = diffMs / (1000 * 60 * 60);
+  if (diffHoras < 0) {
+    // Fecha futura (recordatorio de cita próxima)
+    const horasFuturas = Math.abs(diffHoras);
+    if (horasFuturas < 24) return `En ${Math.round(horasFuturas)} horas`;
+    return `En ${Math.round(horasFuturas / 24)} días`;
+  }
+  if (diffHoras < 1) return 'Hace unos minutos';
+  if (diffHoras < 24) return `Hace ${Math.round(diffHoras)} horas`;
+  const diffDias = Math.round(diffHoras / 24);
+  if (diffDias === 1) return 'Ayer';
+  if (diffDias < 7) return `Hace ${diffDias} días`;
+  return `Hace ${Math.round(diffDias / 7)} semanas`;
+};
+
+const SAMPLE_NOTIFICACIONES = (window.smiletrackNotificacionesData?.notificaciones || [])
+  .map(n => ({ ...n, time: formatTiempoRelativo(n.time) }));
 
 let notificaciones = [...SAMPLE_NOTIFICACIONES];
 let currentFilter = 'all';

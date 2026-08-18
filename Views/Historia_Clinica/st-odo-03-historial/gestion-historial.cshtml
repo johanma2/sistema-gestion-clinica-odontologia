@@ -1,4 +1,33 @@
-@{ Layout = null; }
+@using System.Text.Json
+@using SmileTrack_MVC.Models.ViewModels
+@model HistorialPacienteViewModel
+@{
+    Layout = null;
+    var odonto = Model.Odontograma;
+    var historiaDataJson = JsonSerializer.Serialize(new
+    {
+        pacienteId = odonto.PacienteId,
+        historiaId = odonto.HistoriaId,
+        nombre = odonto.PacienteNombre,
+        codigoHC = odonto.CodigoHC,
+        fechaNacimiento = odonto.FechaNacimiento,
+        grupoSanguineo = Model.GrupoSanguineo,
+        alergias = Model.Alergias,
+        medicamentos = Array.Empty<string>(), // no existe un campo de medicamentos activos en el esquema actual
+        antecedentesMedicos = Model.AntecedentesMedicos,
+        estadoPersistido = odonto.ObservacionesGenerales,
+        historial = Model.Registros.Select(r => new
+        {
+            titulo = r.Descripcion,
+            fecha = r.Fecha.ToString("yyyy-MM-dd"),
+            doctor = r.Doctor,
+            diagnostico = "",
+            procedimiento = r.Descripcion,
+            estado = r.Estado,
+            proximaCita = (string?)null
+        })
+    });
+}
 
 ﻿<!DOCTYPE html>
 <html lang="es">
@@ -109,7 +138,8 @@
         <!-- Formulario de nueva entrada con validación accesible -->
         <div class="card" id="cardForm">
           <h2 class="card-title" id="formTitle">Nueva entrada clínica</h2>
-          <form id="historialForm" onsubmit="guardarEntrada(event)" novalidate aria-labelledby="formTitle">
+          <form id="historialForm" novalidate aria-labelledby="formTitle">
+            @Html.AntiForgeryToken()
 
             <div class="form-group">
               <label class="form-lbl" for="fDiag">Diagnóstico <span class="required" aria-hidden="true">*</span></label>
@@ -221,6 +251,9 @@
     }
   </style>
 
+  <script>
+    window.smiletrackHistoriaData = @Html.Raw(historiaDataJson);
+  </script>
   <script src="@Url.Content("~/js/Historia_Clinica/st-odo-03-historial/gestion-historial.js")"></script>
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">

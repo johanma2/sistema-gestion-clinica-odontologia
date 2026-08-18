@@ -22,6 +22,8 @@ NOTAS DE MANTENIMIENTO:
 - Los comentarios internos explican el "por qué" de las decisiones de diseño/negocio, no el "qué" hace el código básico.
 ============================================ *@
 @{ Layout = null; }
+@using System.Text.Json
+@{ var notificacionesDataJson = JsonSerializer.Serialize(ViewData["NotificacionesData"]); }
 
 <!DOCTYPE html>
 <html lang="es">
@@ -107,6 +109,9 @@ NOTAS DE MANTENIMIENTO:
   <!-- Toast -->
   <!-- [MEJORA]: aria-atomic="true" para que lectores anuncien mensaje completo -->
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script>
+    window.smiletrackNotificacionesData = @Html.Raw(notificacionesDataJson);
+  </script>
   <script src="@Url.Content("~/js/Gestion_De_Citas/st-pac-03-notificaciones/notificaciones.js")"></script>
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">

@@ -1,12 +1,10 @@
-version: "3.9"
-
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: smiletrack-sqlserver
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "SmileTrack#2025"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
       MSSQL_PID: "Express"
     ports:
       - "1433:1433"
@@ -27,14 +25,18 @@ services:
     image: smiletrack-web
     container_name: smiletrack-web
     depends_on:
-      - sqlserver
+      sqlserver:
+        condition: service_healthy
     ports:
       - "5258:80"
     environment:
-      ASPNETCORE_URLS: "http://+:80"
-      ASPNETCORE_ENVIRONMENT: "Development"
-      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=SmileTrackDB;User Id=sa;Password=SmileTrack#2025;TrustServerCertificate=True;"
+      ASPNETCORE_URLS: "${ASPNETCORE_URLS}"
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT}"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=SmileTrackDB;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;"
+    volumes:
+      - smiletrack-dataprotection:/root/.aspnet/DataProtection-Keys
     restart: unless-stopped
 
 volumes:
   smiletrack-sqldata:
+  smiletrack-dataprotection:

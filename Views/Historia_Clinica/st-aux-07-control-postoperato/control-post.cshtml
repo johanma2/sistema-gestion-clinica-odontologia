@@ -48,8 +48,7 @@
           <span class="bc-active">Postoperatorio</span>
         </nav>
         <h1 class="page-title">Control Postoperatorio</h1>
-        <p class="page-subtitle">Pedro García · Endodoncia pieza 23 · Finalizado <time datetime="2026-03-20">20 Mar
-            2026</time></p>
+        <p class="page-subtitle" id="postopSubtitle">Cargando…</p>
       </div>
     </header>
 
@@ -91,34 +90,7 @@
           <h3 class="card-title" id="instructionsTitle">Instrucciones postoperatorio</h3>
 
           <ul class="instructions-list" id="instructionsList" role="list" aria-labelledby="instructionsTitle">
-            <li role="listitem">
-              <label class="custom-checkbox">
-                <input type="checkbox" checked aria-label="No comer próximas 2 horas - completado" />
-                <span class="checkmark" aria-hidden="true"></span>
-                <span class="text">No comer próximas 2h</span>
-              </label>
-            </li>
-            <li role="listitem">
-              <label class="custom-checkbox">
-                <input type="checkbox" checked aria-label="Medicamento cada 8 horas - completado" />
-                <span class="checkmark" aria-hidden="true"></span>
-                <span class="text">Medicamento cada 8h</span>
-              </label>
-            </li>
-            <li role="listitem">
-              <label class="custom-checkbox">
-                <input type="checkbox" aria-label="Evitar temperaturas extremas" />
-                <span class="checkmark" aria-hidden="true"></span>
-                <span class="text">Evitar T° extremas</span>
-              </label>
-            </li>
-            <li role="listitem">
-              <label class="custom-checkbox">
-                <input type="checkbox" aria-label="Control en 7 días" />
-                <span class="checkmark" aria-hidden="true"></span>
-                <span class="text">Control en 7 días</span>
-              </label>
-            </li>
+            <!-- Las instrucciones reales se renderizan desde window.smiletrackPostopData (ver control-post.js) -->
           </ul>
 
           <!-- Input para agregar nueva instrucción -->
@@ -215,6 +187,10 @@
       border: 0;
     }
   </style>
+  <script>
+    window.smiletrackPostopData = @Html.Raw(ViewData["PostopData"]);
+  </script>
+  @Html.AntiForgeryToken()
   <script src="@Url.Content("~/js/Historia_Clinica/st-aux-07-control-postoperato/control-post.js")"></script>
 
   <footer id="dynamic-footer" class="site-footer" role="contentinfo">
